@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: test-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: test-server
+      app.kubernetes.io/name: test-server
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/instance: test-server
+        app.kubernetes.io/managed-by: kmcp
+        app.kubernetes.io/name: test-server
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - /agentbin/agentgateway -f /config/local.yaml
+        image: docker.io/mcp/everything
+        name: tool
+        resources: {}
+        volumeMounts:
+        - mountPath: /config
+          name: config
+        - mountPath: /agentbin
+          name: binary
+      initContainers:
+      - args:
+        - -c
+        - cp /usr/bin/agentgateway /agentbin/agentgateway
+        command:
+        - sh
+        image: ttl.sh/h1751392143:24h
+        name: copy-binary
+        resources: {}
+        volumeMounts:
+        - mountPath: /agentbin
+          name: binary
+      volumes:
+      - configMap:
+          name: test-server
+        name: config
+      - emptyDir: {}
+        name: binary
+status: {}
