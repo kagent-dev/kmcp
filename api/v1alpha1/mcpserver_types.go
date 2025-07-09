@@ -33,35 +33,19 @@ const (
 
 // MCPServerSpec defines the desired state of MCPServer.
 type MCPServerSpec struct {
+	// Configuration to Deploy the MCP Server using a docker container
+	Deployment MCPServerDeployment `json:"deployment"`
+
 	// TransportType defines the type of mcp server being run
 	// +kubebuilder:validation:Enum=stdio;http
 	TransportType TransportType `json:"transportType,omitempty"`
-
-	// StdioTransport defines the configuration for a standard input/output transport.
-	// +optional
-	StdioTransport *StdioTransport `json:"stdioTransport,omitempty"`
-
-	// HTTPTransport defines the configuration for a Streamable HTTP transport.
-	// +optional
-	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
-
-	// Overrides for the deployment
-	DeploymentOverrides *DeploymentOverrides `json:"deploymentOverrides,omitempty"`
-
-	// Port defines the port on which the MCP server will listen.
-	Port uint16 `json:"port,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
-type StdioTransport struct {
-	Cmd  string            `json:"cmd,omitempty"`
-	Args []string          `json:"args,omitempty"`
-	Env  map[string]string `json:"env,omitempty"`
-}
+type StdioTransport struct{}
 
 // HTTPTransport defines the configuration for a Streamable HTTP transport.
-type HTTPTransport struct {
-}
+type HTTPTransport struct{}
 
 // MCPServerStatus defines the observed state of MCPServer.
 type MCPServerStatus struct {
@@ -69,8 +53,22 @@ type MCPServerStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// DeploymentOverrides defines overrides for the MCP server deployment.
-type DeploymentOverrides struct {
+// MCPServerDeployment
+type MCPServerDeployment struct {
+	// Image defines the container image to to deploy the MCP server.
+	Image string `json:"image,omitempty"`
+
+	// Port defines the port on which the MCP server will listen.
+	Port uint16 `json:"port,omitempty"`
+
+	// Cmd defines the command to run in the container to start the mcp server.
+	Cmd string `json:"cmd,omitempty"`
+
+	// Args defines the arguments to pass to the command.
+	Args []string `json:"args,omitempty"`
+
+	// Env defines the environment variables to set in the container.
+	Env map[string]string `json:"env,omitempty"`
 }
 
 // +kubebuilder:object:root=true

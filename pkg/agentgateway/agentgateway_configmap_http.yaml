@@ -1,7 +1,6 @@
 apiVersion: v1
 data:
   local.yaml: |
-    config: {}
     binds:
     - listeners:
       - name: default
@@ -10,16 +9,15 @@ data:
         - backends:
           - backend:
               mcp:
-                name: test-server
+                name: test-http-server
                 targets:
-                - name: test-server
+                - name: test-http-server
                   spec:
                     stdio:
                       args:
-                      - -y
-                      - '@modelcontextprotocol/server-filesystem'
-                      - /
-                      cmd: npx
+                      - run
+                      - start:streamableHttp
+                      cmd: npm
             weight: 100
           matches:
           - path:
@@ -27,9 +25,10 @@ data:
           - path:
               pathPrefix: /mcp
           name: mcp
-      port: 3000
+      port: 3001
+    config: {}
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: test-server
+  name: test-http-server
   namespace: default

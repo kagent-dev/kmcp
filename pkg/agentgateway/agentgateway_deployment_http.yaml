@@ -2,21 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
-  name: test-server
+  name: test-http-server
   namespace: default
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/instance: test-server
-      app.kubernetes.io/name: test-server
+      app.kubernetes.io/instance: test-http-server
+      app.kubernetes.io/name: test-http-server
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app.kubernetes.io/instance: test-server
+        app.kubernetes.io/instance: test-http-server
         app.kubernetes.io/managed-by: kmcp
-        app.kubernetes.io/name: test-server
+        app.kubernetes.io/name: test-http-server
     spec:
       containers:
       - command:
@@ -24,7 +24,7 @@ spec:
         - -c
         - /agentbin/agentgateway -f /config/local.yaml
         image: docker.io/mcp/everything
-        name: tool
+        name: mcp-server
         resources: {}
         volumeMounts:
         - mountPath: /config
@@ -45,7 +45,7 @@ spec:
           name: binary
       volumes:
       - configMap:
-          name: test-server
+          name: test-http-server
         name: config
       - emptyDir: {}
         name: binary

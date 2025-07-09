@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: test-stdio-server
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app.kubernetes.io/instance: test-stdio-server
+    app.kubernetes.io/name: test-stdio-server
+status:
+  loadBalancer: {}
