@@ -39,13 +39,22 @@ type MCPServerSpec struct {
 	// TransportType defines the type of mcp server being run
 	// +kubebuilder:validation:Enum=stdio;http
 	TransportType TransportType `json:"transportType,omitempty"`
+
+	// StdioTransport defines the configuration for a standard input/output transport.
+	StdioTransport *StdioTransport `json:"stdioTransport,omitempty"`
+
+	// HTTPTransport defines the configuration for a Streamable HTTP transport.
+	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
 type StdioTransport struct{}
 
 // HTTPTransport defines the configuration for a Streamable HTTP transport.
-type HTTPTransport struct{}
+type HTTPTransport struct {
+	// target port is the HTTP port that serves the MCP server.over HTTP
+	TargetPort uint32 `json:"targetPort,omitempty"`
+}
 
 // MCPServerStatus defines the observed state of MCPServer.
 type MCPServerStatus struct {

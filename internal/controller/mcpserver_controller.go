@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"kagent.dev/kmcp/pkg/agentgateway"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,7 +50,29 @@ type MCPServerReconciler struct {
 func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the MCPServer instance
+	mcpServer := &kagentdevv1alpha1.MCPServer{}
+	if err := r.Get(ctx, req.NamespacedName, mcpServer); err != nil {
+		// If the resource is not found, we can ignore the error since it will be requeued later
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	t := agentgateway.NewAgentGatewayTranslator(r.Scheme)
+	outputs, err := t.TranslateAgentGatewayOutputs(mcpServer)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")
+		r.reconcileStatus(ctx, mcpServer, err)
+		return ctrl.Result{}, err
+	}
+
+	err = r.reconcileOutputs(ctx, outputs)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "Failed to reconcile outputs")
+		r.reconcileStatus(ctx, mcpServer, err)
+		return ctrl.Result{}, err
+	}
+
+	r.reconcileStatus(ctx, mcpServer, nil)
 
 	return ctrl.Result{}, nil
 }
@@ -60,4 +83,51 @@ func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&kagentdevv1alpha1.MCPServer{}).
 		Named("mcpserver").
 		Complete(r)
+}
+
+func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs *agentgateway.AgentGatewayOutputs) error {
+	// upsert the outputs to the cluster
+	if outputs.Deployment != nil {
+		if err := upsertOutput(ctx, r.Client, outputs.Deployment); err != nil {
+			return err
+		}
+	}
+	if outputs.Service != nil {
+		if err := upsertOutput(ctx, r.Client, outputs.Service); err != nil {
+			return err
+		}
+	}
+	if outputs.ConfigMap != nil {
+		if err := upsertOutput(ctx, r.Client, outputs.ConfigMap); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *MCPServerReconciler) reconcileStatus(ctx context.Context, server *kagentdevv1alpha1.MCPServer, err error) {
+	// TODO: Implement status reconciliation logic
+	// log for now
+	log.FromContext(ctx).Info("Reconcile status", "server", server.Name, "error", err)
+}
+
+func upsertOutput(ctx context.Context, kube client.Client, output client.Object) error {
+	existing := output.DeepCopyObject().(client.Object)
+	if err := kube.Get(ctx, client.ObjectKeyFromObject(existing), existing); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		// If not found, create it
+		if err := kube.Create(ctx, output); err != nil {
+			return err
+		}
+	} else {
+		// If found, update it
+		output.SetResourceVersion(existing.GetResourceVersion())
+		if err := kube.Update(ctx, output); err != nil {
+			return err
+		}
+	}
+	return nil
 }

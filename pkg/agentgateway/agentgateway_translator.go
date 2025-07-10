@@ -2,6 +2,8 @@ package agentgateway
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,7 +15,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "ttl.sh/h1751392143:24h"
+	agentGatewayContainerImage = "howardjohn/agentgateway:1752089495"
 )
 
 type AgentGatewayOutputs struct {
@@ -30,10 +32,13 @@ type AgentGatewayTranslator interface {
 }
 
 type agentGatewayTranslator struct {
+	scheme *runtime.Scheme
 }
 
-func NewAgentGatewayTranslator() AgentGatewayTranslator {
-	return &agentGatewayTranslator{}
+func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
+	return &agentGatewayTranslator{
+		scheme: scheme,
+	}
 }
 
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*AgentGatewayOutputs, error) {
@@ -157,7 +162,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 		}
 	}
 
-	return &appsv1.Deployment{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.Name,
 			Namespace: server.Namespace,
@@ -184,7 +189,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 				Spec: template,
 			},
 		},
-	}, nil
+	}
+
+	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
 }
 
 func convertEnvVars(env map[string]string) []corev1.EnvVar {
@@ -209,7 +216,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.M
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
 	}
-	return &corev1.Service{
+	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.Name,
 			Namespace: server.Namespace,
@@ -232,7 +239,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.M
 				"app.kubernetes.io/instance": server.Name,
 			},
 		},
-	}, nil
+	}
+
+	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
 func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
@@ -264,7 +273,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1
 		},
 	}
 
-	return configMap, nil
+	return configMap, controllerutil.SetOwnerReference(server, configMap, t.scheme)
 }
 
 func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
@@ -281,6 +290,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 		//Filters: nil,
 	}
 
+	port := server.Spec.Deployment.Port
+	if port == 0 {
+		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
+	}
+
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
 		mcpTarget.Spec.Stdio = &StdioTargetSpec{
@@ -289,18 +303,17 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 			Env:  server.Spec.Deployment.Env,
 		}
 	case v1alpha1.TransportTypeHTTP:
+		httpTransportConfig := server.Spec.HTTPTransport
+		if httpTransportConfig == nil || httpTransportConfig.TargetPort == 0 {
+			return nil, fmt.Errorf("HTTP transport requires a target port")
+		}
 		mcpTarget.Spec.SSE = &SSETargetSpec{
 			Host: "localhost",
-			Port: uint32(server.Spec.Deployment.Port),
+			Port: httpTransportConfig.TargetPort,
 			//Path TODO do we need this
 		}
 	default:
 		return nil, fmt.Errorf("unsupported transport type: %s", server.Spec.TransportType)
-	}
-
-	port := server.Spec.Deployment.Port
-	if port == 0 {
-		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
 	}
 
 	config := &LocalConfig{
