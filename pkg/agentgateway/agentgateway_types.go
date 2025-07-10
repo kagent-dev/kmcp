@@ -166,25 +166,20 @@ type QueryValueMatch struct {
 
 // RouteBackend represents a route backend
 type RouteBackend struct {
-	Weight  int           `json:"weight" yaml:"weight"`
-	Backend Backend       `json:"backend" yaml:"backend"`
-	Filters []RouteFilter `json:"filters,omitempty" yaml:"filters,omitempty"`
-}
-
-// TCPRouteBackend represents a TCP route backend
-type TCPRouteBackend struct {
-	Weight  int           `json:"weight" yaml:"weight"`
-	Backend SimpleBackend `json:"backend" yaml:"backend"`
-}
-
-// Backend represents different backend types
-type Backend struct {
+	Weight  int             `json:"weight" yaml:"weight"`
 	Service *ServiceBackend `json:"service,omitempty" yaml:"service,omitempty"`
 	Opaque  *Target         `json:"opaque,omitempty" yaml:"opaque,omitempty"`
 	Dynamic *struct{}       `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
 	MCP     *MCPBackend     `json:"mcp,omitempty" yaml:"mcp,omitempty"`
 	AI      *AIBackend      `json:"ai,omitempty" yaml:"ai,omitempty"`
 	Invalid bool            `json:"invalid,omitempty" yaml:"invalid,omitempty"`
+	Filters []RouteFilter   `json:"filters,omitempty" yaml:"filters,omitempty"`
+}
+
+// TCPRouteBackend represents a TCP route backend
+type TCPRouteBackend struct {
+	Weight  int           `json:"weight" yaml:"weight"`
+	Backend SimpleBackend `json:"backend" yaml:"backend"`
 }
 
 // SimpleBackend represents simpler backend types
@@ -218,16 +213,12 @@ type MCPBackend struct {
 // MCPTarget represents an MCP target
 type MCPTarget struct {
 	Name    string        `json:"name" yaml:"name"`
-	Spec    MCPTargetSpec `json:"spec" yaml:"spec"`
-	Filters []interface{} `json:"filters,omitempty" yaml:"filters,omitempty"` // Skipped complex type
-}
-
-// MCPTargetSpec represents MCP target specification
-type MCPTargetSpec struct {
 	SSE     *SSETargetSpec     `json:"sse,omitempty" yaml:"sse,omitempty"`
 	Stdio   *StdioTargetSpec   `json:"stdio,omitempty" yaml:"stdio,omitempty"`
 	OpenAPI *OpenAPITargetSpec `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	Filters []interface{} `json:"filters,omitempty" yaml:"filters,omitempty"` // Skipped complex type
 }
+
 
 // SSETargetSpec represents SSE target specification
 type SSETargetSpec struct {

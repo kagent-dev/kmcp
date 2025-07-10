@@ -2,9 +2,10 @@ package agentgateway
 
 import (
 	"fmt"
+	"sort"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "howardjohn/agentgateway:1752089495"
+	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
 )
 
 type AgentGatewayOutputs struct {
@@ -84,6 +85,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 					Name:      "binary",
 					MountPath: "/agentbin",
 				}},
+				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
 				Name:  "mcp-server",
@@ -103,6 +105,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 						MountPath: "/agentbin",
 					},
 				},
+				SecurityContext: getSecurityContext(),
 			}},
 			Volumes: []corev1.Volume{
 				{
@@ -139,13 +142,15 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 						Name:      "config",
 						MountPath: "/config",
 					}},
+					SecurityContext: getSecurityContext(),
 				},
 				{
-					Name:    "mcp-server",
-					Image:   image,
-					Command: []string{server.Spec.Deployment.Cmd},
-					Args:    server.Spec.Deployment.Args,
-					Env:     convertEnvVars(server.Spec.Deployment.Env),
+					Name:            "mcp-server",
+					Image:           image,
+					Command:         []string{server.Spec.Deployment.Cmd},
+					Args:            server.Spec.Deployment.Args,
+					Env:             convertEnvVars(server.Spec.Deployment.Env),
+					SecurityContext: getSecurityContext(),
 				}},
 			Volumes: []corev1.Volume{
 				{
@@ -192,6 +197,23 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 	}
 
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
+}
+
+// getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
+func getSecurityContext() *corev1.SecurityContext {
+	//return nil // todo return a default security context
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &[]bool{false}[0],
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+		RunAsNonRoot: &[]bool{true}[0],
+		RunAsUser:    &[]int64{1000}[0],
+		RunAsGroup:   &[]int64{1000}[0],
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
 }
 
 func convertEnvVars(env map[string]string) []corev1.EnvVar {
@@ -283,10 +305,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 
 	mcpTarget := MCPTarget{
 		Name: server.Name,
-		Spec: MCPTargetSpec{
-			SSE:   nil,
-			Stdio: nil,
-		},
 		//Filters: nil,
 	}
 
@@ -297,7 +315,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
-		mcpTarget.Spec.Stdio = &StdioTargetSpec{
+		mcpTarget.Stdio = &StdioTargetSpec{
 			Cmd:  server.Spec.Deployment.Cmd,
 			Args: server.Spec.Deployment.Args,
 			Env:  server.Spec.Deployment.Env,
@@ -307,7 +325,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 		if httpTransportConfig == nil || httpTransportConfig.TargetPort == 0 {
 			return nil, fmt.Errorf("HTTP transport requires a target port")
 		}
-		mcpTarget.Spec.SSE = &SSETargetSpec{
+		mcpTarget.SSE = &SSETargetSpec{
 			Host: "localhost",
 			Port: httpTransportConfig.TargetPort,
 			//Path TODO do we need this
@@ -347,11 +365,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 							//Policies: nil,
 							Backends: []RouteBackend{{
 								Weight: 100,
-								Backend: Backend{
-									MCP: &MCPBackend{
-										Name:    mcpTarget.Name,
-										Targets: []MCPTarget{mcpTarget},
-									},
+								MCP: &MCPBackend{
+									Name:    mcpTarget.Name,
+									Targets: []MCPTarget{mcpTarget},
 								},
 								//Filters: nil, TODO
 							}},

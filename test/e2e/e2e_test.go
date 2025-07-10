@@ -22,12 +22,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"kagent.dev/kmcp/test/utils"
+	"sigs.k8s.io/yaml"
 )
 
 // namespace where the project is deployed in
@@ -272,6 +277,129 @@ var _ = Describe("Manager", Ordered, func() {
 		//    strings.ToLower(<Kind>),
 		// ))
 	})
+
+	Context("MCPServer CRD", func() {
+		FIt("should create all resources for stdio transport MCPServer", func() {
+			mcpServerName := "test-stdio-server"
+
+			By("creating an MCPServer with stdio transport")
+			mcpServer := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "kagent.dev/v1alpha1",
+					"kind":       "MCPServer",
+					"metadata": map[string]interface{}{
+						"name":      mcpServerName,
+						"namespace": namespace,
+					},
+					"spec": map[string]interface{}{
+						"deployment": map[string]interface{}{
+							"image": "docker.io/mcp/everything",
+							"port":  3000,
+							"cmd":   "npx",
+							"args": []string{
+								"-y",
+								"@modelcontextprotocol/server-filesystem",
+								"/",
+							},
+						},
+						"transportType": "stdio",
+					},
+				},
+			}
+
+			cmd := exec.Command("kubectl", "apply", "-f", "-")
+			cmd.Stdin = strings.NewReader(mcpServerToYAML(mcpServer))
+			_, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create MCPServer")
+
+			By("verifying the Deployment is created with correct configuration")
+			Eventually(func(g Gomega) {
+				deployment := getDeployment(mcpServerName, namespace)
+				g.Expect(deployment).NotTo(BeNil())
+
+				// Verify deployment has correct labels
+				g.Expect(deployment.Spec.Selector.MatchLabels).To(Equal(map[string]string{
+					"app.kubernetes.io/name":     mcpServerName,
+					"app.kubernetes.io/instance": mcpServerName,
+				}))
+
+				// Verify pod template has correct labels
+				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/name", mcpServerName))
+				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/instance", mcpServerName))
+				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kmcp"))
+
+				// Verify stdio transport configuration: init container + main container
+				g.Expect(deployment.Spec.Template.Spec.InitContainers).To(HaveLen(1))
+				g.Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
+
+				// Verify init container copies agentgateway binary
+				initContainer := deployment.Spec.Template.Spec.InitContainers[0]
+				g.Expect(initContainer.Name).To(Equal("copy-binary"))
+				g.Expect(initContainer.Image).To(ContainSubstring("agentgateway"))
+				g.Expect(initContainer.Command).To(ContainElement("sh"))
+				g.Expect(initContainer.Args).To(ContainElement(ContainSubstring("cp /usr/bin/agentgateway /agentbin/agentgateway")))
+
+				// Verify main container configuration
+				mainContainer := deployment.Spec.Template.Spec.Containers[0]
+				g.Expect(mainContainer.Name).To(Equal("mcp-server"))
+				g.Expect(mainContainer.Image).To(Equal("docker.io/mcp/everything"))
+				g.Expect(mainContainer.Command).To(ContainElement("sh"))
+				g.Expect(mainContainer.Args).To(ContainElement(ContainSubstring("/agentbin/agentgateway -f /config/local.yaml")))
+
+				// Verify volumes
+				g.Expect(deployment.Spec.Template.Spec.Volumes).To(HaveLen(2))
+				volumeNames := []string{}
+				for _, volume := range deployment.Spec.Template.Spec.Volumes {
+					volumeNames = append(volumeNames, volume.Name)
+				}
+				g.Expect(volumeNames).To(ContainElements("config", "binary"))
+			}).Should(Succeed())
+
+			By("verifying the Service is created with correct configuration")
+			Eventually(func(g Gomega) {
+				service := getService(mcpServerName, namespace)
+				g.Expect(service).NotTo(BeNil())
+
+				// Verify service selector
+				g.Expect(service.Spec.Selector).To(Equal(map[string]string{
+					"app.kubernetes.io/name":     mcpServerName,
+					"app.kubernetes.io/instance": mcpServerName,
+				}))
+
+				// Verify service ports
+				g.Expect(service.Spec.Ports).To(HaveLen(1))
+				g.Expect(service.Spec.Ports[0].Name).To(Equal("http"))
+				g.Expect(service.Spec.Ports[0].Port).To(Equal(int32(3000)))
+				g.Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(3000)))
+				g.Expect(service.Spec.Ports[0].Protocol).To(Equal(corev1.ProtocolTCP))
+			}).Should(Succeed())
+
+			By("verifying the ConfigMap is created with correct configuration")
+			Eventually(func(g Gomega) {
+				configMap := getConfigMap(mcpServerName, namespace)
+				g.Expect(configMap).NotTo(BeNil())
+
+				// Verify configmap contains local.yaml
+				g.Expect(configMap.Data).To(HaveKey("local.yaml"))
+
+				// Parse and verify the configuration content
+				configYaml := configMap.Data["local.yaml"]
+				g.Expect(configYaml).To(ContainSubstring("config: {}"))
+				g.Expect(configYaml).To(ContainSubstring("port: 3000"))
+				g.Expect(configYaml).To(ContainSubstring("stdio:"))
+				g.Expect(configYaml).To(ContainSubstring("cmd: npx"))
+				g.Expect(configYaml).To(ContainSubstring("args:"))
+				g.Expect(configYaml).To(ContainSubstring("- -y"))
+				g.Expect(configYaml).To(ContainSubstring("- '@modelcontextprotocol/server-filesystem'"))
+				g.Expect(configYaml).To(ContainSubstring("- /"))
+			}).Should(Succeed())
+
+			By("cleaning up the MCPServer")
+			cmd = exec.Command("kubectl", "delete", "mcpserver", mcpServerName, "-n", namespace)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })
 
 // serviceAccountToken returns a token for the specified service account in the given namespace.
@@ -331,4 +459,55 @@ type tokenRequest struct {
 	Status struct {
 		Token string `json:"token"`
 	} `json:"status"`
+}
+
+// Helper functions for resource verification
+func getDeployment(name, namespace string) *appsv1.Deployment {
+	cmd := exec.Command("kubectl", "get", "deployment", name, "-n", namespace, "-o", "json")
+	output, err := utils.Run(cmd)
+	if err != nil {
+		return nil
+	}
+
+	var deployment appsv1.Deployment
+	if err := json.Unmarshal([]byte(output), &deployment); err != nil {
+		return nil
+	}
+	return &deployment
+}
+
+func getService(name, namespace string) *corev1.Service {
+	cmd := exec.Command("kubectl", "get", "service", name, "-n", namespace, "-o", "json")
+	output, err := utils.Run(cmd)
+	if err != nil {
+		return nil
+	}
+
+	var service corev1.Service
+	if err := json.Unmarshal([]byte(output), &service); err != nil {
+		return nil
+	}
+	return &service
+}
+
+func getConfigMap(name, namespace string) *corev1.ConfigMap {
+	cmd := exec.Command("kubectl", "get", "configmap", name, "-n", namespace, "-o", "json")
+	output, err := utils.Run(cmd)
+	if err != nil {
+		return nil
+	}
+
+	var configMap corev1.ConfigMap
+	if err := json.Unmarshal([]byte(output), &configMap); err != nil {
+		return nil
+	}
+	return &configMap
+}
+
+func mcpServerToYAML(mcpServer *unstructured.Unstructured) string {
+	yamlBytes, err := yaml.Marshal(mcpServer.Object)
+	if err != nil {
+		return ""
+	}
+	return string(yamlBytes)
 }
