@@ -92,6 +92,8 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 				Image: image,
 				Command: []string{
 					"sh",
+				},
+				Args: []string{
 					"-c",
 					"/agentbin/agentgateway -f /config/local.yaml",
 				},
@@ -128,6 +130,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 		}
 	case v1alpha1.TransportTypeHTTP:
 		// run the gateway as a sidecar when running with HTTP transport
+		var cmd []string
+		if server.Spec.Deployment.Cmd != "" {
+			cmd = []string{server.Spec.Deployment.Cmd}
+		}
 		template = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
@@ -147,7 +153,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 				{
 					Name:            "mcp-server",
 					Image:           image,
-					Command:         []string{server.Spec.Deployment.Cmd},
+					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					SecurityContext: getSecurityContext(),

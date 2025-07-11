@@ -164,10 +164,6 @@ func (r *MCPServerReconciler) validateMCPServer(server *kagentdevv1alpha1.MCPSer
 		return fmt.Errorf("deployment.image is required")
 	}
 
-	if server.Spec.Deployment.Cmd == "" {
-		return fmt.Errorf("deployment.cmd is required")
-	}
-
 	// Additional validation could be added here
 	return nil
 }
