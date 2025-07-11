@@ -154,6 +154,9 @@ type StdioTransport struct{}
 type HTTPTransport struct {
 	// target port is the HTTP port that serves the MCP server.over HTTP
 	TargetPort uint32 `json:"targetPort,omitempty"`
+
+	// the target path where MCP is served
+	TargetPath string `json:"path,omitempty"`
 }
 
 // MCPServerStatus defines the observed state of MCPServer.

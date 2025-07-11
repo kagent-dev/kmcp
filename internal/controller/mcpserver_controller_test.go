@@ -51,7 +51,15 @@ var _ = Describe("MCPServer Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: kagentdevv1alpha1.MCPServerSpec{
+						Deployment: kagentdevv1alpha1.MCPServerDeployment{
+							Image: "docker.io/mcp/everything",
+							Port:  3000,
+							Cmd:   "npx",
+							Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
+						},
+						TransportType: "stdio",
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -68,17 +76,20 @@ var _ = Describe("MCPServer Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			scheme := k8sClient.Scheme()
+			err := kagentdevv1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
 			controllerReconciler := &MCPServerReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Scheme: scheme,
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
 		})
 	})
 })

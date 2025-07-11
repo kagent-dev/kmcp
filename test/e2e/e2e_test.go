@@ -288,7 +288,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("deploy a working MCP server", func() {
 			mcpServerName := "test-mcp-client-server"
 			var portForwardCmd *exec.Cmd
-			var localPort int = 8080
+			localPort := 8080
 
 			By("creating an MCPServer for client testing")
 			mcpServer := &v1alpha1.MCPServer{
@@ -346,7 +346,7 @@ var _ = Describe("Manager", Ordered, func() {
 				if err != nil {
 					return err
 				}
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				return nil
 			}, 30*time.Second, 1*time.Second).Should(Succeed())
 
@@ -377,7 +377,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 			// Log the available tools for debugging
 			for _, tool := range toolsResponse.Tools {
-				fmt.Fprintf(GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
+				_, _ = fmt.Fprintf(GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
 			}
 
 			By("cleaning up port-forward")
@@ -480,20 +480,6 @@ func getService(name, namespace string) *corev1.Service {
 		return nil
 	}
 	return &service
-}
-
-func getConfigMap(name, namespace string) *corev1.ConfigMap {
-	cmd := exec.Command("kubectl", "get", "configmap", name, "-n", namespace, "-o", "json")
-	output, err := utils.Run(cmd)
-	if err != nil {
-		return nil
-	}
-
-	var configMap corev1.ConfigMap
-	if err := json.Unmarshal([]byte(output), &configMap); err != nil {
-		return nil
-	}
-	return &configMap
 }
 
 func mcpServerToYAML(mcpServer interface{}) string {

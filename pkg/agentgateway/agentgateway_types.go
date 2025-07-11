@@ -212,13 +212,12 @@ type MCPBackend struct {
 
 // MCPTarget represents an MCP target
 type MCPTarget struct {
-	Name    string        `json:"name" yaml:"name"`
+	Name    string             `json:"name" yaml:"name"`
 	SSE     *SSETargetSpec     `json:"sse,omitempty" yaml:"sse,omitempty"`
 	Stdio   *StdioTargetSpec   `json:"stdio,omitempty" yaml:"stdio,omitempty"`
 	OpenAPI *OpenAPITargetSpec `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Filters []interface{} `json:"filters,omitempty" yaml:"filters,omitempty"` // Skipped complex type
+	Filters []interface{}      `json:"filters,omitempty" yaml:"filters,omitempty"` // Skipped complex type
 }
-
 
 // SSETargetSpec represents SSE target specification
 type SSETargetSpec struct {

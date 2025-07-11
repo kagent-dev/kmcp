@@ -42,7 +42,9 @@ func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
 	}
 }
 
-func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*AgentGatewayOutputs, error) {
+func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
+	server *v1alpha1.MCPServer,
+) (*AgentGatewayOutputs, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
@@ -62,7 +64,9 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(server *v1alpha1.M
 	}, nil
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha1.MCPServer) (*appsv1.Deployment, error) {
+func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
+	server *v1alpha1.MCPServer,
+) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
 	if image == "" {
 		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
@@ -207,7 +211,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(server *v1alpha
 
 // getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
 func getSecurityContext() *corev1.SecurityContext {
-	//return nil // todo return a default security context
 	return &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &[]bool{false}[0],
 		Capabilities: &corev1.Capabilities{
@@ -311,7 +314,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 
 	mcpTarget := MCPTarget{
 		Name: server.Name,
-		//Filters: nil,
 	}
 
 	port := server.Spec.Deployment.Port
@@ -334,7 +336,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 		mcpTarget.SSE = &SSETargetSpec{
 			Host: "localhost",
 			Port: httpTransportConfig.TargetPort,
-			//Path TODO do we need this
+			Path: httpTransportConfig.TargetPath,
 		}
 	default:
 		return nil, fmt.Errorf("unsupported transport type: %s", server.Spec.TransportType)
@@ -347,15 +349,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 				Port: port,
 				Listeners: []LocalListener{
 					{
-						Name: "default",
-						//GatewayName: nil,
-						//Hostname:    nil,
+						Name:     "default",
 						Protocol: "HTTP",
-						//TLS:         nil,
 						Routes: []LocalRoute{{
 							RouteName: "mcp",
-							//RuleName:  "",
-							//Hostnames: nil,
 							Matches: []RouteMatch{
 								{
 									Path: PathMatch{
@@ -368,17 +365,14 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 									},
 								},
 							},
-							//Policies: nil,
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{
 									Name:    mcpTarget.Name,
 									Targets: []MCPTarget{mcpTarget},
 								},
-								//Filters: nil, TODO
 							}},
 						}},
-						//TCPRoutes:   nil,
 					},
 				},
 			},
