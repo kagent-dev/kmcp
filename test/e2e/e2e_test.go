@@ -17,20 +17,26 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kagent.dev/kmcp/api/v1alpha1"
+
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"kagent.dev/kmcp/test/utils"
 	"sigs.k8s.io/yaml"
 )
@@ -279,31 +285,29 @@ var _ = Describe("Manager", Ordered, func() {
 	})
 
 	Context("MCPServer CRD", func() {
-		FIt("should create all resources for stdio transport MCPServer", func() {
-			mcpServerName := "test-stdio-server"
+		It("deploy a working MCP server", func() {
+			mcpServerName := "test-mcp-client-server"
+			var portForwardCmd *exec.Cmd
+			var localPort int = 8080
 
-			By("creating an MCPServer with stdio transport")
-			mcpServer := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "kagent.dev/v1alpha1",
-					"kind":       "MCPServer",
-					"metadata": map[string]interface{}{
-						"name":      mcpServerName,
-						"namespace": namespace,
+			By("creating an MCPServer for client testing")
+			mcpServer := &v1alpha1.MCPServer{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "kagent.dev/v1alpha1",
+					Kind:       "MCPServer",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      mcpServerName,
+					Namespace: namespace,
+				},
+				Spec: v1alpha1.MCPServerSpec{
+					Deployment: v1alpha1.MCPServerDeployment{
+						Image: "docker.io/mcp/everything",
+						Port:  3000,
+						Cmd:   "npx",
+						Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
 					},
-					"spec": map[string]interface{}{
-						"deployment": map[string]interface{}{
-							"image": "docker.io/mcp/everything",
-							"port":  3000,
-							"cmd":   "npx",
-							"args": []string{
-								"-y",
-								"@modelcontextprotocol/server-filesystem",
-								"/",
-							},
-						},
-						"transportType": "stdio",
-					},
+					TransportType: "stdio",
 				},
 			}
 
@@ -312,87 +316,75 @@ var _ = Describe("Manager", Ordered, func() {
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to create MCPServer")
 
-			By("verifying the Deployment is created with correct configuration")
+			By("waiting for the deployment to be ready")
 			Eventually(func(g Gomega) {
 				deployment := getDeployment(mcpServerName, namespace)
 				g.Expect(deployment).NotTo(BeNil())
+				g.Expect(deployment.Status.ReadyReplicas).To(Equal(int32(1)))
+			}, 3*time.Minute).Should(Succeed())
 
-				// Verify deployment has correct labels
-				g.Expect(deployment.Spec.Selector.MatchLabels).To(Equal(map[string]string{
-					"app.kubernetes.io/name":     mcpServerName,
-					"app.kubernetes.io/instance": mcpServerName,
-				}))
-
-				// Verify pod template has correct labels
-				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/name", mcpServerName))
-				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/instance", mcpServerName))
-				g.Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kmcp"))
-
-				// Verify stdio transport configuration: init container + main container
-				g.Expect(deployment.Spec.Template.Spec.InitContainers).To(HaveLen(1))
-				g.Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
-
-				// Verify init container copies agentgateway binary
-				initContainer := deployment.Spec.Template.Spec.InitContainers[0]
-				g.Expect(initContainer.Name).To(Equal("copy-binary"))
-				g.Expect(initContainer.Image).To(ContainSubstring("agentgateway"))
-				g.Expect(initContainer.Command).To(ContainElement("sh"))
-				g.Expect(initContainer.Args).To(ContainElement(ContainSubstring("cp /usr/bin/agentgateway /agentbin/agentgateway")))
-
-				// Verify main container configuration
-				mainContainer := deployment.Spec.Template.Spec.Containers[0]
-				g.Expect(mainContainer.Name).To(Equal("mcp-server"))
-				g.Expect(mainContainer.Image).To(Equal("docker.io/mcp/everything"))
-				g.Expect(mainContainer.Command).To(ContainElement("sh"))
-				g.Expect(mainContainer.Args).To(ContainElement(ContainSubstring("/agentbin/agentgateway -f /config/local.yaml")))
-
-				// Verify volumes
-				g.Expect(deployment.Spec.Template.Spec.Volumes).To(HaveLen(2))
-				volumeNames := []string{}
-				for _, volume := range deployment.Spec.Template.Spec.Volumes {
-					volumeNames = append(volumeNames, volume.Name)
-				}
-				g.Expect(volumeNames).To(ContainElements("config", "binary"))
-			}).Should(Succeed())
-
-			By("verifying the Service is created with correct configuration")
+			By("waiting for the service to be ready")
 			Eventually(func(g Gomega) {
 				service := getService(mcpServerName, namespace)
 				g.Expect(service).NotTo(BeNil())
-
-				// Verify service selector
-				g.Expect(service.Spec.Selector).To(Equal(map[string]string{
-					"app.kubernetes.io/name":     mcpServerName,
-					"app.kubernetes.io/instance": mcpServerName,
-				}))
-
-				// Verify service ports
 				g.Expect(service.Spec.Ports).To(HaveLen(1))
-				g.Expect(service.Spec.Ports[0].Name).To(Equal("http"))
 				g.Expect(service.Spec.Ports[0].Port).To(Equal(int32(3000)))
-				g.Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(3000)))
-				g.Expect(service.Spec.Ports[0].Protocol).To(Equal(corev1.ProtocolTCP))
 			}).Should(Succeed())
 
-			By("verifying the ConfigMap is created with correct configuration")
-			Eventually(func(g Gomega) {
-				configMap := getConfigMap(mcpServerName, namespace)
-				g.Expect(configMap).NotTo(BeNil())
+			By("setting up kubectl port-forward to access the MCP server")
+			portForwardCmd = exec.Command("kubectl", "port-forward",
+				fmt.Sprintf("service/%s", mcpServerName),
+				fmt.Sprintf("%d:3000", localPort),
+				"-n", namespace)
 
-				// Verify configmap contains local.yaml
-				g.Expect(configMap.Data).To(HaveKey("local.yaml"))
+			err = portForwardCmd.Start()
+			Expect(err).NotTo(HaveOccurred(), "Failed to start port-forward")
 
-				// Parse and verify the configuration content
-				configYaml := configMap.Data["local.yaml"]
-				g.Expect(configYaml).To(ContainSubstring("config: {}"))
-				g.Expect(configYaml).To(ContainSubstring("port: 3000"))
-				g.Expect(configYaml).To(ContainSubstring("stdio:"))
-				g.Expect(configYaml).To(ContainSubstring("cmd: npx"))
-				g.Expect(configYaml).To(ContainSubstring("args:"))
-				g.Expect(configYaml).To(ContainSubstring("- -y"))
-				g.Expect(configYaml).To(ContainSubstring("- '@modelcontextprotocol/server-filesystem'"))
-				g.Expect(configYaml).To(ContainSubstring("- /"))
-			}).Should(Succeed())
+			// Wait for port-forward to be ready
+			Eventually(func() error {
+				resp, err := http.Get(fmt.Sprintf("http://localhost:%d", localPort))
+				if err != nil {
+					return err
+				}
+				resp.Body.Close()
+				return nil
+			}, 30*time.Second, 1*time.Second).Should(Succeed())
+
+			By("creating MCP client and testing connection")
+			mcpClient, err := client.NewStreamableHttpClient(fmt.Sprintf("http://localhost:%d/mcp", localPort))
+			Expect(err).NotTo(HaveOccurred(), "Failed to create MCP client")
+
+			ctx := context.Background()
+
+			By("initializing the MCP client")
+			initResponse, err := mcpClient.Initialize(ctx, mcp.InitializeRequest{
+				Params: mcp.InitializeParams{
+					ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+					ClientInfo: mcp.Implementation{
+						Name:    "kmcp-e2e-test",
+						Version: "1.0.0",
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), "Failed to initialize MCP client")
+			Expect(initResponse).NotTo(BeNil())
+
+			By("listing available tools from the MCP server")
+			toolsResponse, err := mcpClient.ListTools(ctx, mcp.ListToolsRequest{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to list tools")
+			Expect(toolsResponse).NotTo(BeNil())
+			Expect(toolsResponse.Tools).NotTo(BeEmpty(), "Expected at least one tool to be available")
+
+			// Log the available tools for debugging
+			for _, tool := range toolsResponse.Tools {
+				fmt.Fprintf(GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
+			}
+
+			By("cleaning up port-forward")
+			if portForwardCmd != nil && portForwardCmd.Process != nil {
+				err = portForwardCmd.Process.Kill()
+				Expect(err).NotTo(HaveOccurred(), "Failed to kill port-forward process")
+			}
 
 			By("cleaning up the MCPServer")
 			cmd = exec.Command("kubectl", "delete", "mcpserver", mcpServerName, "-n", namespace)
@@ -504,8 +496,8 @@ func getConfigMap(name, namespace string) *corev1.ConfigMap {
 	return &configMap
 }
 
-func mcpServerToYAML(mcpServer *unstructured.Unstructured) string {
-	yamlBytes, err := yaml.Marshal(mcpServer.Object)
+func mcpServerToYAML(mcpServer interface{}) string {
+	yamlBytes, err := yaml.Marshal(mcpServer)
 	if err != nil {
 		return ""
 	}
