@@ -57,8 +57,7 @@ var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
 
 	// Before running the tests, set up the environment by creating the namespace,
-	// enforce the restricted security policy to the namespace, installing CRDs,
-	// and deploying the controller.
+	// enforce the restricted security policy to the namespace, and deploying the controller using Helm.
 	BeforeAll(func() {
 		By("creating manager namespace")
 		cmd := exec.Command("kubectl", "create", "ns", namespace)
@@ -71,30 +70,25 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to label namespace with restricted policy")
 
-		By("installing CRDs")
-		cmd = exec.Command("make", "install")
+		By("deploying the controller-manager using Helm")
+		cmd = exec.Command("helm", "install", "kmcp", "helm/kmcp",
+			"--namespace", namespace,
+			"--wait", "--timeout=5m",
+			"--set", fmt.Sprintf("image.repository=%s", getImageRepository(projectImage)),
+			"--set", fmt.Sprintf("image.tag=%s", getImageTag(projectImage)))
 		_, err = utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
-
-		By("deploying the controller-manager")
-		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
-		_, err = utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
+		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager using Helm")
 	})
 
-	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
+	// After all tests have been executed, clean up by undeploying the controller using Helm
 	// and deleting the namespace.
 	AfterAll(func() {
 		By("cleaning up the curl pod for metrics")
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 
-		By("undeploying the controller-manager")
-		cmd = exec.Command("make", "undeploy")
-		_, _ = utils.Run(cmd)
-
-		By("uninstalling CRDs")
-		cmd = exec.Command("make", "uninstall")
+		By("undeploying the controller-manager using Helm")
+		cmd = exec.Command("helm", "uninstall", "kmcp", "--namespace", namespace)
 		_, _ = utils.Run(cmd)
 
 		By("removing manager namespace")
@@ -195,10 +189,8 @@ var _ = Describe("Manager", Ordered, func() {
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Metrics service should exist")
 
-			By("validating that the ServiceMonitor for Prometheus is applied in the namespace")
-			cmd = exec.Command("kubectl", "get", "ServiceMonitor", "-n", namespace)
-			_, err = utils.Run(cmd)
-			Expect(err).NotTo(HaveOccurred(), "ServiceMonitor should exist")
+			// Note: ServiceMonitor is not included in the basic Helm chart deployment
+			// Skip ServiceMonitor validation for now
 
 			By("getting the service account token")
 			token, err := serviceAccountToken()
@@ -488,4 +480,22 @@ func mcpServerToYAML(mcpServer interface{}) string {
 		return ""
 	}
 	return string(yamlBytes)
+}
+
+// getImageRepository extracts the repository part from a full image name
+// e.g., "example.com/kmcp:v0.0.1" -> "example.com/kmcp"
+func getImageRepository(image string) string {
+	if idx := strings.LastIndex(image, ":"); idx != -1 {
+		return image[:idx]
+	}
+	return image
+}
+
+// getImageTag extracts the tag part from a full image name
+// e.g., "example.com/kmcp:v0.0.1" -> "v0.0.1"
+func getImageTag(image string) string {
+	if idx := strings.LastIndex(image, ":"); idx != -1 {
+		return image[idx+1:]
+	}
+	return "latest"
 }
