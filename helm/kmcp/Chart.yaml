@@ -1,0 +1,19 @@
+apiVersion: v2
+name: kmcp
+description: A Helm chart for KMCP (Kubernetes MCP Server Controller)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/kagent-dev/kmcp
+sources:
+  - https://github.com/kagent-dev/kmcp
+maintainers:
+  - name: kmcp-maintainers
+    email: maintainers@kagent.dev
+keywords:
+  - mcp
+  - kubernetes
+  - controller
+  - server
+annotations:
+  category: Infrastructure 
