@@ -1,0 +1,60 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kmcp.fullname" . }}-manager-role
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kagent.dev
+  resources:
+  - mcpservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kagent.dev
+  resources:
+  - mcpservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kagent.dev
+  resources:
+  - mcpservers/status
+  verbs:
+  - get
+  - patch
+  - update
+{{- end }} 
