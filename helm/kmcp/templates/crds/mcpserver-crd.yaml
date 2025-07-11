@@ -74,6 +74,9 @@ spec:
                 description: HTTPTransport defines the configuration for a Streamable
                   HTTP transport.
                 properties:
+                  path:
+                    description: the target path where MCP is served
+                    type: string
                   targetPort:
                     description: target port is the HTTP port that serves the MCP
                       server.over HTTP
@@ -181,4 +184,4 @@ spec:
     storage: true
     subresources:
       status: {}
-{{- end }} 
+{{- end }}

@@ -45,6 +45,29 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+.PHONY: helm-crd
+helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
+	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
+	@mkdir -p helm/kmcp/templates/crds
+	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@awk '/^  name: mcpservers.kagent.dev$$/ { \
+		print; \
+		print "  labels:"; \
+		print "    {{- include \"kmcp.labels\" . | nindent 4 }}"; \
+		next; \
+	} \
+	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@echo '{{- end }}' >> helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@echo "Helm CRD template generated at helm/kmcp/templates/crds/mcpserver-crd.yaml"
+
+.PHONY: helm-templates
+helm-templates: helm-crd ## Generate all Helm templates from source definitions.
+	@echo "All Helm templates updated successfully"
+
+.PHONY: manifests-all
+manifests-all: manifests helm-templates ## Generate both Kustomize and Helm manifests from source definitions.
+	@echo "All manifests (Kustomize and Helm) updated successfully"
+
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
