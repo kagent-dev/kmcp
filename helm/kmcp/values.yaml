@@ -1,0 +1,108 @@
+# Default values for kmcp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Image configuration
+image:
+  repository: controller
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# Image pull secrets for private registries
+imagePullSecrets: []
+
+# Override the name of the chart
+nameOverride: ""
+
+# Override the full name of the chart
+fullnameOverride: ""
+
+# Target namespace for installation
+# If not specified, defaults to the release namespace
+namespace: ""
+
+# Controller configuration
+controller:
+  # Number of replicas
+  replicaCount: 1
+  
+  # Leader election settings
+  leaderElection:
+    enabled: true
+  
+  # Health probe configuration
+  healthProbe:
+    bindAddress: ":8081"
+    livenessProbe:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  
+  # Metrics configuration
+  metrics:
+    enabled: true
+    bindAddress: ":8443"
+    secureServing: true
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - "ALL"
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Service account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# RBAC configuration
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+# Service configuration for metrics
+service:
+  type: ClusterIP
+  port: 8443
+  targetPort: 8443
+
+# Custom Resource Definition configuration
+crd:
+  # Specifies whether CRDs should be created
+  create: true 
