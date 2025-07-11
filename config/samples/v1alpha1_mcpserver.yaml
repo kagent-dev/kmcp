@@ -1,0 +1,9 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  labels:
+    app.kubernetes.io/name: kmcp
+    app.kubernetes.io/managed-by: kustomize
+  name: mcpserver-sample
+spec:
+  # TODO(user): Add fields here
