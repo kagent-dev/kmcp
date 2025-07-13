@@ -1,56 +1,183 @@
-# KMCP - Kubernetes Model Context Protocol Controller
+# KMCP - Model Context Protocol Development & Deployment Platform
 
-KMCP is a Kubernetes controller that enables declarative management of Model Context Protocol (MCP) servers in Kubernetes clusters. It provides a cloud-native way to deploy, configure, and manage MCP servers that can be used by AI applications and agents to access external data sources and tools.
+KMCP is a comprehensive platform for developing and deploying Model Context Protocol (MCP) servers. It provides both a powerful CLI tool for local development and a Kubernetes controller for cloud-native deployment.
 
-## What is the Model Context Protocol (MCP)?
+## Table of Contents
 
-The Model Context Protocol (MCP) is an open standard developed by Anthropic that standardizes how AI applications provide context to Large Language Models (LLMs). Think of MCP as a universal adapter that allows AI models to seamlessly connect to various data sources and external tools without requiring custom integrations for each connection.
+- [What is MCP?](#what-is-mcp)
+- [Quick Start](#quick-start)
+- [CLI Tool](#cli-tool)
+  - [Installation](#installation)
+  - [Commands](#commands)
+  - [Examples](#examples)
+- [Kubernetes Controller](#kubernetes-controller)
+- [Supported Frameworks](#supported-frameworks)
+- [Contributing](#contributing)
+- [License](#license)
+- [Resources](#resources)
 
-### Key Benefits of MCP:
+## What is MCP?
 
-- **Standardized Data Access**: Provides AI models with a consistent way to access external data
-- **Tool Integration**: Connects AI assistants to business tools and internal systems  
-- **Structured Responses**: Ensures consistent, structured outputs from AI models
-- **Improved Context**: Gives AI models the context they need for better responses
+The Model Context Protocol (MCP) is an open standard developed by Anthropic that standardizes how AI applications provide context to Large Language Models (LLMs). Think of MCP as a universal adapter that allows AI models to seamlessly connect to various data sources and external tools.
+
+### Key Benefits:
+
+- **Standardized Data Access**: Consistent way for AI models to access external data
+- **Tool Integration**: Connect AI assistants to business tools and internal systems  
+- **Structured Responses**: Ensure consistent, structured outputs from AI models
+- **Improved Context**: Give AI models the context they need for better responses
 - **Vendor Independence**: Open standard that works across different AI providers
 
 ### MCP Architecture:
 
-MCP follows a client-server architecture where:
-- **MCP Clients**: AI applications (like Claude Desktop, Cursor, etc.) that consume MCP services
-- **MCP Servers**: Lightweight programs that expose specific capabilities through standardized interfaces
-- **Transport Protocols**: Communication methods including stdio (standard input/output) and HTTP with Server-Sent Events (SSE)
+- **MCP Clients**: AI applications (Claude Desktop, Cursor, etc.) that consume MCP services
+- **MCP Servers**: Lightweight programs that expose capabilities through standardized interfaces
+- **Transport Protocols**: Communication via stdio (standard input/output) and HTTP with SSE
 
-## What Does KMCP Do?
+## Quick Start
 
-KMCP brings MCP to Kubernetes by providing:
+Get started with KMCP in under 5 minutes:
 
-### 1. **Declarative MCP Server Management**
-- Deploy MCP servers using Kubernetes Custom Resources
-- Manage server lifecycle through standard Kubernetes operations
-- Support for both stdio and HTTP transport protocols
+```bash
+# Install the CLI
+go install github.com/kagent-dev/kmcp/cmd/kmcp@latest
 
-### 2. **Container-based MCP Servers**
-- Run MCP servers as containerized workloads
-- Leverage Kubernetes' scheduling, scaling, and reliability features
-- Support for custom container images and configurations
+# Create a new MCP server project
+kmcp init my-mcp-server
 
-### 3. **Service Discovery and Networking**
-- Automatic Service creation for HTTP-based MCP servers
-- Kubernetes-native networking and load balancing
-- Secure communication within the cluster
+# Build and test your server
+cd my-mcp-server
+kmcp build --docker --tag my-mcp-server:latest
 
-### 4. **Configuration Management**
-- ConfigMap-based configuration for MCP servers
-- Environment variable injection
-- Support for complex MCP server configurations
+# Your MCP server is ready to use!
+```
 
-## Architecture
+## CLI Tool
 
-KMCP consists of several key components:
+The KMCP CLI provides a complete development experience for MCP servers with project scaffolding, build automation, and deployment tools.
+
+### Installation
+
+#### Option 1: Go Install (Recommended)
+```bash
+go install github.com/kagent-dev/kmcp/cmd/kmcp@latest
+```
+
+#### Option 2: Build from Source
+```bash
+git clone https://github.com/kagent-dev/kmcp.git
+cd kmcp
+make build-cli
+```
+
+#### Option 3: Download Binary
+Download the latest binary from the [releases page](https://github.com/kagent-dev/kmcp/releases).
+
+### Commands
+
+#### `kmcp init` - Initialize New Projects
+
+Create a new MCP server project with interactive prompts:
+
+```bash
+kmcp init [project-name] [flags]
+```
+
+**Flags:**
+- `--framework` - Choose framework (fastmcp-python, fastmcp-ts, easymcp-ts, official-python, official-ts)
+- `--template` - Select template (basic, database, filesystem, api-client, multi-tool)
+- `--author` - Set project author
+- `--email` - Set author email
+- `--force` - Overwrite existing directory
+- `--no-git` - Skip git initialization
+- `--non-interactive` - Use defaults without prompts
+- `--verbose` - Show detailed output
+
+#### `kmcp build` - Build MCP Servers
+
+Build your MCP server with Docker support:
+
+```bash
+kmcp build [flags]
+```
+
+**Flags:**
+- `--docker` - Build Docker image
+- `--tag` - Docker image tag (default: "latest")
+- `--output` - Output name (default: current directory name)
+- `--platform` - Target platform (e.g., linux/amd64)
+- `--verbose` - Show detailed build output
+
+### Examples
+
+#### Create a FastMCP Python Project
+
+```bash
+# Interactive creation
+kmcp init my-python-server
+
+# Non-interactive with specific options
+kmcp init my-python-server \
+  --framework fastmcp-python \
+  --template database \
+  --author "John Doe" \
+  --email "john@example.com" \
+  --non-interactive
+```
+
+#### Create a TypeScript Project
+
+```bash
+# FastMCP TypeScript with filesystem template
+kmcp init my-ts-server \
+  --framework fastmcp-ts \
+  --template filesystem
+
+# EasyMCP TypeScript for simple projects
+kmcp init simple-server \
+  --framework easymcp-ts \
+  --template basic
+```
+
+#### Build and Deploy
+
+```bash
+# Build Docker image
+kmcp build --docker --tag my-server:v1.0.0
+
+# Build for specific platform
+kmcp build --docker --platform linux/amd64 --tag my-server:latest
+
+# Build with verbose output
+kmcp build --docker --verbose --tag my-server:dev
+```
+
+## Kubernetes Controller
+
+KMCP also includes a Kubernetes controller for cloud-native MCP server deployment.
+
+### Controller Features
+
+- **Declarative Management**: Deploy MCP servers using Kubernetes Custom Resources
+- **Container-based Servers**: Run MCP servers as containerized workloads
+- **Service Discovery**: Automatic Service creation for HTTP-based MCP servers
+- **Configuration Management**: ConfigMap-based configuration with environment variables
+
+### Controller Installation
+
+```bash
+# Install CRDs
+kubectl apply -f https://raw.githubusercontent.com/kagent-dev/kmcp/main/config/crd/bases/kagent.dev_mcpservers.yaml
+
+# Deploy controller
+kubectl apply -f https://raw.githubusercontent.com/kagent-dev/kmcp/main/config/default/
+
+# Or use Helm
+helm repo add kmcp https://charts.kagent.dev
+helm install kmcp kmcp/kmcp --namespace kmcp-system --create-namespace
+```
 
 ### MCPServer Custom Resource
-The `MCPServer` CRD defines the desired state of an MCP server deployment:
 
 ```yaml
 apiVersion: kagent.dev/v1alpha1
@@ -58,158 +185,64 @@ kind: MCPServer
 metadata:
   name: my-mcp-server
 spec:
-  # Container configuration
   deployment:
     image: "my-mcp-server:latest"
     port: 3000
-    cmd: "npx"
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/"]
-    env:
-      MY_CONFIG: "value"
-  
-  # Transport type: stdio or http
-  transportType: "stdio"
-  
-  # HTTP-specific configuration (when using HTTP transport)
-  httpTransport:
-    targetPort: 3000
-    path: "/mcp"
-```
-
-### Controller Components
-
-1. **MCPServer Controller**: Reconciles MCPServer resources and manages their lifecycle
-2. **AgentGateway Translator**: Converts MCPServer specs into Kubernetes resources
-3. **Status Management**: Tracks deployment status with comprehensive condition reporting
-
-### Generated Kubernetes Resources
-
-For each MCPServer, KMCP creates:
-- **Deployment**: Runs the MCP server container(s)
-- **Service**: Exposes HTTP-based MCP servers (when applicable)
-- **ConfigMap**: Stores MCP server configuration
-- **AgentGateway**: Provides protocol translation and routing
-
-## Supported Transport Types
-
-### 1. Stdio Transport
-- Uses standard input/output for communication
-- Ideal for local development and simple integrations
-- MCP server runs as a subprocess
-
-### 2. HTTP Transport  
-- Uses HTTP with Server-Sent Events (SSE)
-- Suitable for remote access and web-based integrations
-- Enables load balancing and high availability
-
-## Use Cases
-
-### Enterprise AI Integration
-- Deploy MCP servers that connect to internal databases, APIs, and services
-- Provide AI agents with secure access to company data
-- Enable context-aware AI applications in enterprise environments
-
-### Development Tools
-- Run MCP servers for code repositories, documentation, and development tools
-- Integrate with IDEs and AI coding assistants
-- Provide contextual information for software development
-
-### Data Processing Pipelines
-- Deploy MCP servers that access data lakes, warehouses, and streaming platforms
-- Enable AI models to process and analyze real-time data
-- Support complex data transformation workflows
-
-## Status Conditions
-
-KMCP provides comprehensive status reporting through standard Kubernetes conditions:
-
-- **Accepted**: MCPServer configuration is valid
-- **ResolvedRefs**: All references (images, etc.) are resolved
-- **Programmed**: Kubernetes resources are created successfully  
-- **Ready**: MCP server is running and ready to accept connections
-
-## Getting Started
-
-### Prerequisites
-- Kubernetes cluster v1.11.3+
-- kubectl configured to access your cluster
-- Container runtime (Docker, containerd, etc.)
-
-### Installation
-
-1. **Install the CRDs**:
-```bash
-kubectl apply -f https://raw.githubusercontent.com/kagent-dev/kmcp/main/config/crd/bases/kagent.dev_mcpservers.yaml
-```
-
-2. **Deploy the Controller**:
-```bash
-kubectl apply -f https://raw.githubusercontent.com/kagent-dev/kmcp/main/config/default/
-```
-
-3. **Create an MCPServer**:
-```bash
-kubectl apply -f config/samples/v1alpha1_mcpserver.yaml
-```
-
-### Using Helm
-
-KMCP also provides a Helm chart for easy installation:
-
-```bash
-helm repo add kmcp https://charts.kagent.dev
-helm install kmcp kmcp/kmcp --namespace kmcp-system --create-namespace
-```
-
-## Examples
-
-### Filesystem MCP Server
-```yaml
-apiVersion: kagent.dev/v1alpha1
-kind: MCPServer
-metadata:
-  name: filesystem-server
-spec:
-  deployment:
-    image: "docker.io/mcp/everything"
-    port: 3000
-    cmd: "npx"
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
+    cmd: "python"
+    args: ["-m", "my_mcp_server"]
   transportType: "stdio"
 ```
 
-### Database MCP Server
-```yaml
-apiVersion: kagent.dev/v1alpha1
-kind: MCPServer
-metadata:
-  name: postgres-server
-spec:
-  deployment:
-    image: "my-postgres-mcp:latest"
-    port: 8080
-    env:
-      DATABASE_URL: "postgresql://user:pass@db:5432/mydb"
-  transportType: "http"
-  httpTransport:
-    targetPort: 8080
-    path: "/mcp"
+## Supported Frameworks
+
+KMCP supports the most popular MCP frameworks:
+
+### FastMCP Python ⭐ (Recommended)
+- **Best for**: Production Python applications
+- **Features**: Comprehensive toolkit, official SDK integration
+- **Use cases**: Database integration, API clients, complex workflows
+
+### FastMCP TypeScript
+- **Best for**: Node.js developers, web integration
+- **Features**: Modern TypeScript, OAuth 2.0, server-sent events
+- **Use cases**: REST APIs, web services, real-time applications
+
+### EasyMCP TypeScript
+- **Best for**: Simple projects, learning MCP
+- **Features**: Minimal setup, Express-like API
+- **Use cases**: Prototypes, simple tools, getting started
+
+### Official SDKs
+- **Best for**: Custom architectures, maximum control
+- **Features**: Full protocol access, advanced configurations
+- **Use cases**: Enterprise integrations, specialized requirements
+
+## Project Structure
+
+Generated projects follow MCP best practices:
+
+```
+my-mcp-server/
+├── src/
+│   ├── tools/          # Tool implementations
+│   ├── resources/      # Resource handlers
+│   ├── prompts/        # Prompt templates
+│   └── main.py         # Server entry point
+├── tests/              # Test suite
+├── Dockerfile          # Container definition
+├── pyproject.toml      # Python dependencies
+├── .env.example        # Environment variables
+└── README.md           # Project documentation
 ```
 
 ## Development
 
 ### Building from Source
 
-1. **Clone the repository**:
 ```bash
 git clone https://github.com/kagent-dev/kmcp.git
 cd kmcp
-```
-
-2. **Build and deploy**:
-```bash
-make docker-build docker-push IMG=<your-registry>/kmcp:tag
-make deploy IMG=<your-registry>/kmcp:tag
+make build-cli
 ```
 
 ### Running Tests
@@ -219,9 +252,87 @@ make test
 make test-e2e
 ```
 
+### Development Mode
+
+```bash
+# Run CLI in development mode
+go run cmd/kmcp/main.go init test-project --verbose
+
+# Build and test
+make build-cli
+./bin/kmcp build --help
+```
+
+## TODO - Initial Phase Completion
+
+The following tasks remain to complete the initial phase of KMCP:
+
+### CLI Tool Enhancements
+- [ ] **Add `dev` command** - Local development server with hot reload
+- [ ] **Add `validate` command** - Protocol compliance checking
+- [ ] **Add `test` command** - Run MCP server tests with inspector
+- [ ] **Add `list` command** - List available frameworks and templates
+- [ ] **Add `migrate` command** - Upgrade projects between framework versions
+
+### Template System Improvements
+- [ ] **EasyMCP TypeScript templates** - Add missing template variations
+- [ ] **Official SDK templates** - Basic templates for official Python/TypeScript SDKs
+- [ ] **Multi-tool template** - Advanced template with multiple tools/resources
+- [ ] **API client template** - Template for REST/GraphQL API integration
+- [ ] **Template validation** - Ensure all templates build and run correctly
+
+### Build System Enhancements
+- [ ] **Multi-platform builds** - Support ARM64 and x86_64 architectures
+- [ ] **Build optimization** - Improve Docker build caching and layer optimization
+- [ ] **Security scanning** - Integrate vulnerability scanning in build process
+- [ ] **Build profiles** - Development vs production build configurations
+
+### Testing & Validation
+- [ ] **Integration tests** - End-to-end testing of generated projects
+- [ ] **Framework compliance** - Validate generated servers work with MCP clients
+- [ ] **Template testing** - Automated testing of all templates
+- [ ] **CLI testing** - Comprehensive test suite for CLI commands
+
+### Documentation & Examples
+- [ ] **Framework comparison guide** - Help users choose the right framework
+- [ ] **Advanced usage examples** - Complex MCP server implementations
+- [ ] **Troubleshooting guide** - Common issues and solutions
+- [ ] **Video tutorials** - Getting started and advanced workflows
+
+### Distribution & Packaging
+- [ ] **GitHub releases** - Automated binary releases for all platforms
+- [ ] **Homebrew formula** - Easy installation on macOS
+- [ ] **Docker image** - Containerized CLI tool
+- [ ] **Package managers** - Consider APT, YUM, Chocolatey support
+
+### IDE & Editor Integration
+- [ ] **VS Code extension** - Project templates and debugging support
+- [ ] **Cursor integration** - Enhanced MCP development experience
+- [ ] **Language server** - MCP protocol awareness in editors
+
+### Performance & Reliability
+- [ ] **Error handling** - Comprehensive error messages and recovery
+- [ ] **Progress indicators** - Better UX for long-running operations
+- [ ] **Configuration caching** - Speed up repeated operations
+- [ ] **Interrupt handling** - Graceful handling of Ctrl+C
+
+### Community & Ecosystem
+- [ ] **Contributing guide** - Detailed guide for contributors
+- [ ] **Issue templates** - Structured bug reports and feature requests
+- [ ] **Community templates** - Accept and maintain community-contributed templates
+- [ ] **Plugin system** - Allow third-party framework extensions
+
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
 
 ## License
 
@@ -244,4 +355,7 @@ limitations under the License.
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [MCP Documentation](https://modelcontextprotocol.io/)
 - [Anthropic's MCP Announcement](https://www.anthropic.com/news/model-context-protocol)
-- [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+- [FastMCP Python Documentation](https://github.com/jlowin/fastmcp)
+- [FastMCP TypeScript Documentation](https://github.com/sammcj/fastmcp-typescript)
+- [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+- [Official MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
