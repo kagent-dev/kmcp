@@ -64,6 +64,7 @@ func (b *Builder) Build(opts Options) error {
 func (b *Builder) detectProjectType(dir string) (string, error) {
 	// Check for Python project
 	if b.fileExists(filepath.Join(dir, "pyproject.toml")) ||
+		b.fileExists(filepath.Join(dir, ".python-version")) ||
 		b.fileExists(filepath.Join(dir, "requirements.txt")) ||
 		b.fileExists(filepath.Join(dir, "setup.py")) {
 		return "python", nil
