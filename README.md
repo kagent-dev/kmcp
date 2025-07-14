@@ -275,6 +275,13 @@ The following tasks remain to complete the initial phase of KMCP:
 - [ ] **Add `migrate` command** - Upgrade projects between framework versions
 
 ### Template System Improvements
+- [ ] **🚀 MAJOR: Template System Refactoring** - See [TEMPLATE_REFACTOR.md](TEMPLATE_REFACTOR.md) for comprehensive plan
+  - [ ] Opinionated modular architecture with plugin-based tools
+  - [ ] Project manifest system (`kmcp.yaml`)
+  - [ ] Auto-generated boilerplate separation
+  - [ ] CLI tool management commands (`add-tool`, `remove-tool`, etc.)
+  - [ ] **Kubernetes-native secret management** - Built-in secret handling and sanitization
+  - [ ] **Multi-environment support** - Local development to production workflows
 - [ ] **EasyMCP TypeScript templates** - Add missing template variations
 - [ ] **Official SDK templates** - Basic templates for official Python/TypeScript SDKs
 - [ ] **Multi-tool template** - Advanced template with multiple tools/resources
