@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"kagent.dev/kmcp/pkg/manifest"
 	"kagent.dev/kmcp/pkg/templates"
 )
 
@@ -117,6 +118,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Project directory: %s\n", projectPath)
 	}
 
+	// Create project directory first
+	if err := os.MkdirAll(projectPath, 0755); err != nil {
+		return fmt.Errorf("failed to create project directory: %w", err)
+	}
+
+	// Create project manifest
+	if err := createProjectManifest(projectPath, projectName, framework, template, author, email); err != nil {
+		return fmt.Errorf("failed to create project manifest: %w", err)
+	}
+
 	// Create project configuration
 	config := templates.ProjectConfig{
 		Name:      projectName,
@@ -137,13 +148,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Success message
 	fmt.Printf("\n✓ Successfully created MCP server project: %s\n", projectName)
+	fmt.Printf("✓ Generated project manifest: kmcp.yaml\n")
 	fmt.Printf("\nNext steps:\n")
 	fmt.Printf("  cd %s\n", projectName)
 
 	switch framework {
 	case "fastmcp-python", "official-python":
-		fmt.Printf("  pip install -e .\n")
-		fmt.Printf("  kmcp build\n")
+		fmt.Printf("  uv sync\n")
+		fmt.Printf("  uv run python -m src.main\n")
 	case "fastmcp-ts", "easymcp-ts", "official-ts":
 		fmt.Printf("  npm install\n")
 		fmt.Printf("  kmcp build\n")
@@ -151,6 +163,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\nTo build a Docker image:\n")
 	fmt.Printf("  kmcp build --docker\n")
+
+	fmt.Printf("\nTo manage secrets:\n")
+	fmt.Printf("  kmcp secrets add-secret API_KEY --environment local\n")
+	fmt.Printf("  kmcp secrets generate-k8s-secrets --environment staging\n")
 
 	return nil
 }
@@ -255,4 +271,208 @@ func promptForEmail() (string, error) {
 	var email string
 	fmt.Scanln(&email)
 	return strings.TrimSpace(email), nil
+}
+
+// createProjectManifest creates the kmcp.yaml manifest file
+func createProjectManifest(projectPath, projectName, framework, template, author, email string) error {
+	// Set default author if empty
+	if author == "" {
+		author = "KMCP CLI"
+	}
+	if email == "" {
+		email = "noreply@kagent.dev"
+	}
+
+	// Create manifest with template-specific tools
+	projectManifest := &manifest.ProjectManifest{
+		Name:        projectName,
+		Framework:   framework,
+		Version:     "0.1.0",
+		Description: fmt.Sprintf("%s MCP server built with %s", projectName, framework),
+		Author:      author,
+		Email:       email,
+		Tools:       getTemplateTools(template),
+		Resources:   make(map[string]manifest.ResourceConfig),
+		Secrets: manifest.SecretsConfig{
+			Local: manifest.SecretProviderConfig{
+				Provider: manifest.SecretProviderEnv,
+				Config: map[string]interface{}{
+					"file": ".env.local",
+				},
+			},
+			Staging: manifest.SecretProviderConfig{
+				Provider: manifest.SecretProviderKubernetes,
+				Config: map[string]interface{}{
+					"namespace": "default",
+					"secretName": fmt.Sprintf("%s-secrets-staging", strings.ReplaceAll(projectName, "_", "-")),
+				},
+			},
+			Production: manifest.SecretProviderConfig{
+				Provider: manifest.SecretProviderKubernetes,
+				Config: map[string]interface{}{
+					"namespace": "production",
+					"secretName": fmt.Sprintf("%s-secrets-production", strings.ReplaceAll(projectName, "_", "-")),
+				},
+			},
+		},
+		Dependencies: manifest.DependencyConfig{
+			Runtime: getFrameworkDependencies(framework, template),
+			Dev:     getFrameworkDevDependencies(framework),
+		},
+		Build: manifest.BuildConfig{
+			Output: projectName,
+			Docker: manifest.DockerConfig{
+				Image:      fmt.Sprintf("%s:latest", strings.ReplaceAll(projectName, "_", "-")),
+				Dockerfile: "Dockerfile",
+				Platform:   []string{"linux/amd64"},
+			},
+		},
+	}
+
+	// Save manifest
+	manifestManager := manifest.NewManager(projectPath)
+	if err := manifestManager.Save(projectManifest); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	return nil
+}
+
+// getTemplateTools returns the tools configuration for a given template
+func getTemplateTools(template string) map[string]manifest.ToolConfig {
+	tools := make(map[string]manifest.ToolConfig)
+
+	switch template {
+	case "basic":
+		tools["echo"] = manifest.ToolConfig{
+			Name:        "echo",
+			Description: "Echo a message back to the client",
+			Handler:     "tools.echo",
+			Config: map[string]interface{}{
+				"enabled": true,
+			},
+		}
+		tools["calculator"] = manifest.ToolConfig{
+			Name:        "calculator",
+			Description: "Perform basic arithmetic calculations",
+			Handler:     "tools.calculator",
+			Config: map[string]interface{}{
+				"enabled": true,
+				"operations": []string{"add", "subtract", "multiply", "divide"},
+			},
+		}
+	case "database":
+		tools["query"] = manifest.ToolConfig{
+			Name:        "query",
+			Description: "Execute database queries",
+			Handler:     "tools.database.query",
+			Config: map[string]interface{}{
+				"enabled": true,
+				"max_results": 100,
+			},
+		}
+		tools["schema"] = manifest.ToolConfig{
+			Name:        "schema",
+			Description: "Get database schema information",
+			Handler:     "tools.database.schema",
+			Config: map[string]interface{}{
+				"enabled": true,
+			},
+		}
+	case "filesystem":
+		tools["read_file"] = manifest.ToolConfig{
+			Name:        "read_file",
+			Description: "Read file contents",
+			Handler:     "tools.filesystem.read_file",
+			Config: map[string]interface{}{
+				"enabled": true,
+				"max_size": "1MB",
+			},
+		}
+		tools["list_directory"] = manifest.ToolConfig{
+			Name:        "list_directory",
+			Description: "List directory contents",
+			Handler:     "tools.filesystem.list_directory",
+			Config: map[string]interface{}{
+				"enabled": true,
+			},
+		}
+	case "api-client":
+		tools["http_request"] = manifest.ToolConfig{
+			Name:        "http_request",
+			Description: "Make HTTP requests",
+			Handler:     "tools.api.http_request",
+			Config: map[string]interface{}{
+				"enabled": true,
+				"timeout": "30s",
+			},
+		}
+	case "multi-tool":
+		// Combine all tools
+		for k, v := range getTemplateTools("basic") {
+			tools[k] = v
+		}
+		for k, v := range getTemplateTools("database") {
+			tools[k] = v
+		}
+		for k, v := range getTemplateTools("filesystem") {
+			tools[k] = v
+		}
+		for k, v := range getTemplateTools("api-client") {
+			tools[k] = v
+		}
+	default:
+		// Default to basic tools
+		return getTemplateTools("basic")
+	}
+
+	return tools
+}
+
+// getFrameworkDependencies returns runtime dependencies for a framework
+func getFrameworkDependencies(framework, template string) []string {
+	switch framework {
+	case "fastmcp-python":
+		deps := []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
+		switch template {
+		case "database":
+			deps = append(deps, "asyncpg>=0.29.0", "sqlalchemy>=2.0.0")
+		case "filesystem":
+			deps = append(deps, "watchdog>=3.0.0")
+		case "api-client":
+			deps = append(deps, "httpx>=0.25.0", "aiohttp>=3.8.0")
+		}
+		return deps
+	case "fastmcp-ts":
+		deps := []string{"@fastmcp/core", "@modelcontextprotocol/sdk"}
+		switch template {
+		case "database":
+			deps = append(deps, "pg", "typeorm")
+		case "filesystem":
+			deps = append(deps, "chokidar")
+		case "api-client":
+			deps = append(deps, "axios", "node-fetch")
+		}
+		return deps
+	case "easymcp-ts":
+		return []string{"@easymcp/core", "@modelcontextprotocol/sdk"}
+	case "official-python":
+		return []string{"mcp>=1.0.0"}
+	case "official-ts":
+		return []string{"@modelcontextprotocol/sdk"}
+	default:
+		return []string{}
+	}
+}
+
+// getFrameworkDevDependencies returns development dependencies for a framework
+func getFrameworkDevDependencies(framework string) []string {
+	switch framework {
+	case "fastmcp-python", "official-python":
+		return []string{"pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=22.0.0", "mypy>=1.0.0", "ruff>=0.1.0"}
+	case "fastmcp-ts", "easymcp-ts", "official-ts":
+		return []string{"@types/node", "typescript", "tsx", "vitest", "eslint", "prettier"}
+	default:
+		return []string{}
+	}
 }
