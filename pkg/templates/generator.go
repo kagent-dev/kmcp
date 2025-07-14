@@ -227,17 +227,239 @@ func (g *Generator) toKebabCase(s string) string {
 
 // Placeholder methods for other frameworks - will implement incrementally
 func (g *Generator) generateFastMCPTypeScript(config ProjectConfig, data map[string]interface{}) error {
-	return fmt.Errorf("FastMCP TypeScript template not yet implemented")
+	if config.Verbose {
+		fmt.Println("Generating FastMCP TypeScript project...")
+	}
+
+	// Create basic directory structure
+	dirs := []string{
+		"",
+		"src",
+		"src/tools",
+		"src/resources", 
+		"src/core",
+		"config",
+		"tests",
+	}
+
+	for _, dir := range dirs {
+		dirPath := filepath.Join(config.Directory, dir)
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+	}
+
+	// Generate files
+	files := g.getFastMCPTypeScriptFiles(config.Template, data)
+
+	for filename, content := range files {
+		filePath := filepath.Join(config.Directory, filename)
+
+		// Ensure directory exists for the file
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for file %s: %w", filename, err)
+		}
+
+		// Render template content
+		renderedContent, err := g.renderTemplate(content, data)
+		if err != nil {
+			return fmt.Errorf("failed to render template for %s: %w", filename, err)
+		}
+
+		// Write file
+		if err := os.WriteFile(filePath, []byte(renderedContent), 0644); err != nil {
+			return fmt.Errorf("failed to write file %s: %w", filename, err)
+		}
+
+		if config.Verbose {
+			fmt.Printf("  Created: %s\n", filename)
+		}
+	}
+
+	// Initialize git repository
+	if !config.NoGit {
+		if err := g.initGitRepo(config.Directory, config.Verbose); err != nil {
+			// Don't fail the whole operation if git init fails
+			if config.Verbose {
+				fmt.Printf("Warning: failed to initialize git repository: %v\n", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateEasyMCPTypeScript(config ProjectConfig, data map[string]interface{}) error {
-	return fmt.Errorf("EasyMCP TypeScript template not yet implemented")
+	if config.Verbose {
+		fmt.Println("Generating EasyMCP TypeScript project...")
+	}
+
+	// Create basic directory structure
+	dirs := []string{
+		"",
+		"src",
+	}
+
+	for _, dir := range dirs {
+		dirPath := filepath.Join(config.Directory, dir)
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+	}
+
+	// Generate files
+	files := g.getEasyMCPTypeScriptFiles(config.Template, data)
+
+	for filename, content := range files {
+		filePath := filepath.Join(config.Directory, filename)
+
+		// Ensure directory exists for the file
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for file %s: %w", filename, err)
+		}
+
+		// Render template content
+		renderedContent, err := g.renderTemplate(content, data)
+		if err != nil {
+			return fmt.Errorf("failed to render template for %s: %w", filename, err)
+		}
+
+		// Write file
+		if err := os.WriteFile(filePath, []byte(renderedContent), 0644); err != nil {
+			return fmt.Errorf("failed to write file %s: %w", filename, err)
+		}
+
+		if config.Verbose {
+			fmt.Printf("  Created: %s\n", filename)
+		}
+	}
+
+	// Initialize git repository
+	if !config.NoGit {
+		if err := g.initGitRepo(config.Directory, config.Verbose); err != nil {
+			// Don't fail the whole operation if git init fails
+			if config.Verbose {
+				fmt.Printf("Warning: failed to initialize git repository: %v\n", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateOfficialPython(config ProjectConfig, data map[string]interface{}) error {
-	return fmt.Errorf("Official Python SDK template not yet implemented")
+	if config.Verbose {
+		fmt.Println("Generating Official Python SDK project...")
+	}
+
+	// Create basic directory structure
+	dirs := []string{
+		"",
+		"src",
+		"tests",
+	}
+
+	for _, dir := range dirs {
+		dirPath := filepath.Join(config.Directory, dir)
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+	}
+
+	// Generate files
+	files := g.getOfficialPythonFiles(config.Template, data)
+
+	for filename, content := range files {
+		filePath := filepath.Join(config.Directory, filename)
+
+		// Ensure directory exists for the file
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for file %s: %w", filename, err)
+		}
+
+		// Render template content
+		renderedContent, err := g.renderTemplate(content, data)
+		if err != nil {
+			return fmt.Errorf("failed to render template for %s: %w", filename, err)
+		}
+
+		// Write file
+		if err := os.WriteFile(filePath, []byte(renderedContent), 0644); err != nil {
+			return fmt.Errorf("failed to write file %s: %w", filename, err)
+		}
+
+		if config.Verbose {
+			fmt.Printf("  Created: %s\n", filename)
+		}
+	}
+
+	// Initialize git repository
+	if !config.NoGit {
+		if err := g.initGitRepo(config.Directory, config.Verbose); err != nil {
+			// Don't fail the whole operation if git init fails
+			if config.Verbose {
+				fmt.Printf("Warning: failed to initialize git repository: %v\n", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateOfficialTypeScript(config ProjectConfig, data map[string]interface{}) error {
-	return fmt.Errorf("Official TypeScript SDK template not yet implemented")
+	if config.Verbose {
+		fmt.Println("Generating Official TypeScript SDK project...")
+	}
+
+	// Create basic directory structure
+	dirs := []string{
+		"",
+		"src",
+	}
+
+	for _, dir := range dirs {
+		dirPath := filepath.Join(config.Directory, dir)
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+	}
+
+	// Generate files
+	files := g.getOfficialTypeScriptFiles(config.Template, data)
+
+	for filename, content := range files {
+		filePath := filepath.Join(config.Directory, filename)
+
+		// Ensure directory exists for the file
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for file %s: %w", filename, err)
+		}
+
+		// Render template content
+		renderedContent, err := g.renderTemplate(content, data)
+		if err != nil {
+			return fmt.Errorf("failed to render template for %s: %w", filename, err)
+		}
+
+		// Write file
+		if err := os.WriteFile(filePath, []byte(renderedContent), 0644); err != nil {
+			return fmt.Errorf("failed to write file %s: %w", filename, err)
+		}
+
+		if config.Verbose {
+			fmt.Printf("  Created: %s\n", filename)
+		}
+	}
+
+	// Initialize git repository
+	if !config.NoGit {
+		if err := g.initGitRepo(config.Directory, config.Verbose); err != nil {
+			// Don't fail the whole operation if git init fails
+			if config.Verbose {
+				fmt.Printf("Warning: failed to initialize git repository: %v\n", err)
+			}
+		}
+	}
+
+	return nil
 }
