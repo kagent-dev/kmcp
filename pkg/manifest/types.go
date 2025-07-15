@@ -118,11 +118,5 @@ const (
 	SecretProviderKubernetes = "kubernetes"
 )
 
-// Supported tool types
-const (
-	ToolTypeBasic      = "basic"
-	ToolTypeDatabase   = "database"
-	ToolTypeFilesystem = "filesystem"
-	ToolTypeAPIClient  = "api-client"
-	ToolTypeMultiTool  = "multi-tool"
-)
+// Tool types are imported from the tools package to eliminate redundancy
+// Use tools.ToolTypeBasic, tools.ToolTypeAPIClient, etc.
