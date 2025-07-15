@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+	"kagent.dev/kmcp/pkg/tools"
 )
 
 const ManifestFileName = "kmcp.yaml"
@@ -271,11 +272,10 @@ func isValidFramework(framework string) bool {
 
 func isValidToolType(toolType string) bool {
 	validTypes := []string{
-		ToolTypeBasic,
-		ToolTypeDatabase,
-		ToolTypeFilesystem,
-		ToolTypeAPIClient,
-		ToolTypeMultiTool,
+		tools.ToolTypeBasic,
+		tools.ToolTypeHTTP,
+		tools.ToolTypeData,
+		tools.ToolTypeWorkflow,
 	}
 
 	for _, valid := range validTypes {

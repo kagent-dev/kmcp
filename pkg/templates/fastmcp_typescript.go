@@ -3,56 +3,56 @@ package templates
 // getFastMCPTypeScriptFiles returns the file templates for FastMCP TypeScript projects
 func (g *Generator) getFastMCPTypeScriptFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"package.json":                      g.getFastMCPTypeScriptPackageJson(templateType, data),
-		"tsconfig.json":                     g.getFastMCPTypeScriptTsConfig(templateType, data),
-		"README.md":                         g.getFastMCPTypeScriptReadme(templateType, data),
-		"Dockerfile":                        g.getFastMCPTypeScriptDockerfile(templateType, data),
-		".gitignore":                        g.getFastMCPTypeScriptGitignore(templateType, data),
-		".env.example":                      g.getFastMCPTypeScriptEnvExample(templateType, data),
-		
+		"package.json":  g.getFastMCPTypeScriptPackageJson(templateType, data),
+		"tsconfig.json": g.getFastMCPTypeScriptTsConfig(templateType, data),
+		"README.md":     g.getFastMCPTypeScriptReadme(templateType, data),
+		"Dockerfile":    g.getFastMCPTypeScriptDockerfile(templateType, data),
+		".gitignore":    g.getFastMCPTypeScriptGitignore(templateType, data),
+		".env.example":  g.getFastMCPTypeScriptEnvExample(templateType, data),
+
 		// New modular structure
-		"src/main.ts":                       g.getFastMCPTypeScriptMain(templateType, data),
-		
+		"src/main.ts": g.getFastMCPTypeScriptMain(templateType, data),
+
 		// Tools directory
-		"src/tools/index.ts":                g.getFastMCPTypeScriptToolsIndex(templateType, data),
-		"src/tools/echo.ts":                 g.getFastMCPTypeScriptEchoTool(templateType, data),
-		"src/tools/calculator.ts":           g.getFastMCPTypeScriptCalculatorTool(templateType, data),
-		
+		"src/tools/index.ts":      g.getFastMCPTypeScriptToolsIndex(templateType, data),
+		"src/tools/echo.ts":       g.getFastMCPTypeScriptEchoTool(templateType, data),
+		"src/tools/calculator.ts": g.getFastMCPTypeScriptCalculatorTool(templateType, data),
+
 		// Resources directory
-		"src/resources/index.ts":            g.getFastMCPTypeScriptResourcesIndex(templateType, data),
-		
+		"src/resources/index.ts": g.getFastMCPTypeScriptResourcesIndex(templateType, data),
+
 		// Core directory (generated framework code)
-		"src/core/index.ts":                 g.getFastMCPTypeScriptCoreIndex(templateType, data),
-		"src/core/server.ts":                g.getFastMCPTypeScriptCoreServer(templateType, data),
-		"src/core/registry.ts":              g.getFastMCPTypeScriptCoreRegistry(templateType, data),
-		
+		"src/core/index.ts":    g.getFastMCPTypeScriptCoreIndex(templateType, data),
+		"src/core/server.ts":   g.getFastMCPTypeScriptCoreServer(templateType, data),
+		"src/core/registry.ts": g.getFastMCPTypeScriptCoreRegistry(templateType, data),
+
 		// Configuration files
-		"config/server.yaml":                g.getFastMCPTypeScriptServerConfig(templateType, data),
-		"config/tools.yaml":                 g.getFastMCPTypeScriptToolsConfig(templateType, data),
-		
+		"config/server.yaml": g.getFastMCPTypeScriptServerConfig(templateType, data),
+		"config/tools.yaml":  g.getFastMCPTypeScriptToolsConfig(templateType, data),
+
 		// Tests
-		"tests/tools.test.ts":               g.getFastMCPTypeScriptTestTools(templateType, data),
-		"tests/server.test.ts":              g.getFastMCPTypeScriptTestServer(templateType, data),
-		"jest.config.js":                    g.getFastMCPTypeScriptJestConfig(templateType, data),
-		
+		"tests/tools.test.ts":  g.getFastMCPTypeScriptTestTools(templateType, data),
+		"tests/server.test.ts": g.getFastMCPTypeScriptTestServer(templateType, data),
+		"jest.config.js":       g.getFastMCPTypeScriptJestConfig(templateType, data),
+
 		// Build and dev tools
-		"nodemon.json":                      g.getFastMCPTypeScriptNodemonConfig(templateType, data),
-		".eslintrc.js":                      g.getFastMCPTypeScriptEslintConfig(templateType, data),
-		".prettierrc":                       g.getFastMCPTypeScriptPrettierConfig(templateType, data),
+		"nodemon.json": g.getFastMCPTypeScriptNodemonConfig(templateType, data),
+		".eslintrc.js": g.getFastMCPTypeScriptEslintConfig(templateType, data),
+		".prettierrc":  g.getFastMCPTypeScriptPrettierConfig(templateType, data),
 	}
 
 	// Add template-specific files
 	switch templateType {
-	case "database":
-		files["src/tools/database.ts"] = g.getFastMCPTypeScriptDatabaseTool(templateType, data)
-	case "filesystem":
-		files["src/tools/filesystem.ts"] = g.getFastMCPTypeScriptFilesystemTool(templateType, data)
-	case "api-client":
-		files["src/tools/api-client.ts"] = g.getFastMCPTypeScriptAPIClientTool(templateType, data)
+	case "http":
+		files["src/tools/http-client.ts"] = g.getFastMCPTypeScriptHTTPTool(templateType, data)
+	case "data":
+		files["src/tools/data-processor.ts"] = g.getFastMCPTypeScriptDataTool(templateType, data)
+	case "workflow":
+		files["src/tools/workflow-executor.ts"] = g.getFastMCPTypeScriptWorkflowTool(templateType, data)
 	case "multi-tool":
-		files["src/tools/database.ts"] = g.getFastMCPTypeScriptDatabaseTool(templateType, data)
-		files["src/tools/filesystem.ts"] = g.getFastMCPTypeScriptFilesystemTool(templateType, data)
-		files["src/tools/api-client.ts"] = g.getFastMCPTypeScriptAPIClientTool(templateType, data)
+		files["src/tools/http-client.ts"] = g.getFastMCPTypeScriptHTTPTool(templateType, data)
+		files["src/tools/data-processor.ts"] = g.getFastMCPTypeScriptDataTool(templateType, data)
+		files["src/tools/workflow-executor.ts"] = g.getFastMCPTypeScriptWorkflowTool(templateType, data)
 	}
 
 	return files
@@ -1184,106 +1184,9 @@ func (g *Generator) getFastMCPTypeScriptPrettierConfig(templateType string, data
 }
 
 // Placeholder implementations for template-specific tools
-func (g *Generator) getFastMCPTypeScriptDatabaseTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptHTTPTool(templateType string, data map[string]interface{}) string {
 	return `/**
- * Database tool implementation for {{.ProjectName}} MCP server.
- */
-
-import { z } from 'zod';
-import { Pool } from 'pg';
-
-export const DatabaseQueryRequestSchema = z.object({
-  query: z.string().describe('SQL query to execute'),
-  params: z.array(z.any()).optional().describe('Query parameters'),
-});
-
-export type DatabaseQueryRequest = z.infer<typeof DatabaseQueryRequestSchema>;
-
-export interface DatabaseToolConfig {
-  enabled?: boolean;
-  connectionString?: string;
-  maxResults?: number;
-}
-
-export class DatabaseTool {
-  private config: DatabaseToolConfig;
-  private pool?: Pool;
-
-  constructor(config: DatabaseToolConfig = {}) {
-    this.config = {
-      enabled: true,
-      maxResults: 100,
-      ...config,
-    };
-  }
-
-  async query(request: DatabaseQueryRequest): Promise<any> {
-    if (!this.config.enabled) {
-      return { error: 'Database tool is disabled' };
-    }
-
-    // TODO: Implement database connectivity
-    return {
-      message: 'Database integration template - implementation coming soon',
-      query: request.query,
-      params: request.params,
-    };
-  }
-}
-`
-}
-
-func (g *Generator) getFastMCPTypeScriptFilesystemTool(templateType string, data map[string]interface{}) string {
-	return `/**
- * Filesystem tool implementation for {{.ProjectName}} MCP server.
- */
-
-import { z } from 'zod';
-import { readFile, writeFile, access } from 'fs/promises';
-
-export const ReadFileRequestSchema = z.object({
-  path: z.string().describe('Path to the file to read'),
-  encoding: z.string().optional().default('utf-8').describe('File encoding'),
-});
-
-export type ReadFileRequest = z.infer<typeof ReadFileRequestSchema>;
-
-export interface FilesystemToolConfig {
-  enabled?: boolean;
-  allowedPaths?: string[];
-  maxSize?: string;
-}
-
-export class FilesystemTool {
-  private config: FilesystemToolConfig;
-
-  constructor(config: FilesystemToolConfig = {}) {
-    this.config = {
-      enabled: true,
-      maxSize: '1MB',
-      ...config,
-    };
-  }
-
-  async readFile(request: ReadFileRequest): Promise<any> {
-    if (!this.config.enabled) {
-      return { error: 'Filesystem tool is disabled' };
-    }
-
-    // TODO: Implement safe file reading
-    return {
-      message: 'Filesystem integration template - implementation coming soon',
-      path: request.path,
-      encoding: request.encoding,
-    };
-  }
-}
-`
-}
-
-func (g *Generator) getFastMCPTypeScriptAPIClientTool(templateType string, data map[string]interface{}) string {
-	return `/**
- * API client tool implementation for {{.ProjectName}} MCP server.
+ * HTTP client tool implementation for {{.ProjectName}} MCP server.
  */
 
 import { z } from 'zod';
@@ -1298,16 +1201,16 @@ export const HTTPRequestSchema = z.object({
 
 export type HTTPRequest = z.infer<typeof HTTPRequestSchema>;
 
-export interface APIClientToolConfig {
+export interface HTTPToolConfig {
   enabled?: boolean;
   timeout?: number;
   allowedDomains?: string[];
 }
 
-export class APIClientTool {
-  private config: APIClientToolConfig;
+export class HTTPTool {
+  private config: HTTPToolConfig;
 
-  constructor(config: APIClientToolConfig = {}) {
+  constructor(config: HTTPToolConfig = {}) {
     this.config = {
       enabled: true,
       timeout: 30000,
@@ -1317,12 +1220,12 @@ export class APIClientTool {
 
   async httpRequest(request: HTTPRequest): Promise<any> {
     if (!this.config.enabled) {
-      return { error: 'API client tool is disabled' };
+      return { error: 'HTTP client tool is disabled' };
     }
 
     // TODO: Implement HTTP client
     return {
-      message: 'API client integration template - implementation coming soon',
+      message: 'HTTP client integration template - implementation coming soon',
       url: request.url,
       method: request.method,
       headers: request.headers,
@@ -1330,4 +1233,102 @@ export class APIClientTool {
   }
 }
 `
-} 
+}
+
+func (g *Generator) getFastMCPTypeScriptDataTool(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Data processor tool implementation for {{.ProjectName}} MCP server.
+ */
+
+import { z } from 'zod';
+import { Pool } from 'pg';
+
+export const DataQueryRequestSchema = z.object({
+  query: z.string().describe('SQL query to execute'),
+  params: z.array(z.any()).optional().describe('Query parameters'),
+});
+
+export type DataQueryRequest = z.infer<typeof DataQueryRequestSchema>;
+
+export interface DataToolConfig {
+  enabled?: boolean;
+  connectionString?: string;
+  maxResults?: number;
+}
+
+export class DataTool {
+  private config: DataToolConfig;
+  private pool?: Pool;
+
+  constructor(config: DataToolConfig = {}) {
+    this.config = {
+      enabled: true,
+      maxResults: 100,
+      ...config,
+    };
+  }
+
+  async query(request: DataQueryRequest): Promise<any> {
+    if (!this.config.enabled) {
+      return { error: 'Data processor tool is disabled' };
+    }
+
+    // TODO: Implement database connectivity
+    return {
+      message: 'Data processor integration template - implementation coming soon',
+      query: request.query,
+      params: request.params,
+    };
+  }
+}
+`
+}
+
+func (g *Generator) getFastMCPTypeScriptWorkflowTool(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Workflow executor tool implementation for {{.ProjectName}} MCP server.
+ */
+
+import { z } from 'zod';
+import { Pool } from 'pg';
+
+export const WorkflowRequestSchema = z.object({
+  workflow: z.string().describe('JSON workflow definition'),
+  inputs: z.record(z.any()).optional().describe('Input data for the workflow'),
+});
+
+export type WorkflowRequest = z.infer<typeof WorkflowRequestSchema>;
+
+export interface WorkflowToolConfig {
+  enabled?: boolean;
+  connectionString?: string;
+  maxSteps?: number;
+}
+
+export class WorkflowTool {
+  private config: WorkflowToolConfig;
+  private pool?: Pool;
+
+  constructor(config: WorkflowToolConfig = {}) {
+    this.config = {
+      enabled: true,
+      maxSteps: 10,
+      ...config,
+    };
+  }
+
+  async executeWorkflow(request: WorkflowRequest): Promise<any> {
+    if (!this.config.enabled) {
+      return { error: 'Workflow executor tool is disabled' };
+    }
+
+    // TODO: Implement workflow execution logic
+    return {
+      message: 'Workflow executor integration template - implementation coming soon',
+      workflow: request.workflow,
+      inputs: request.inputs,
+    };
+  }
+}
+`
+}

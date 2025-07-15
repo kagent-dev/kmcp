@@ -303,14 +303,14 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 			Staging: manifest.SecretProviderConfig{
 				Provider: manifest.SecretProviderKubernetes,
 				Config: map[string]interface{}{
-					"namespace": "default",
+					"namespace":  "default",
 					"secretName": fmt.Sprintf("%s-secrets-staging", strings.ReplaceAll(projectName, "_", "-")),
 				},
 			},
 			Production: manifest.SecretProviderConfig{
 				Provider: manifest.SecretProviderKubernetes,
 				Config: map[string]interface{}{
-					"namespace": "production",
+					"namespace":  "production",
 					"secretName": fmt.Sprintf("%s-secrets-production", strings.ReplaceAll(projectName, "_", "-")),
 				},
 			},
@@ -358,53 +358,35 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 			Handler:     "tools.calculator",
 			Config: map[string]interface{}{
 				"enabled": true,
-				"operations": []string{"add", "subtract", "multiply", "divide"},
 			},
 		}
-	case "database":
-		tools["query"] = manifest.ToolConfig{
-			Name:        "query",
-			Description: "Execute database queries",
-			Handler:     "tools.database.query",
-			Config: map[string]interface{}{
-				"enabled": true,
-				"max_results": 100,
-			},
-		}
-		tools["schema"] = manifest.ToolConfig{
-			Name:        "schema",
-			Description: "Get database schema information",
-			Handler:     "tools.database.schema",
-			Config: map[string]interface{}{
-				"enabled": true,
-			},
-		}
-	case "filesystem":
-		tools["read_file"] = manifest.ToolConfig{
-			Name:        "read_file",
-			Description: "Read file contents",
-			Handler:     "tools.filesystem.read_file",
-			Config: map[string]interface{}{
-				"enabled": true,
-				"max_size": "1MB",
-			},
-		}
-		tools["list_directory"] = manifest.ToolConfig{
-			Name:        "list_directory",
-			Description: "List directory contents",
-			Handler:     "tools.filesystem.list_directory",
-			Config: map[string]interface{}{
-				"enabled": true,
-			},
-		}
-	case "api-client":
-		tools["http_request"] = manifest.ToolConfig{
-			Name:        "http_request",
+	case "http":
+		tools["http_client"] = manifest.ToolConfig{
+			Name:        "http_client",
 			Description: "Make HTTP requests",
-			Handler:     "tools.api.http_request",
+			Handler:     "tools.http_client",
 			Config: map[string]interface{}{
 				"enabled": true,
-				"timeout": "30s",
+				"timeout": 30,
+			},
+		}
+	case "data":
+		tools["data_processor"] = manifest.ToolConfig{
+			Name:        "data_processor",
+			Description: "Process and manipulate data",
+			Handler:     "tools.data_processor",
+			Config: map[string]interface{}{
+				"enabled": true,
+			},
+		}
+	case "workflow":
+		tools["workflow_executor"] = manifest.ToolConfig{
+			Name:        "workflow_executor",
+			Description: "Execute multi-step workflows",
+			Handler:     "tools.workflow_executor",
+			Config: map[string]interface{}{
+				"enabled":   true,
+				"max_steps": 10,
 			},
 		}
 	case "multi-tool":
@@ -412,13 +394,13 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 		for k, v := range getTemplateTools("basic") {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("database") {
+		for k, v := range getTemplateTools("http") {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("filesystem") {
+		for k, v := range getTemplateTools("data") {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("api-client") {
+		for k, v := range getTemplateTools("workflow") {
 			tools[k] = v
 		}
 	default:
@@ -435,31 +417,47 @@ func getFrameworkDependencies(framework, template string) []string {
 	case "fastmcp-python":
 		deps := []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
 		switch template {
-		case "database":
-			deps = append(deps, "asyncpg>=0.29.0", "sqlalchemy>=2.0.0")
-		case "filesystem":
-			deps = append(deps, "watchdog>=3.0.0")
-		case "api-client":
-			deps = append(deps, "httpx>=0.25.0", "aiohttp>=3.8.0")
+		case "http":
+			deps = append(deps, "httpx>=0.25.0")
+		case "data":
+			deps = append(deps, "pandas>=2.0.0", "numpy>=1.21.0")
+		case "workflow":
+			deps = append(deps, "asyncio")
 		}
 		return deps
 	case "fastmcp-ts":
 		deps := []string{"@fastmcp/core", "@modelcontextprotocol/sdk"}
 		switch template {
-		case "database":
-			deps = append(deps, "pg", "typeorm")
-		case "filesystem":
-			deps = append(deps, "chokidar")
-		case "api-client":
-			deps = append(deps, "axios", "node-fetch")
+		case "http":
+			deps = append(deps, "axios", "fetch")
+		case "data":
+			deps = append(deps, "lodash")
+		case "workflow":
+			deps = append(deps, "async")
 		}
 		return deps
-	case "easymcp-ts":
-		return []string{"@easymcp/core", "@modelcontextprotocol/sdk"}
 	case "official-python":
-		return []string{"mcp>=1.0.0"}
-	case "official-ts":
-		return []string{"@modelcontextprotocol/sdk"}
+		deps := []string{"mcp>=1.0.0"}
+		switch template {
+		case "http":
+			deps = append(deps, "httpx>=0.25.0")
+		case "data":
+			deps = append(deps, "pandas>=2.0.0")
+		case "workflow":
+			deps = append(deps, "asyncio")
+		}
+		return deps
+	case "official-typescript":
+		deps := []string{"@modelcontextprotocol/sdk"}
+		switch template {
+		case "http":
+			deps = append(deps, "axios")
+		case "data":
+			deps = append(deps, "lodash")
+		case "workflow":
+			deps = append(deps, "async")
+		}
+		return deps
 	default:
 		return []string{}
 	}
