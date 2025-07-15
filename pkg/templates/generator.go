@@ -74,7 +74,6 @@ func (g *Generator) getTemplateData(config ProjectConfig) (map[string]interface{
 		"ProjectNameLower":  strings.ToLower(config.Name),
 		"ProjectNameCamel":  g.toCamelCase(config.Name),
 		"ProjectNamePascal": g.toPascalCase(config.Name),
-		"ProjectNameSnake":  g.toSnakeCase(config.Name),
 		"ProjectNameKebab":  g.toKebabCase(config.Name),
 		"Framework":         config.Framework,
 		"Template":          config.Template,
@@ -103,7 +102,6 @@ func (g *Generator) generateFastMCPPython(config ProjectConfig, data map[string]
 	// Create basic directory structure
 	dirs := []string{
 		"",
-		g.toSnakeCase(config.Name),
 		"tests",
 	}
 
@@ -211,13 +209,6 @@ func (g *Generator) toPascalCase(s string) string {
 	return strings.ToUpper(camel[:1]) + camel[1:]
 }
 
-func (g *Generator) toSnakeCase(s string) string {
-	words := strings.FieldsFunc(s, func(r rune) bool {
-		return r == '-' || r == '_' || r == ' '
-	})
-	return strings.ToLower(strings.Join(words, "_"))
-}
-
 func (g *Generator) toKebabCase(s string) string {
 	words := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '-' || r == '_' || r == ' '
@@ -236,7 +227,7 @@ func (g *Generator) generateFastMCPTypeScript(config ProjectConfig, data map[str
 		"",
 		"src",
 		"src/tools",
-		"src/resources", 
+		"src/resources",
 		"src/core",
 		"config",
 		"tests",

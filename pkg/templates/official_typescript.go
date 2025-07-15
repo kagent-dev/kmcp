@@ -3,40 +3,40 @@ package templates
 // getOfficialTypeScriptFiles returns the file templates for Official TypeScript SDK projects
 func (g *Generator) getOfficialTypeScriptFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"package.json":                      g.getOfficialTypeScriptPackageJson(templateType, data),
-		"tsconfig.json":                     g.getOfficialTypeScriptTsConfig(templateType, data),
-		"README.md":                         g.getOfficialTypeScriptReadme(templateType, data),
-		"Dockerfile":                        g.getOfficialTypeScriptDockerfile(templateType, data),
-		".gitignore":                        g.getOfficialTypeScriptGitignore(templateType, data),
-		".env.example":                      g.getOfficialTypeScriptEnvExample(templateType, data),
-		
+		"package.json":  g.getOfficialTypeScriptPackageJson(templateType, data),
+		"tsconfig.json": g.getOfficialTypeScriptTsConfig(templateType, data),
+		"README.md":     g.getOfficialTypeScriptReadme(templateType, data),
+		"Dockerfile":    g.getOfficialTypeScriptDockerfile(templateType, data),
+		".gitignore":    g.getOfficialTypeScriptGitignore(templateType, data),
+		".env.example":  g.getOfficialTypeScriptEnvExample(templateType, data),
+
 		// Official SDK structure - minimal and focused
-		"src/index.ts":                      g.getOfficialTypeScriptMain(templateType, data),
-		"src/server.ts":                     g.getOfficialTypeScriptServer(templateType, data),
-		"src/tools.ts":                      g.getOfficialTypeScriptTools(templateType, data),
-		
+		"src/index.ts":  g.getOfficialTypeScriptMain(templateType, data),
+		"src/server.ts": g.getOfficialTypeScriptServer(templateType, data),
+		"src/tools.ts":  g.getOfficialTypeScriptTools(templateType, data),
+
 		// Tests
-		"src/index.test.ts":                 g.getOfficialTypeScriptTest(templateType, data),
-		"jest.config.js":                    g.getOfficialTypeScriptJestConfig(templateType, data),
-		
+		"src/index.test.ts": g.getOfficialTypeScriptTest(templateType, data),
+		"jest.config.js":    g.getOfficialTypeScriptJestConfig(templateType, data),
+
 		// Dev tools
-		"nodemon.json":                      g.getOfficialTypeScriptNodemonConfig(templateType, data),
-		".eslintrc.js":                      g.getOfficialTypeScriptEslintConfig(templateType, data),
-		".prettierrc":                       g.getOfficialTypeScriptPrettierConfig(templateType, data),
+		"nodemon.json": g.getOfficialTypeScriptNodemonConfig(templateType, data),
+		".eslintrc.js": g.getOfficialTypeScriptEslintConfig(templateType, data),
+		".prettierrc":  g.getOfficialTypeScriptPrettierConfig(templateType, data),
 	}
 
 	// Add template-specific files
 	switch templateType {
-	case "database":
-		files["src/database-tools.ts"] = g.getOfficialTypeScriptDatabaseTools(templateType, data)
-	case "filesystem":
-		files["src/filesystem-tools.ts"] = g.getOfficialTypeScriptFilesystemTools(templateType, data)
-	case "api-client":
-		files["src/api-client-tools.ts"] = g.getOfficialTypeScriptAPIClientTools(templateType, data)
+	case "http":
+		files["src/http-client-tools.ts"] = g.getOfficialTypeScriptHTTPClientTools(templateType, data)
+	case "data":
+		files["src/data-processor-tools.ts"] = g.getOfficialTypeScriptDataProcessorTools(templateType, data)
+	case "workflow":
+		files["src/workflow-executor-tools.ts"] = g.getOfficialTypeScriptWorkflowExecutorTools(templateType, data)
 	case "multi-tool":
-		files["src/database-tools.ts"] = g.getOfficialTypeScriptDatabaseTools(templateType, data)
-		files["src/filesystem-tools.ts"] = g.getOfficialTypeScriptFilesystemTools(templateType, data)
-		files["src/api-client-tools.ts"] = g.getOfficialTypeScriptAPIClientTools(templateType, data)
+		files["src/http-client-tools.ts"] = g.getOfficialTypeScriptHTTPClientTools(templateType, data)
+		files["src/data-processor-tools.ts"] = g.getOfficialTypeScriptDataProcessorTools(templateType, data)
+		files["src/workflow-executor-tools.ts"] = g.getOfficialTypeScriptWorkflowExecutorTools(templateType, data)
 	}
 
 	return files
@@ -752,88 +752,14 @@ func (g *Generator) getOfficialTypeScriptPrettierConfig(templateType string, dat
 }
 
 // Template-specific tools (placeholders)
-func (g *Generator) getOfficialTypeScriptDatabaseTools(templateType string, data map[string]interface{}) string {
+func (g *Generator) getOfficialTypeScriptHTTPClientTools(templateType string, data map[string]interface{}) string {
 	return `/**
- * Database tools for {{.ProjectName}} MCP Server
+ * HTTP client tools for {{.ProjectName}} MCP Server
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
-export function getDatabaseTools(): Tool[] {
-  return [
-    {
-      name: 'query_database',
-      description: 'Execute a database query',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'SQL query to execute',
-          },
-        },
-        required: ['query'],
-      },
-    },
-  ];
-}
-
-export async function queryDatabaseTool(args: { query: string }): Promise<any> {
-  // TODO: Implement database connectivity
-  return {
-    message: 'Database integration coming soon',
-    query: args.query,
-    timestamp: new Date().toISOString(),
-  };
-}
-`
-}
-
-func (g *Generator) getOfficialTypeScriptFilesystemTools(templateType string, data map[string]interface{}) string {
-	return `/**
- * Filesystem tools for {{.ProjectName}} MCP Server
- */
-
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-
-export function getFilesystemTools(): Tool[] {
-  return [
-    {
-      name: 'read_file',
-      description: 'Read a file from the filesystem',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'Path to the file to read',
-          },
-        },
-        required: ['path'],
-      },
-    },
-  ];
-}
-
-export async function readFileTool(args: { path: string }): Promise<any> {
-  // TODO: Implement safe file reading
-  return {
-    message: 'Filesystem integration coming soon',
-    path: args.path,
-    timestamp: new Date().toISOString(),
-  };
-}
-`
-}
-
-func (g *Generator) getOfficialTypeScriptAPIClientTools(templateType string, data map[string]interface{}) string {
-	return `/**
- * API client tools for {{.ProjectName}} MCP Server
- */
-
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-
-export function getAPIClientTools(): Tool[] {
+export function getHTTPClientTools(): Tool[] {
   return [
     {
       name: 'http_request',
@@ -868,4 +794,84 @@ export async function httpRequestTool(args: { url: string; method?: string }): P
   };
 }
 `
-} 
+}
+
+func (g *Generator) getOfficialTypeScriptDataProcessorTools(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Data processor tools for {{.ProjectName}} MCP Server
+ */
+
+import { Tool } from '@modelcontextprotocol/sdk/types.js';
+
+export function getDataProcessorTools(): Tool[] {
+  return [
+    {
+      name: 'process_data',
+      description: 'Process data using a predefined algorithm',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'string',
+            description: 'Data to process',
+          },
+          algorithm: {
+            type: 'string',
+            enum: ['reverse', 'uppercase', 'lowercase', 'trim'],
+            description: 'Algorithm to apply',
+          },
+        },
+        required: ['data', 'algorithm'],
+      },
+    },
+  ];
+}
+
+export async function processDataTool(args: { data: string; algorithm: string }): Promise<any> {
+  // TODO: Implement data processing logic
+  return {
+    message: 'Data processor integration coming soon',
+    data: args.data,
+    algorithm: args.algorithm,
+    timestamp: new Date().toISOString(),
+  };
+}
+`
+}
+
+func (g *Generator) getOfficialTypeScriptWorkflowExecutorTools(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Workflow executor tools for {{.ProjectName}} MCP Server
+ */
+
+import { Tool } from '@modelcontextprotocol/sdk/types.js';
+
+export function getWorkflowExecutorTools(): Tool[] {
+  return [
+    {
+      name: 'execute_workflow',
+      description: 'Execute a predefined workflow',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          workflow: {
+            type: 'string',
+            description: 'Workflow definition in JSON format',
+          },
+        },
+        required: ['workflow'],
+      },
+    },
+  ];
+}
+
+export async function executeWorkflowTool(args: { workflow: string }): Promise<any> {
+  // TODO: Implement workflow execution logic
+  return {
+    message: 'Workflow executor integration coming soon',
+    workflow: args.workflow,
+    timestamp: new Date().toISOString(),
+  };
+}
+`
+}
