@@ -3,40 +3,40 @@ package templates
 // getEasyMCPTypeScriptFiles returns the file templates for EasyMCP TypeScript projects
 func (g *Generator) getEasyMCPTypeScriptFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"package.json":                      g.getEasyMCPTypeScriptPackageJson(templateType, data),
-		"tsconfig.json":                     g.getEasyMCPTypeScriptTsConfig(templateType, data),
-		"README.md":                         g.getEasyMCPTypeScriptReadme(templateType, data),
-		"Dockerfile":                        g.getEasyMCPTypeScriptDockerfile(templateType, data),
-		".gitignore":                        g.getEasyMCPTypeScriptGitignore(templateType, data),
-		".env.example":                      g.getEasyMCPTypeScriptEnvExample(templateType, data),
-		
+		"package.json":  g.getEasyMCPTypeScriptPackageJson(templateType, data),
+		"tsconfig.json": g.getEasyMCPTypeScriptTsConfig(templateType, data),
+		"README.md":     g.getEasyMCPTypeScriptReadme(templateType, data),
+		"Dockerfile":    g.getEasyMCPTypeScriptDockerfile(templateType, data),
+		".gitignore":    g.getEasyMCPTypeScriptGitignore(templateType, data),
+		".env.example":  g.getEasyMCPTypeScriptEnvExample(templateType, data),
+
 		// Simple structure - fewer files, more straightforward
-		"src/index.ts":                      g.getEasyMCPTypeScriptMain(templateType, data),
-		"src/tools.ts":                      g.getEasyMCPTypeScriptTools(templateType, data),
-		"src/config.ts":                     g.getEasyMCPTypeScriptConfig(templateType, data),
-		
+		"src/index.ts":  g.getEasyMCPTypeScriptMain(templateType, data),
+		"src/tools.ts":  g.getEasyMCPTypeScriptTools(templateType, data),
+		"src/config.ts": g.getEasyMCPTypeScriptConfig(templateType, data),
+
 		// Minimal testing setup
-		"src/index.test.ts":                 g.getEasyMCPTypeScriptTest(templateType, data),
-		"jest.config.js":                    g.getEasyMCPTypeScriptJestConfig(templateType, data),
-		
+		"src/index.test.ts": g.getEasyMCPTypeScriptTest(templateType, data),
+		"jest.config.js":    g.getEasyMCPTypeScriptJestConfig(templateType, data),
+
 		// Dev tools
-		"nodemon.json":                      g.getEasyMCPTypeScriptNodemonConfig(templateType, data),
-		".eslintrc.js":                      g.getEasyMCPTypeScriptEslintConfig(templateType, data),
-		".prettierrc":                       g.getEasyMCPTypeScriptPrettierConfig(templateType, data),
+		"nodemon.json": g.getEasyMCPTypeScriptNodemonConfig(templateType, data),
+		".eslintrc.js": g.getEasyMCPTypeScriptEslintConfig(templateType, data),
+		".prettierrc":  g.getEasyMCPTypeScriptPrettierConfig(templateType, data),
 	}
 
-	// Add template-specific additional tools
+	// Add template-specific files
 	switch templateType {
-	case "database":
-		files["src/database.ts"] = g.getEasyMCPTypeScriptDatabase(templateType, data)
-	case "filesystem":
-		files["src/filesystem.ts"] = g.getEasyMCPTypeScriptFilesystem(templateType, data)
-	case "api-client":
-		files["src/api-client.ts"] = g.getEasyMCPTypeScriptAPIClient(templateType, data)
+	case "http":
+		files["src/http-client.ts"] = g.getEasyMCPTypeScriptHTTPClient(templateType, data)
+	case "data":
+		files["src/data-processor.ts"] = g.getEasyMCPTypeScriptDataProcessor(templateType, data)
+	case "workflow":
+		files["src/workflow-executor.ts"] = g.getEasyMCPTypeScriptWorkflowExecutor(templateType, data)
 	case "multi-tool":
-		files["src/database.ts"] = g.getEasyMCPTypeScriptDatabase(templateType, data)
-		files["src/filesystem.ts"] = g.getEasyMCPTypeScriptFilesystem(templateType, data)
-		files["src/api-client.ts"] = g.getEasyMCPTypeScriptAPIClient(templateType, data)
+		files["src/http-client.ts"] = g.getEasyMCPTypeScriptHTTPClient(templateType, data)
+		files["src/data-processor.ts"] = g.getEasyMCPTypeScriptDataProcessor(templateType, data)
+		files["src/workflow-executor.ts"] = g.getEasyMCPTypeScriptWorkflowExecutor(templateType, data)
 	}
 
 	return files
@@ -706,80 +706,14 @@ func (g *Generator) getEasyMCPTypeScriptPrettierConfig(templateType string, data
 }
 
 // Simplified template-specific tools
-func (g *Generator) getEasyMCPTypeScriptDatabase(templateType string, data map[string]interface{}) string {
+func (g *Generator) getEasyMCPTypeScriptHTTPClient(templateType string, data map[string]interface{}) string {
 	return `/**
- * Database tools for {{.ProjectName}}
+ * HTTP client tools for {{.ProjectName}}
  */
 
 import { EasyMCP } from 'easymcp';
 
-export function registerDatabaseTools(server: EasyMCP) {
-  server.addTool('queryDatabase', {
-    description: 'Execute a database query',
-    parameters: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'SQL query to execute'
-        }
-      },
-      required: ['query']
-    },
-    handler: async (params: { query: string }) => {
-      // TODO: Implement database integration
-      return {
-        message: 'Database integration coming soon',
-        query: params.query,
-        timestamp: new Date().toISOString()
-      };
-    }
-  });
-}
-`
-}
-
-func (g *Generator) getEasyMCPTypeScriptFilesystem(templateType string, data map[string]interface{}) string {
-	return `/**
- * Filesystem tools for {{.ProjectName}}
- */
-
-import { EasyMCP } from 'easymcp';
-
-export function registerFilesystemTools(server: EasyMCP) {
-  server.addTool('readFile', {
-    description: 'Read a file from the filesystem',
-    parameters: {
-      type: 'object',
-      properties: {
-        path: {
-          type: 'string',
-          description: 'Path to the file to read'
-        }
-      },
-      required: ['path']
-    },
-    handler: async (params: { path: string }) => {
-      // TODO: Implement safe file reading
-      return {
-        message: 'Filesystem integration coming soon',
-        path: params.path,
-        timestamp: new Date().toISOString()
-      };
-    }
-  });
-}
-`
-}
-
-func (g *Generator) getEasyMCPTypeScriptAPIClient(templateType string, data map[string]interface{}) string {
-	return `/**
- * API client tools for {{.ProjectName}}
- */
-
-import { EasyMCP } from 'easymcp';
-
-export function registerAPIClientTools(server: EasyMCP) {
+export function registerHTTPClientTools(server: EasyMCP) {
   server.addTool('httpRequest', {
     description: 'Make an HTTP request',
     parameters: {
@@ -810,4 +744,85 @@ export function registerAPIClientTools(server: EasyMCP) {
   });
 }
 `
-} 
+}
+
+func (g *Generator) getEasyMCPTypeScriptDataProcessor(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Data processor tools for {{.ProjectName}}
+ */
+
+import { EasyMCP } from 'easymcp';
+
+export function registerDataProcessorTools(server: EasyMCP) {
+  server.addTool('processData', {
+    description: 'Process data using a predefined algorithm',
+    parameters: {
+      type: 'object',
+      properties: {
+        algorithm: {
+          type: 'string',
+          enum: ['sort', 'filter', 'map', 'reduce'],
+          description: 'The algorithm to apply'
+        },
+        data: {
+          type: 'array',
+          description: 'Array of data to process'
+        },
+        options: {
+          type: 'object',
+          description: 'Algorithm-specific options'
+        }
+      },
+      required: ['algorithm', 'data']
+    },
+    handler: async (params: { algorithm: string; data: any[]; options?: any }) => {
+      // TODO: Implement data processing logic
+      return {
+        message: 'Data processing coming soon',
+        algorithm: params.algorithm,
+        data: params.data,
+        timestamp: new Date().toISOString()
+      };
+    }
+  });
+}
+`
+}
+
+func (g *Generator) getEasyMCPTypeScriptWorkflowExecutor(templateType string, data map[string]interface{}) string {
+	return `/**
+ * Workflow executor tools for {{.ProjectName}}
+ */
+
+import { EasyMCP } from 'easymcp';
+
+export function registerWorkflowExecutorTools(server: EasyMCP) {
+  server.addTool('executeWorkflow', {
+    description: 'Execute a predefined workflow',
+    parameters: {
+      type: 'object',
+      properties: {
+        workflowName: {
+          type: 'string',
+          description: 'Name of the workflow to execute'
+        },
+        inputs: {
+          type: 'object',
+          description: 'Inputs for the workflow'
+        }
+      },
+      required: ['workflowName']
+    },
+    handler: async (params: { workflowName: string; inputs?: any }) => {
+      // TODO: Implement workflow execution logic
+      return {
+        message: 'Workflow execution coming soon',
+        workflowName: params.workflowName,
+        inputs: params.inputs,
+        timestamp: new Date().toISOString()
+      };
+    }
+  });
+}
+`
+}

@@ -3,39 +3,39 @@ package templates
 // getOfficialPythonFiles returns the file templates for Official Python SDK projects
 func (g *Generator) getOfficialPythonFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"pyproject.toml":                    g.getOfficialPythonPyprojectToml(templateType, data),
-		".python-version":                   g.getOfficialPythonPythonVersion(templateType, data),
-		"README.md":                         g.getOfficialPythonReadme(templateType, data),
-		"Dockerfile":                        g.getOfficialPythonDockerfile(templateType, data),
-		".gitignore":                        g.getOfficialPythonGitignore(templateType, data),
-		".env.example":                      g.getOfficialPythonEnvExample(templateType, data),
-		
+		"pyproject.toml":  g.getOfficialPythonPyprojectToml(templateType, data),
+		".python-version": g.getOfficialPythonPythonVersion(templateType, data),
+		"README.md":       g.getOfficialPythonReadme(templateType, data),
+		"Dockerfile":      g.getOfficialPythonDockerfile(templateType, data),
+		".gitignore":      g.getOfficialPythonGitignore(templateType, data),
+		".env.example":    g.getOfficialPythonEnvExample(templateType, data),
+
 		// Official SDK structure - minimal and focused
-		"src/server.py":                     g.getOfficialPythonServer(templateType, data),
-		"src/tools.py":                      g.getOfficialPythonTools(templateType, data),
-		"src/__init__.py":                   "",
-		
+		"src/server.py":   g.getOfficialPythonServer(templateType, data),
+		"src/tools.py":    g.getOfficialPythonTools(templateType, data),
+		"src/__init__.py": "",
+
 		// Main entry point
-		"main.py":                           g.getOfficialPythonMain(templateType, data),
-		
+		"main.py": g.getOfficialPythonMain(templateType, data),
+
 		// Tests
-		"tests/__init__.py":                 "",
-		"tests/test_server.py":              g.getOfficialPythonTestServer(templateType, data),
-		"tests/test_tools.py":               g.getOfficialPythonTestTools(templateType, data),
+		"tests/__init__.py":    "",
+		"tests/test_server.py": g.getOfficialPythonTestServer(templateType, data),
+		"tests/test_tools.py":  g.getOfficialPythonTestTools(templateType, data),
 	}
 
 	// Add template-specific files
 	switch templateType {
-	case "database":
-		files["src/database_tools.py"] = g.getOfficialPythonDatabaseTools(templateType, data)
-	case "filesystem":
-		files["src/filesystem_tools.py"] = g.getOfficialPythonFilesystemTools(templateType, data)
-	case "api-client":
-		files["src/api_client_tools.py"] = g.getOfficialPythonAPIClientTools(templateType, data)
+	case "http":
+		files["src/http_client_tools.py"] = g.getOfficialPythonHTTPClientTools(templateType, data)
+	case "data":
+		files["src/data_processor_tools.py"] = g.getOfficialPythonDataProcessorTools(templateType, data)
+	case "workflow":
+		files["src/workflow_executor_tools.py"] = g.getOfficialPythonWorkflowExecutorTools(templateType, data)
 	case "multi-tool":
-		files["src/database_tools.py"] = g.getOfficialPythonDatabaseTools(templateType, data)
-		files["src/filesystem_tools.py"] = g.getOfficialPythonFilesystemTools(templateType, data)
-		files["src/api_client_tools.py"] = g.getOfficialPythonAPIClientTools(templateType, data)
+		files["src/http_client_tools.py"] = g.getOfficialPythonHTTPClientTools(templateType, data)
+		files["src/data_processor_tools.py"] = g.getOfficialPythonDataProcessorTools(templateType, data)
+		files["src/workflow_executor_tools.py"] = g.getOfficialPythonWorkflowExecutorTools(templateType, data)
 	}
 
 	return files
@@ -683,95 +683,15 @@ class TestTools:
 }
 
 // Template-specific tools (placeholders)
-func (g *Generator) getOfficialPythonDatabaseTools(templateType string, data map[string]interface{}) string {
-	return `"""Database tools for {{.ProjectName}} MCP Server."""
+func (g *Generator) getOfficialPythonHTTPClientTools(templateType string, data map[string]interface{}) string {
+	return `"""HTTP client tools for {{.ProjectName}} MCP Server."""
 
 from typing import Any, Dict, List
 from mcp.types import Tool
 
 
-def get_database_tools() -> List[Tool]:
-    """Get database-specific tools."""
-    return [
-        Tool(
-            name="query_database",
-            description="Execute a database query",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL query to execute"
-                    }
-                },
-                "required": ["query"]
-            }
-        )
-    ]
-
-
-async def query_database_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute a database query."""
-    query = arguments.get("query", "")
-    
-    # TODO: Implement database connectivity
-    return {
-        "message": "Database integration coming soon",
-        "query": query,
-        "timestamp": "2025-01-16T14:49:30Z"
-    }
-`
-}
-
-func (g *Generator) getOfficialPythonFilesystemTools(templateType string, data map[string]interface{}) string {
-	return `"""Filesystem tools for {{.ProjectName}} MCP Server."""
-
-from typing import Any, Dict, List
-from mcp.types import Tool
-
-
-def get_filesystem_tools() -> List[Tool]:
-    """Get filesystem-specific tools."""
-    return [
-        Tool(
-            name="read_file",
-            description="Read a file from the filesystem",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to the file to read"
-                    }
-                },
-                "required": ["path"]
-            }
-        )
-    ]
-
-
-async def read_file_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """Read a file from the filesystem."""
-    path = arguments.get("path", "")
-    
-    # TODO: Implement safe file reading
-    return {
-        "message": "Filesystem integration coming soon",
-        "path": path,
-        "timestamp": "2025-01-16T14:49:30Z"
-    }
-`
-}
-
-func (g *Generator) getOfficialPythonAPIClientTools(templateType string, data map[string]interface{}) string {
-	return `"""API client tools for {{.ProjectName}} MCP Server."""
-
-from typing import Any, Dict, List
-from mcp.types import Tool
-
-
-def get_api_client_tools() -> List[Tool]:
-    """Get API client-specific tools."""
+def get_http_client_tools() -> List[Tool]:
+    """Get HTTP client-specific tools."""
     return [
         Tool(
             name="http_request",
@@ -809,4 +729,104 @@ async def http_request_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
         "timestamp": "2025-01-16T14:49:30Z"
     }
 `
-} 
+}
+
+func (g *Generator) getOfficialPythonDataProcessorTools(templateType string, data map[string]interface{}) string {
+	return `"""Data processor tools for {{.ProjectName}} MCP Server."""
+
+from typing import Any, Dict, List
+from mcp.types import Tool
+
+
+def get_data_processor_tools() -> List[Tool]:
+    """Get data processor-specific tools."""
+    return [
+        Tool(
+            name="process_data",
+            description="Process data using a predefined algorithm",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "algorithm": {
+                        "type": "string",
+                        "enum": ["sum", "average", "count"],
+                        "description": "The algorithm to apply"
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        },
+                        "description": "List of numbers to process"
+                    }
+                },
+                "required": ["algorithm", "data"]
+            }
+        )
+    ]
+
+
+async def process_data_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Process data using a predefined algorithm."""
+    algorithm = arguments.get("algorithm")
+    data = arguments.get("data")
+    
+    if not isinstance(data, list) or not all(isinstance(item, (int, float)) for item in data):
+        raise ValueError("Data must be a list of numbers")
+    
+    if algorithm == "sum":
+        result = sum(data)
+    elif algorithm == "average":
+        result = sum(data) / len(data)
+    elif algorithm == "count":
+        result = len(data)
+    else:
+        raise ValueError(f"Unknown algorithm: {algorithm}")
+    
+    return {
+        "result": result,
+        "algorithm": algorithm,
+        "inputs": {"algorithm": algorithm, "data": data}
+    }
+`
+}
+
+func (g *Generator) getOfficialPythonWorkflowExecutorTools(templateType string, data map[string]interface{}) string {
+	return `"""Workflow executor tools for {{.ProjectName}} MCP Server."""
+
+from typing import Any, Dict, List
+from mcp.types import Tool
+
+
+def get_workflow_executor_tools() -> List[Tool]:
+    """Get workflow executor-specific tools."""
+    return [
+        Tool(
+            name="execute_workflow",
+            description="Execute a predefined workflow",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workflow_name": {
+                        "type": "string",
+                        "description": "Name of the workflow to execute"
+                    }
+                },
+                "required": ["workflow_name"]
+            }
+        )
+    ]
+
+
+async def execute_workflow_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute a predefined workflow."""
+    workflow_name = arguments.get("workflow_name")
+    
+    # TODO: Implement workflow execution logic
+    return {
+        "message": f"Workflow '{workflow_name}' execution coming soon",
+        "workflow_name": workflow_name,
+        "timestamp": "2025-01-16T14:49:30Z"
+    }
+`
+}

@@ -3,52 +3,52 @@ package templates
 // getFastMCPPythonFiles returns the file templates for FastMCP Python projects
 func (g *Generator) getFastMCPPythonFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"pyproject.toml":                    g.getFastMCPPythonPyprojectToml(templateType, data),
-		".python-version":                   g.getFastMCPPythonPythonVersion(templateType, data),
-		"README.md":                         g.getFastMCPPythonReadme(templateType, data),
-		"Dockerfile":                        g.getFastMCPPythonDockerfile(templateType, data),
-		".gitignore":                        g.getFastMCPPythonGitignore(templateType, data),
-		".env.example":                      g.getFastMCPPythonEnvExample(templateType, data),
-		
+		"pyproject.toml":  g.getFastMCPPythonPyprojectToml(templateType, data),
+		".python-version": g.getFastMCPPythonPythonVersion(templateType, data),
+		"README.md":       g.getFastMCPPythonReadme(templateType, data),
+		"Dockerfile":      g.getFastMCPPythonDockerfile(templateType, data),
+		".gitignore":      g.getFastMCPPythonGitignore(templateType, data),
+		".env.example":    g.getFastMCPPythonEnvExample(templateType, data),
+
 		// New modular structure
-		"src/__init__.py":                   "",
-		"src/main.py":                       g.getFastMCPPythonMain(templateType, data),
-		
+		"src/__init__.py": "",
+		"src/main.py":     g.getFastMCPPythonMain(templateType, data),
+
 		// Tools directory
-		"src/tools/__init__.py":             g.getFastMCPPythonToolsInit(templateType, data),
-		"src/tools/echo.py":                 g.getFastMCPPythonEchoTool(templateType, data),
-		"src/tools/calculator.py":           g.getFastMCPPythonCalculatorTool(templateType, data),
-		
+		"src/tools/__init__.py":   g.getFastMCPPythonToolsInit(templateType, data),
+		"src/tools/echo.py":       g.getFastMCPPythonEchoTool(templateType, data),
+		"src/tools/calculator.py": g.getFastMCPPythonCalculatorTool(templateType, data),
+
 		// Resources directory
-		"src/resources/__init__.py":         g.getFastMCPPythonResourcesInit(templateType, data),
-		
+		"src/resources/__init__.py": g.getFastMCPPythonResourcesInit(templateType, data),
+
 		// Core directory (generated framework code)
-		"src/core/__init__.py":              g.getFastMCPPythonCoreInit(templateType, data),
-		"src/core/server.py":                g.getFastMCPPythonCoreServer(templateType, data),
-		"src/core/registry.py":              g.getFastMCPPythonCoreRegistry(templateType, data),
-		
+		"src/core/__init__.py": g.getFastMCPPythonCoreInit(templateType, data),
+		"src/core/server.py":   g.getFastMCPPythonCoreServer(templateType, data),
+		"src/core/registry.py": g.getFastMCPPythonCoreRegistry(templateType, data),
+
 		// Configuration files
-		"config/server.yaml":                g.getFastMCPPythonServerConfig(templateType, data),
-		"config/tools.yaml":                 g.getFastMCPPythonToolsConfig(templateType, data),
-		
+		"config/server.yaml": g.getFastMCPPythonServerConfig(templateType, data),
+		"config/tools.yaml":  g.getFastMCPPythonToolsConfig(templateType, data),
+
 		// Tests
-		"tests/__init__.py":                 "",
-		"tests/test_tools.py":               g.getFastMCPPythonTestTools(templateType, data),
-		"tests/test_server.py":              g.getFastMCPPythonTestServer(templateType, data),
+		"tests/__init__.py":    "",
+		"tests/test_tools.py":  g.getFastMCPPythonTestTools(templateType, data),
+		"tests/test_server.py": g.getFastMCPPythonTestServer(templateType, data),
 	}
 
 	// Add template-specific files
 	switch templateType {
-	case "database":
-		files["src/tools/database.py"] = g.getFastMCPPythonDatabaseTool(templateType, data)
-	case "filesystem":
-		files["src/tools/filesystem.py"] = g.getFastMCPPythonFilesystemTool(templateType, data)
-	case "api-client":
-		files["src/tools/api_client.py"] = g.getFastMCPPythonAPIClientTool(templateType, data)
+	case "http":
+		files["src/tools/http_client.py"] = g.getFastMCPPythonHTTPTool(templateType, data)
+	case "data":
+		files["src/tools/data_processor.py"] = g.getFastMCPPythonDataTool(templateType, data)
+	case "workflow":
+		files["src/tools/workflow_executor.py"] = g.getFastMCPPythonWorkflowTool(templateType, data)
 	case "multi-tool":
-		files["src/tools/database.py"] = g.getFastMCPPythonDatabaseTool(templateType, data)
-		files["src/tools/filesystem.py"] = g.getFastMCPPythonFilesystemTool(templateType, data)
-		files["src/tools/api_client.py"] = g.getFastMCPPythonAPIClientTool(templateType, data)
+		files["src/tools/http_client.py"] = g.getFastMCPPythonHTTPTool(templateType, data)
+		files["src/tools/data_processor.py"] = g.getFastMCPPythonDataTool(templateType, data)
+		files["src/tools/workflow_executor.py"] = g.getFastMCPPythonWorkflowTool(templateType, data)
 	}
 
 	return files
@@ -1154,6 +1154,160 @@ class APIClientTool:
             "url": request.url,
             "method": request.method,
             "headers": request.headers
+        }
+`
+}
+
+// New tool functions for the simplified tool types
+func (g *Generator) getFastMCPPythonHTTPTool(templateType string, data map[string]interface{}) string {
+	return `"""HTTP client tool implementation for {{.ProjectName}} MCP server."""
+
+from typing import Any, Dict
+from pydantic import BaseModel, Field
+import httpx
+
+
+class HTTPRequestRequest(BaseModel):
+    """Request model for HTTP operations."""
+    method: str = Field(..., description="HTTP method (GET, POST, etc.)")
+    endpoint: str = Field(..., description="API endpoint")
+    data: Dict[str, Any] = Field(default_factory=dict, description="Request data")
+
+
+class HTTPTool:
+    """Tool for HTTP client operations."""
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        """Initialize the HTTP tool with configuration."""
+        self.config = config or {}
+        self.base_url = self.config.get("base_url", "")
+        self.timeout = self.config.get("timeout", 30)
+    
+    async def make_request(self, request: HTTPRequestRequest) -> Dict[str, Any]:
+        """Make an HTTP request."""
+        url = f"{self.base_url.rstrip('/')}/{request.endpoint.lstrip('/')}" if self.base_url else request.endpoint
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.request(
+                    request.method,
+                    url,
+                    json=request.data if request.data else None
+                )
+                
+                try:
+                    data = response.json()
+                except:
+                    data = response.text
+                
+                return {
+                    "status_code": response.status_code,
+                    "data": data,
+                    "success": response.is_success
+                }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "success": False
+            }
+`
+}
+
+func (g *Generator) getFastMCPPythonDataTool(templateType string, data map[string]interface{}) string {
+	return `"""Data processing tool implementation for {{.ProjectName}} MCP server."""
+
+from typing import Any, Dict, List, Union
+from pydantic import BaseModel, Field
+
+
+class DataProcessRequest(BaseModel):
+    """Request model for data processing operations."""
+    data: Union[Dict, List, str] = Field(..., description="Input data to process")
+    operation: str = Field(default="process", description="Operation to perform")
+
+
+class DataTool:
+    """Tool for data processing operations."""
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        """Initialize the data tool with configuration."""
+        self.config = config or {}
+    
+    async def process_data(self, request: DataProcessRequest) -> Dict[str, Any]:
+        """Process input data."""
+        # TODO: Implement your data processing logic here
+        return {
+            "tool": "data_processor",
+            "input_type": type(request.data).__name__,
+            "operation": request.operation,
+            "result": "Data processed successfully"
+        }
+    
+    async def validate_data(self, request: DataProcessRequest) -> Dict[str, Any]:
+        """Validate input data."""
+        # TODO: Implement your validation logic here
+        return {
+            "valid": True,
+            "errors": [],
+            "data_type": type(request.data).__name__
+        }
+`
+}
+
+func (g *Generator) getFastMCPPythonWorkflowTool(templateType string, data map[string]interface{}) string {
+	return `"""Workflow execution tool implementation for {{.ProjectName}} MCP server."""
+
+from typing import Any, Dict, List
+from pydantic import BaseModel, Field
+
+
+class WorkflowRequest(BaseModel):
+    """Request model for workflow operations."""
+    steps: List[Dict[str, Any]] = Field(..., description="Workflow steps to execute")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Initial context")
+
+
+class WorkflowTool:
+    """Tool for workflow execution operations."""
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        """Initialize the workflow tool with configuration."""
+        self.config = config or {}
+        self.max_steps = self.config.get("max_steps", 10)
+    
+    async def execute_workflow(self, request: WorkflowRequest) -> Dict[str, Any]:
+        """Execute a workflow with multiple steps."""
+        if len(request.steps) > self.max_steps:
+            return {
+                "error": f"Too many steps (max {self.max_steps})"
+            }
+        
+        results = []
+        context = request.context.copy()
+        
+        for i, step in enumerate(request.steps):
+            # TODO: Implement your step execution logic here
+            step_result = await self.execute_step(step, context)
+            results.append(step_result)
+            
+            # Update context with step results
+            if step_result.get("context"):
+                context.update(step_result["context"])
+        
+        return {
+            "tool": "workflow_executor",
+            "steps_executed": len(results),
+            "results": results,
+            "context": context
+        }
+    
+    async def execute_step(self, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a single workflow step."""
+        # TODO: Implement your step execution logic here
+        return {
+            "step_type": step.get("type", "unknown"),
+            "status": "success",
+            "context": {}
         }
 `
 }
