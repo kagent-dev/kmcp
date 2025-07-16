@@ -78,9 +78,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
 			InitContainers: []corev1.Container{{
-				Name:    "copy-binary",
-				Image:   agentGatewayContainerImage,
-				Command: []string{"sh"},
+				Name:            "copy-binary",
+				Image:           agentGatewayContainerImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"sh"},
 				Args: []string{
 					"-c",
 					"cp /usr/bin/agentgateway /agentbin/agentgateway",
@@ -92,8 +93,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
-				Name:  "mcp-server",
-				Image: image,
+				Name:            "mcp-server",
+				Image:           image,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
 					"sh",
 				},
@@ -141,9 +143,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		template = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "agent-gateway",
-					Image:   agentGatewayContainerImage,
-					Command: []string{"sh"},
+					Name:            "agent-gateway",
+					Image:           agentGatewayContainerImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"sh"},
 					Args: []string{
 						"-c",
 						"/agentbin/agentgateway -f /config/local.yaml",
@@ -157,6 +160,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				{
 					Name:            "mcp-server",
 					Image:           image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
