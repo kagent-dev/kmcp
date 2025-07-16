@@ -175,6 +175,15 @@ func generateTool(toolName, toolPath string) error {
 
 	fmt.Printf("✅ Successfully created tool: %s\n", toolName)
 	fmt.Printf("📁 Generated file: %s\n", toolPath)
+	
+	// Regenerate __init__.py file
+	toolsDir := filepath.Dir(toolPath)
+	if err := generator.RegenerateToolsInit(toolsDir); err != nil {
+		fmt.Printf("⚠️  Warning: Failed to regenerate __init__.py: %v\n", err)
+	} else {
+		fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
+	}
+
 	fmt.Printf("📝 Edit the file to implement your tool logic\n")
 	fmt.Printf("🚀 The tool will be automatically loaded when the server starts\n")
 
