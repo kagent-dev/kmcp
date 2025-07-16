@@ -28,12 +28,15 @@ func (d *Discovery) AnalyzeToolFile(filePath string) (*ToolInfo, error) {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	// Extract tool name from file name (without .py extension)
+	fileName := filepath.Base(filePath)
+	toolName := strings.TrimSuffix(fileName, ".py")
+
 	toolInfo := &ToolInfo{
-		Name:     filepath.Base(filePath),
-		FilePath: filePath,
-		Methods:  []MethodInfo{},
-		Imports:  []string{},
-		Config:   make(map[string]interface{}),
+		Name:         toolName,
+		FilePath:     filePath,
+		FunctionName: toolName,
+		Config:       make(map[string]interface{}),
 	}
 
 	// Parse the file content
@@ -48,214 +51,197 @@ func (d *Discovery) AnalyzeToolFile(filePath string) (*ToolInfo, error) {
 func (d *Discovery) parseFileContent(content string, toolInfo *ToolInfo) error {
 	lines := strings.Split(content, "\n")
 
-	// Regular expressions for parsing Python code
-	classRegex := regexp.MustCompile(`^class\s+(\w+).*:`)
-	methodRegex := regexp.MustCompile(`^\s+(async\s+)?def\s+(\w+)\s*\(([^)]*)\)\s*(->\s*([^:]+))?\s*:`)
-	importRegex := regexp.MustCompile(`^(from\s+\S+\s+)?import\s+(.+)`)
+	// Look for the function definition (tools now use @mcp.tool() decorator)
+	functionRegex := regexp.MustCompile(`^def\s+` + toolInfo.FunctionName + `\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?\s*:`)
 
-	var currentClass string
-	var currentMethod *MethodInfo
-	var inDocstring bool
-	var docstringContent strings.Builder
+	var inFunction bool
+	var functionDocstring string
 
 	for i, line := range lines {
-		line = strings.TrimRight(line, "\r\n")
+		line = strings.TrimSpace(line)
 
-		// Handle multi-line docstrings
-		if inDocstring {
-			if strings.Contains(line, `"""`) {
-				inDocstring = false
-				// Apply collected docstring to current method or class
-				if currentMethod != nil {
-					currentMethod.Description = strings.TrimSpace(docstringContent.String())
-				}
-				docstringContent.Reset()
-			} else {
-				docstringContent.WriteString(line)
-				docstringContent.WriteString(" ")
+		// Check if we found the main function
+		if matches := functionRegex.FindStringSubmatch(line); matches != nil {
+			inFunction = true
+
+			// Extract parameters
+			if len(matches) > 1 && matches[1] != "" {
+				params := d.parseParameters(matches[1])
+				toolInfo.Parameters = params
 			}
+
+			// Extract return type
+			if len(matches) > 2 && matches[2] != "" {
+				toolInfo.ReturnType = strings.TrimSpace(matches[2])
+			}
+
+			// Check if function is async
+			if strings.Contains(lines[i], "async def") {
+				toolInfo.IsAsync = true
+			}
+
 			continue
 		}
 
-		// Check for class definitions
-		if classMatch := classRegex.FindStringSubmatch(line); classMatch != nil {
-			currentClass = classMatch[1]
-			toolInfo.ClassName = currentClass
-			continue
-		}
-
-		// Check for method definitions
-		if methodMatch := methodRegex.FindStringSubmatch(line); methodMatch != nil {
-			isAsync := strings.TrimSpace(methodMatch[1]) == "async"
-			methodName := methodMatch[2]
-			paramsStr := methodMatch[3]
-			returnType := strings.TrimSpace(methodMatch[5])
-
-			// Skip private methods and __init__
-			if strings.HasPrefix(methodName, "_") {
-				continue
-			}
-
-			method := MethodInfo{
-				Name:       methodName,
-				IsAsync:    isAsync,
-				ReturnType: returnType,
-				Parameters: d.parseParameters(paramsStr),
-				Config:     make(map[string]interface{}),
-			}
-
-			// Look for docstring on next lines
-			if i+1 < len(lines) {
-				nextLine := strings.TrimSpace(lines[i+1])
-				if strings.HasPrefix(nextLine, `"""`) {
-					if strings.HasSuffix(nextLine, `"""`) && len(nextLine) > 6 {
-						// Single line docstring
-						method.Description = strings.Trim(nextLine, `"`)
-					} else {
-						// Multi-line docstring
-						inDocstring = true
-						currentMethod = &method
-						docstringContent.WriteString(strings.TrimPrefix(nextLine, `"""`))
-					}
+		// Extract docstring if we're in the function
+		if inFunction && functionDocstring == "" {
+			if strings.Contains(line, `"""`) || strings.Contains(line, `'''`) {
+				// Extract docstring
+				docstring := d.extractDocstring(lines, i)
+				if docstring != "" {
+					toolInfo.Description = docstring
+					functionDocstring = docstring
 				}
 			}
-
-			toolInfo.Methods = append(toolInfo.Methods, method)
-			continue
 		}
 
-		// Check for imports
-		if importMatch := importRegex.FindStringSubmatch(line); importMatch != nil {
-			toolInfo.Imports = append(toolInfo.Imports, strings.TrimSpace(line))
-			continue
+		// Stop parsing once we exit the function
+		if inFunction && line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && !strings.Contains(line, `"""`) && !strings.Contains(line, `'''`) {
+			break
 		}
+	}
+
+	// If no function found, this is an error for our dynamic loading approach
+	if !inFunction {
+		return fmt.Errorf("no function named '%s' found in file", toolInfo.FunctionName)
 	}
 
 	return nil
 }
 
-// parseParameters parses method parameters from a parameter string
-func (d *Discovery) parseParameters(paramsStr string) []ParameterInfo {
-	if paramsStr == "" {
-		return []ParameterInfo{}
-	}
+// parseParameters extracts parameter information from function signature
+func (d *Discovery) parseParameters(paramStr string) []ParameterInfo {
+	var params []ParameterInfo
 
-	params := []ParameterInfo{}
-
-	// Split parameters by comma, but handle nested structures
-	paramParts := d.splitParameters(paramsStr)
-
-	for _, part := range paramParts {
+	// Simple parameter parsing - can be enhanced later
+	parts := strings.Split(paramStr, ",")
+	for _, part := range parts {
 		part = strings.TrimSpace(part)
-
-		// Skip 'self' parameter
-		if part == "self" {
+		if part == "" || part == "self" {
 			continue
 		}
 
-		param := d.parseParameter(part)
-		if param.Name != "" {
-			params = append(params, param)
+		param := ParameterInfo{
+			Name:     part,
+			Type:     "str", // Default type
+			Required: true,
 		}
+
+		// Check for type annotations
+		if strings.Contains(part, ":") {
+			parts := strings.Split(part, ":")
+			param.Name = strings.TrimSpace(parts[0])
+			if len(parts) > 1 {
+				param.Type = strings.TrimSpace(parts[1])
+			}
+		}
+
+		// Check for default values
+		if strings.Contains(param.Name, "=") {
+			parts := strings.Split(param.Name, "=")
+			param.Name = strings.TrimSpace(parts[0])
+			if len(parts) > 1 {
+				param.Default = strings.TrimSpace(parts[1])
+				param.Required = false
+			}
+		}
+
+		params = append(params, param)
 	}
 
 	return params
 }
 
-// splitParameters splits parameter string by comma while respecting nested structures
-func (d *Discovery) splitParameters(paramsStr string) []string {
-	parts := []string{}
-	current := strings.Builder{}
-	depth := 0
+// extractDocstring extracts docstring from function
+func (d *Discovery) extractDocstring(lines []string, startLine int) string {
+	var docstring strings.Builder
+	var inDocstring bool
+	var quoteType string
 
-	for _, char := range paramsStr {
-		switch char {
-		case '(', '[', '{':
-			depth++
-			current.WriteRune(char)
-		case ')', ']', '}':
-			depth--
-			current.WriteRune(char)
-		case ',':
-			if depth == 0 {
-				parts = append(parts, current.String())
-				current.Reset()
-			} else {
-				current.WriteRune(char)
+	for i := startLine; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+
+		if !inDocstring {
+			if strings.Contains(line, `"""`) {
+				inDocstring = true
+				quoteType = `"""`
+				// Extract content after opening quotes
+				if idx := strings.Index(line, `"""`); idx != -1 {
+					content := line[idx+3:]
+					if strings.Contains(content, `"""`) {
+						// Single line docstring
+						content = strings.TrimSuffix(content, `"""`)
+						return strings.TrimSpace(content)
+					}
+					if content != "" {
+						docstring.WriteString(content)
+					}
+				}
+			} else if strings.Contains(line, `'''`) {
+				inDocstring = true
+				quoteType = `'''`
+				// Extract content after opening quotes
+				if idx := strings.Index(line, `'''`); idx != -1 {
+					content := line[idx+3:]
+					if strings.Contains(content, `'''`) {
+						// Single line docstring
+						content = strings.TrimSuffix(content, `'''`)
+						return strings.TrimSpace(content)
+					}
+					if content != "" {
+						docstring.WriteString(content)
+					}
+				}
 			}
-		default:
-			current.WriteRune(char)
+		} else {
+			// We're inside a docstring
+			if strings.Contains(line, quoteType) {
+				// End of docstring
+				content := strings.Split(line, quoteType)[0]
+				if content != "" {
+					docstring.WriteString(" " + content)
+				}
+				break
+			} else {
+				if docstring.Len() > 0 {
+					docstring.WriteString(" ")
+				}
+				docstring.WriteString(line)
+			}
 		}
 	}
 
-	if current.Len() > 0 {
-		parts = append(parts, current.String())
-	}
-
-	return parts
+	return strings.TrimSpace(docstring.String())
 }
 
-// parseParameter parses a single parameter definition
-func (d *Discovery) parseParameter(paramStr string) ParameterInfo {
-	param := ParameterInfo{}
-
-	// Handle default values
-	if strings.Contains(paramStr, "=") {
-		parts := strings.SplitN(paramStr, "=", 2)
-		paramStr = strings.TrimSpace(parts[0])
-		param.Default = strings.TrimSpace(parts[1])
-		param.Required = false
-	} else {
-		param.Required = true
-	}
-
-	// Handle type annotations
-	if strings.Contains(paramStr, ":") {
-		parts := strings.SplitN(paramStr, ":", 2)
-		param.Name = strings.TrimSpace(parts[0])
-		param.Type = strings.TrimSpace(parts[1])
-	} else {
-		param.Name = strings.TrimSpace(paramStr)
-		param.Type = "Any"
-	}
-
-	return param
-}
-
-// ScanDirectory scans a directory for Python tool files
-func (d *Discovery) ScanDirectory(dir string) ([]ToolInfo, error) {
-	toolsDir := filepath.Join(d.projectDir, dir)
-
+// DiscoverTools discovers all tool files in the tools directory
+func (d *Discovery) DiscoverTools(toolsDir string) ([]ToolInfo, error) {
 	var tools []ToolInfo
 
+	// Find all Python files in tools directory
 	err := filepath.Walk(toolsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Only process Python files
-		if !strings.HasSuffix(path, ".py") || strings.HasSuffix(path, "__init__.py") {
+		// Skip __init__.py and other non-tool files
+		if info.IsDir() || !strings.HasSuffix(info.Name(), ".py") || info.Name() == "__init__.py" {
 			return nil
 		}
 
 		// Analyze the tool file
 		toolInfo, err := d.AnalyzeToolFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to analyze %s: %w", path, err)
+			return fmt.Errorf("failed to analyze tool file %s: %w", path, err)
 		}
 
-		// Only include files that have at least one method
-		if len(toolInfo.Methods) > 0 {
-			tools = append(tools, *toolInfo)
-		}
-
+		tools = append(tools, *toolInfo)
 		return nil
 	})
 
-	return tools, err
-}
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover tools: %w", err)
+	}
 
-// ListAvailableTools lists all available tools in the project
-func (d *Discovery) ListAvailableTools() ([]ToolInfo, error) {
-	return d.ScanDirectory("src/tools")
+	return tools, nil
 }
