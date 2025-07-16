@@ -14,23 +14,26 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new MCP server project",
-	Long: `Initialize a new MCP server project with templates and best practices.
+	Long: `Initialize a new MCP server project with dynamic tool loading.
 
 This command creates a new MCP server project using one of the supported frameworks:
-- FastMCP Python (recommended)
-- FastMCP TypeScript  
-- EasyMCP TypeScript (simple)
-- Official Python SDK
-- Official TypeScript SDK
+- FastMCP Python (recommended) - Dynamic tool loading with FastMCP
+- FastMCP TypeScript - Dynamic tool loading with FastMCP  
+- EasyMCP TypeScript - Simple TypeScript framework
+- Official Python SDK - Official Python MCP SDK
+- Official TypeScript SDK - Official TypeScript MCP SDK
 
-The command will guide you through selecting a framework and template type.`,
+The recommended approach is FastMCP Python which provides:
+- Automatic tool discovery and loading
+- One file per tool with clear structure
+- Built-in configuration management
+- Comprehensive testing framework`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInit,
 }
 
 var (
 	initFramework      string
-	initTemplate       string
 	initForce          bool
 	initNoGit          bool
 	initAuthor         string
@@ -42,7 +45,6 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, fastmcp-ts, easymcp-ts, official-python, official-ts)")
-	initCmd.Flags().StringVarP(&initTemplate, "template", "t", "", "Template type (basic, database, filesystem, api-client, multi-tool)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
@@ -90,15 +92,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get template selection
-	template := initTemplate
-	if template == "" && !initNonInteractive {
+	template := "basic" // Default template for all frameworks
+	if !initNonInteractive && framework == "fastmcp-python" {
+		fmt.Println("\nFastMCP Python uses dynamic tool loading - no template selection needed!")
+		fmt.Println("Tools will be automatically discovered from the src/tools/ directory.")
+		fmt.Println("Use 'kmcp add-tool <name>' to add new tools after project creation.")
+	} else if !initNonInteractive {
 		selected, err := promptForTemplate(framework)
 		if err != nil {
 			return fmt.Errorf("failed to select template: %w", err)
 		}
 		template = selected
-	} else if template == "" {
-		template = "basic" // Default template
 	}
 
 	// Get author information
@@ -201,11 +205,11 @@ func promptForProjectName() (string, error) {
 
 func promptForFramework() (string, error) {
 	fmt.Println("\nSelect a framework:")
-	fmt.Println("1. FastMCP Python (recommended)")
-	fmt.Println("2. FastMCP TypeScript")
-	fmt.Println("3. EasyMCP TypeScript (simple)")
-	fmt.Println("4. Official Python SDK")
-	fmt.Println("5. Official TypeScript SDK")
+	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
+	fmt.Println("2. FastMCP TypeScript - Dynamic tool loading with FastMCP")
+	fmt.Println("3. EasyMCP TypeScript - Simple TypeScript framework")
+	fmt.Println("4. Official Python SDK - Official Python MCP SDK")
+	fmt.Println("5. Official TypeScript SDK - Official TypeScript MCP SDK")
 	fmt.Print("Enter choice [1-5]: ")
 
 	var choice string
@@ -230,6 +234,11 @@ func promptForFramework() (string, error) {
 }
 
 func promptForTemplate(framework string) (string, error) {
+	if framework == "fastmcp-python" {
+		// FastMCP Python uses dynamic loading, no template selection needed
+		return "basic", nil
+	}
+
 	fmt.Println("\nSelect a template:")
 	fmt.Println("1. Basic - Simple server with example tools")
 	fmt.Println("2. Database - Database integration template")

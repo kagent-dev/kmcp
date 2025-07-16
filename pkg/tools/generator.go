@@ -10,29 +10,15 @@ import (
 
 // Generator handles generating new Python tool files from templates
 type Generator struct {
-	templates map[string]*ToolTemplate
 }
 
 // NewGenerator creates a new generator instance
 func NewGenerator() *Generator {
-	g := &Generator{
-		templates: make(map[string]*ToolTemplate),
-	}
-
-	// Initialize built-in templates
-	g.initBuiltinTemplates()
-
-	return g
+	return &Generator{}
 }
 
-// GenerateToolFile generates a new Python tool file from a template
-func (g *Generator) GenerateToolFile(filePath, toolName, toolType string, config map[string]interface{}) error {
-	// Get the template for the tool type
-	toolTemplate, exists := g.templates[toolType]
-	if !exists {
-		return fmt.Errorf("unknown tool type: %s", toolType)
-	}
-
+// GenerateToolFile generates a new Python tool file from the unified template
+func (g *Generator) GenerateToolFile(filePath, toolName string, config map[string]interface{}) error {
 	// Prepare template data
 	data := map[string]interface{}{
 		"ToolName":      toolName,
@@ -54,7 +40,7 @@ func (g *Generator) GenerateToolFile(filePath, toolName, toolType string, config
 	}
 
 	// Parse and execute the template
-	tmpl, err := template.New(toolType).Parse(toolTemplate.Content)
+	tmpl, err := template.New("tool").Parse(g.getUnifiedTemplate())
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -74,294 +60,110 @@ func (g *Generator) GenerateToolFile(filePath, toolName, toolType string, config
 	return nil
 }
 
-// initBuiltinTemplates initializes the built-in tool templates
-func (g *Generator) initBuiltinTemplates() {
-	// Basic tool template - minimal structure
-	g.templates["basic"] = &ToolTemplate{
-		Name:         "basic",
-		Type:         "basic",
-		Description:  "Minimal tool structure with basic functionality",
-		Content:      g.getBasicTemplate(),
-		Dependencies: []string{},
-	}
+// getUnifiedTemplate returns the unified tool template with commented examples
+func (g *Generator) getUnifiedTemplate() string {
+	return `"""{{.ToolNameTitle}} tool for MCP server.{{if .description}}
 
-	// HTTP tool template - basic HTTP client
-	g.templates["http"] = &ToolTemplate{
-		Name:         "http",
-		Type:         "http",
-		Description:  "Tool with HTTP client capabilities",
-		Content:      g.getHTTPTemplate(),
-		Dependencies: []string{"httpx"},
-	}
+{{.description}}{{end}}
 
-	// Data tool template - data processing focus
-	g.templates["data"] = &ToolTemplate{
-		Name:         "data",
-		Type:         "data",
-		Description:  "Tool for data processing and manipulation",
-		Content:      g.getDataTemplate(),
-		Dependencies: []string{},
-	}
+This tool is automatically loaded by the FastMCP dynamic loading system.
+The function name must match the filename for auto-discovery.
+"""
 
-	// Workflow tool template - multi-step operations
-	g.templates["workflow"] = &ToolTemplate{
-		Name:         "workflow",
-		Type:         "workflow",
-		Description:  "Tool for multi-step operations and workflows",
-		Content:      g.getWorkflowTemplate(),
-		Dependencies: []string{},
-	}
-}
+from core.server import mcp
+from core.utils import get_tool_config, get_env_var
 
-// getBasicTemplate returns the minimal basic tool template
-func (g *Generator) getBasicTemplate() string {
-	return `"""{{.ToolNameTitle}} tool for MCP server."""
-
-from typing import Dict, Any
+# Import additional dependencies as needed
+# import httpx          # For HTTP requests
+# import asyncpg        # For PostgreSQL database
+# import aiofiles       # For async file operations
+# import json           # For JSON processing
+# import yaml           # For YAML processing
 
 
-class {{.ClassName}}:
-    """{{.ToolNameTitle}} tool implementation.{{if .description}}
+@mcp.tool()
+def {{.ToolName}}(message: str) -> str:
+    """{{.ToolNameTitle}} tool implementation.
     
-    {{.description}}{{end}}"""
+    This is a template function. Replace this implementation with your tool logic.
     
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the {{.ToolName}} tool."""
-        self.config = config or {}
-    
-    async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process data and return results.
+    Args:
+        message: Input message (replace with your actual parameters)
         
-        Args:
-            data: Input data to process
-            
-        Returns:
-            Dict containing the processed results
-        """
-        # TODO: Implement your tool logic here
-        return {
-            "tool": "{{.ToolName}}",
-            "input": data,
-            "result": "Processed successfully"
-        }
+    Returns:
+        str: Result of the tool operation (replace with your actual return type)
+    """
+    # Get tool-specific configuration from kmcp.yaml
+    config = get_tool_config("{{.ToolName}}")
     
-    async def get_status(self) -> Dict[str, Any]:
-        """Get tool status."""
-        return {
-            "tool": "{{.ToolName}}",
-            "status": "ready"
-        }
+    # TODO: Replace this basic implementation with your tool logic
+    
+    # Example: Basic text processing
+    prefix = config.get("prefix", "")
+    return f"{prefix}{message}"
+    
+    # Example: HTTP API call
+    # api_key = get_env_var(config.get("api_key_env", "API_KEY"))
+    # base_url = config.get("base_url", "https://api.example.com")
+    # timeout = config.get("timeout", 30)
+    # 
+    # async with httpx.AsyncClient(timeout=timeout) as client:
+    #     headers = {"Authorization": f"Bearer {api_key}"}
+    #     response = await client.get(f"{base_url}/endpoint", headers=headers)
+    #     return response.json()
+    
+    # Example: Database operation
+    # db_url = get_env_var(config.get("db_url_env", "DATABASE_URL"))
+    # 
+    # async with asyncpg.connect(db_url) as conn:
+    #     result = await conn.fetchrow("SELECT * FROM table WHERE id = $1", message)
+    #     return dict(result) if result else None
+    
+    # Example: File processing
+    # file_path = config.get("file_path", "/tmp/data.txt")
+    # max_size = config.get("max_file_size", 1024 * 1024)  # 1MB
+    # 
+    # async with aiofiles.open(file_path, 'r') as f:
+    #     content = await f.read(max_size)
+    #     return {"content": content, "size": len(content)}
+    
+    # Example: JSON/YAML processing
+    # try:
+    #     data = json.loads(message)
+    #     # Process the data
+    #     return {"processed": True, "data": data}
+    # except json.JSONDecodeError:
+    #     return {"error": "Invalid JSON format"}
+    
+    # Example: Multi-step workflow
+    # steps = config.get("steps", [])
+    # results = []
+    # 
+    # for step in steps:
+    #     step_type = step.get("type")
+    #     if step_type == "process":
+    #         result = await process_step(message, step)
+    #     elif step_type == "validate":
+    #         result = await validate_step(message, step)
+    #     else:
+    #         result = {"error": f"Unknown step type: {step_type}"}
+    #     
+    #     results.append(result)
+    # 
+    # return {"workflow_results": results}
+
+
+# Example: Helper function for complex tools
+# async def process_step(data: str, step_config: dict) -> dict:
+#     """Process a single step in a workflow."""
+#     # Your step processing logic here
+#     return {"step": "processed", "data": data}
+
+
+# Example: Validation helper
+# async def validate_step(data: str, step_config: dict) -> dict:
+#     """Validate data in a workflow step."""
+#     # Your validation logic here
+#     return {"valid": True, "data": data}
 `
-}
-
-// getHTTPTemplate returns the HTTP tool template
-func (g *Generator) getHTTPTemplate() string {
-	return `"""{{.ToolNameTitle}} HTTP tool for MCP server."""
-
-from typing import Dict, Any, Optional
-import httpx
-
-
-class {{.ClassName}}:
-    """{{.ToolNameTitle}} HTTP tool implementation.{{if .description}}
-    
-    {{.description}}{{end}}"""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the {{.ToolName}} HTTP tool."""
-        self.config = config or {}
-        self.base_url = self.config.get("base_url", "{{.base_url}}")
-        self.timeout = self.config.get("timeout", 30)
-    
-    async def make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
-        """Make an HTTP request.
-        
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            endpoint: API endpoint
-            **kwargs: Additional request parameters
-            
-        Returns:
-            Dict containing the response data
-        """
-        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}" if self.base_url else endpoint
-        
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.request(method, url, **kwargs)
-                
-                # Try to parse JSON, fall back to text
-                try:
-                    data = response.json()
-                except:
-                    data = response.text
-                
-                return {
-                    "status_code": response.status_code,
-                    "data": data,
-                    "success": response.is_success
-                }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "success": False
-            }
-    
-    async def get_status(self) -> Dict[str, Any]:
-        """Get tool status."""
-        return {
-            "tool": "{{.ToolName}}",
-            "base_url": self.base_url,
-            "timeout": self.timeout,
-            "status": "ready"
-        }
-`
-}
-
-// getDataTemplate returns the data processing tool template
-func (g *Generator) getDataTemplate() string {
-	return `"""{{.ToolNameTitle}} data processing tool for MCP server."""
-
-from typing import Dict, Any, List, Union
-
-
-class {{.ClassName}}:
-    """{{.ToolNameTitle}} data processing tool implementation.{{if .description}}
-    
-    {{.description}}{{end}}"""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the {{.ToolName}} data tool."""
-        self.config = config or {}
-    
-    async def process_data(self, data: Union[Dict, List, str]) -> Dict[str, Any]:
-        """Process input data.
-        
-        Args:
-            data: Input data to process
-            
-        Returns:
-            Dict containing the processed results
-        """
-        # TODO: Implement your data processing logic here
-        return {
-            "tool": "{{.ToolName}}",
-            "input_type": type(data).__name__,
-            "result": "Data processed successfully"
-        }
-    
-    async def validate_data(self, data: Any) -> Dict[str, Any]:
-        """Validate input data.
-        
-        Args:
-            data: Data to validate
-            
-        Returns:
-            Dict containing validation results
-        """
-        # TODO: Implement your validation logic here
-        return {
-            "valid": True,
-            "errors": []
-        }
-    
-    async def get_status(self) -> Dict[str, Any]:
-        """Get tool status."""
-        return {
-            "tool": "{{.ToolName}}",
-            "status": "ready"
-        }
-`
-}
-
-// getWorkflowTemplate returns the workflow tool template
-func (g *Generator) getWorkflowTemplate() string {
-	return `"""{{.ToolNameTitle}} workflow tool for MCP server."""
-
-from typing import Dict, Any, List
-
-
-class {{.ClassName}}:
-    """{{.ToolNameTitle}} workflow tool implementation.{{if .description}}
-    
-    {{.description}}{{end}}"""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the {{.ToolName}} workflow tool."""
-        self.config = config or {}
-        self.max_steps = self.config.get("max_steps", 10)
-    
-    async def execute_workflow(self, steps: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute a workflow with multiple steps.
-        
-        Args:
-            steps: List of workflow steps to execute
-            
-        Returns:
-            Dict containing the workflow results
-        """
-        if len(steps) > self.max_steps:
-            return {
-                "error": f"Too many steps (max {self.max_steps})"
-            }
-        
-        results = []
-        context = {}
-        
-        for i, step in enumerate(steps):
-            # TODO: Implement your step execution logic here
-            step_result = await self.execute_step(step, context)
-            results.append(step_result)
-            
-            # Update context with step results
-            if step_result.get("context"):
-                context.update(step_result["context"])
-        
-        return {
-            "tool": "{{.ToolName}}",
-            "steps_executed": len(results),
-            "results": results,
-            "context": context
-        }
-    
-    async def execute_step(self, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a single workflow step.
-        
-        Args:
-            step: Step configuration
-            context: Current workflow context
-            
-        Returns:
-            Dict containing step results
-        """
-        # TODO: Implement your step execution logic here
-        return {
-            "step_type": step.get("type", "unknown"),
-            "status": "success",
-            "context": {}
-        }
-    
-    async def get_status(self) -> Dict[str, Any]:
-        """Get tool status."""
-        return {
-            "tool": "{{.ToolName}}",
-            "max_steps": self.max_steps,
-            "status": "ready"
-        }
-`
-}
-
-// GetTemplate returns a template by name
-func (g *Generator) GetTemplate(name string) (*ToolTemplate, bool) {
-	template, exists := g.templates[name]
-	return template, exists
-}
-
-// ListTemplates returns all available templates
-func (g *Generator) ListTemplates() []string {
-	names := make([]string, 0, len(g.templates))
-	for name := range g.templates {
-		names = append(names, name)
-	}
-	return names
 }

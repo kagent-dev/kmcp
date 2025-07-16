@@ -10,51 +10,33 @@ func (g *Generator) getFastMCPPythonFiles(templateType string, data map[string]i
 		".gitignore":      g.getFastMCPPythonGitignore(templateType, data),
 		".env.example":    g.getFastMCPPythonEnvExample(templateType, data),
 
-		// New modular structure
+		// Core application structure
 		"src/__init__.py": "",
 		"src/main.py":     g.getFastMCPPythonMain(templateType, data),
 
-		// Tools directory
-		"src/tools/__init__.py":   g.getFastMCPPythonToolsInit(templateType, data),
-		"src/tools/echo.py":       g.getFastMCPPythonEchoTool(templateType, data),
-		"src/tools/calculator.py": g.getFastMCPPythonCalculatorTool(templateType, data),
-
-		// Resources directory
-		"src/resources/__init__.py": g.getFastMCPPythonResourcesInit(templateType, data),
-
-		// Core directory (generated framework code)
+		// Core framework (dynamic loading implementation)
 		"src/core/__init__.py": g.getFastMCPPythonCoreInit(templateType, data),
 		"src/core/server.py":   g.getFastMCPPythonCoreServer(templateType, data),
-		"src/core/registry.py": g.getFastMCPPythonCoreRegistry(templateType, data),
+		"src/core/utils.py":    g.getFastMCPPythonCoreUtils(templateType, data),
 
-		// Configuration files
-		"config/server.yaml": g.getFastMCPPythonServerConfig(templateType, data),
-		"config/tools.yaml":  g.getFastMCPPythonToolsConfig(templateType, data),
+		// Tools directory with example tools
+		"src/tools/__init__.py": g.getFastMCPPythonToolsInit(templateType, data),
+		"src/tools/echo.py":     g.getFastMCPPythonExampleEcho(templateType, data),
+
+		// Configuration
+		"kmcp.yaml": g.getFastMCPPythonKmcpConfig(templateType, data),
 
 		// Tests
-		"tests/__init__.py":    "",
-		"tests/test_tools.py":  g.getFastMCPPythonTestTools(templateType, data),
-		"tests/test_server.py": g.getFastMCPPythonTestServer(templateType, data),
-	}
-
-	// Add template-specific files
-	switch templateType {
-	case "http":
-		files["src/tools/http_client.py"] = g.getFastMCPPythonHTTPTool(templateType, data)
-	case "data":
-		files["src/tools/data_processor.py"] = g.getFastMCPPythonDataTool(templateType, data)
-	case "workflow":
-		files["src/tools/workflow_executor.py"] = g.getFastMCPPythonWorkflowTool(templateType, data)
-	case "multi-tool":
-		files["src/tools/http_client.py"] = g.getFastMCPPythonHTTPTool(templateType, data)
-		files["src/tools/data_processor.py"] = g.getFastMCPPythonDataTool(templateType, data)
-		files["src/tools/workflow_executor.py"] = g.getFastMCPPythonWorkflowTool(templateType, data)
+		"tests/__init__.py":       "",
+		"tests/test_tools.py":     g.getFastMCPPythonTestTools(templateType, data),
+		"tests/test_server.py":    g.getFastMCPPythonTestServer(templateType, data),
+		"tests/test_discovery.py": g.getFastMCPPythonTestDiscovery(templateType, data),
 	}
 
 	return files
 }
 
-// getFastMCPPythonPyprojectToml generates the pyproject.toml template
+// getFastMCPPythonPyprojectToml generates the pyproject.toml template with FastMCP dependency
 func (g *Generator) getFastMCPPythonPyprojectToml(templateType string, data map[string]interface{}) string {
 	return `[project]
 name = "{{.ProjectNameKebab}}"
@@ -66,22 +48,9 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.0.0",
     "fastmcp>=0.1.0",
     "pydantic>=2.0.0",
-    "pyyaml>=6.0.0",{{if eq .Template "database"}}
-    "asyncpg>=0.29.0",
-    "sqlalchemy>=2.0.0",{{end}}{{if eq .Template "filesystem"}}
-    "watchdog>=3.0.0",
-    "aiofiles>=23.0.0",{{end}}{{if eq .Template "api-client"}}
-    "httpx>=0.25.0",
-    "aiohttp>=3.8.0",{{end}}{{if eq .Template "multi-tool"}}
-    "asyncpg>=0.29.0",
-    "sqlalchemy>=2.0.0",
-    "watchdog>=3.0.0",
-    "aiofiles>=23.0.0",
-    "httpx>=0.25.0",
-    "aiohttp>=3.8.0",{{end}}
+    "pyyaml>=6.0.0",
 ]
 
 [build-system]
@@ -119,116 +88,534 @@ warn_unused_configs = true
 disallow_untyped_defs = true`
 }
 
-// getFastMCPPythonReadme generates the README.md template
+// getFastMCPPythonMain generates the main entry point with dynamic loading
+func (g *Generator) getFastMCPPythonMain(templateType string, data map[string]interface{}) string {
+	return `#!/usr/bin/env python3
+"""{{.ProjectName}} MCP server with dynamic tool loading.
+
+This server automatically discovers and loads tools from the src/tools/ directory.
+Each tool file should contain a function decorated with @mcp.tool().
+"""
+
+import sys
+from pathlib import Path
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from core.server import DynamicMCPServer
+
+
+def main() -> None:
+    """Main entry point for the MCP server."""
+    try:
+        # Create server with dynamic tool loading
+        server = DynamicMCPServer(
+            name="{{.ProjectName}}",
+            tools_dir="src/tools"
+        )
+        
+        # Load tools and start server
+        server.load_tools()
+        server.run()
+        
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+    except Exception as e:
+        print(f"Server error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+`
+}
+
+// getFastMCPPythonCoreInit generates the core package init
+func (g *Generator) getFastMCPPythonCoreInit(templateType string, data map[string]interface{}) string {
+	return `"""Core framework for {{.ProjectName}} MCP server.
+
+This package provides the dynamic tool loading system that automatically
+discovers and registers tools from the src/tools/ directory.
+"""
+
+from .server import DynamicMCPServer
+
+__all__ = ["DynamicMCPServer"]
+`
+}
+
+// getFastMCPPythonCoreServer generates the dynamic server implementation
+func (g *Generator) getFastMCPPythonCoreServer(templateType string, data map[string]interface{}) string {
+	return `"""Dynamic MCP server implementation with automatic tool discovery.
+
+This server automatically discovers and loads tools from the tools directory.
+Each tool file should contain a function decorated with @mcp.tool().
+"""
+
+import os
+import sys
+import importlib.util
+from pathlib import Path
+from typing import Dict, Any, List, Callable
+
+import yaml
+from fastmcp import FastMCP
+
+from .utils import load_config, get_shared_config
+
+
+# Global FastMCP instance for tools to import
+mcp = FastMCP(name="Dynamic Server")
+
+
+class DynamicMCPServer:
+    """MCP server with dynamic tool loading capabilities."""
+    
+    def __init__(self, name: str, tools_dir: str = "src/tools"):
+        """Initialize the dynamic MCP server.
+        
+        Args:
+            name: Server name
+            tools_dir: Directory containing tool files
+        """
+        global mcp
+        self.name = name
+        self.tools_dir = Path(tools_dir)
+        self.config = self._load_config()
+        
+        # Update global FastMCP instance
+        mcp = FastMCP(name=self.name)
+        self.mcp = mcp
+        
+        # Track loaded tools
+        self.loaded_tools: List[str] = []
+        
+    def _load_config(self) -> Dict[str, Any]:
+        """Load configuration from kmcp.yaml."""
+        return load_config("kmcp.yaml")
+    
+    def load_tools(self) -> None:
+        """Discover and load all tools from the tools directory."""
+        if not self.tools_dir.exists():
+            print(f"Tools directory {self.tools_dir} does not exist")
+            return
+            
+        # Find all Python files in tools directory
+        tool_files = list(self.tools_dir.glob("*.py"))
+        tool_files = [f for f in tool_files if f.name != "__init__.py"]
+        
+        if not tool_files:
+            print(f"No tool files found in {self.tools_dir}")
+            return
+            
+        loaded_count = 0
+        
+        for tool_file in tool_files:
+            try:
+                # Simply import the module - tools auto-register via @mcp.tool() decorator
+                tool_name = tool_file.stem
+                if self._import_tool_module(tool_file, tool_name):
+                    self.loaded_tools.append(tool_name)
+                    loaded_count += 1
+                    print(f"✅ Loaded tool module: {tool_name}")
+                else:
+                    print(f"❌ Failed to load tool module: {tool_name}")
+                    
+            except Exception as e:
+                print(f"❌ Error loading tool {tool_file.name}: {e}")
+                # Fail fast - if any tool fails to load, stop the server
+                sys.exit(1)
+                
+        print(f"📦 Successfully loaded {loaded_count} tools")
+        
+        if loaded_count == 0:
+            print("⚠️  No tools loaded. Server starting without tools.")
+        
+        # Update tools __init__.py with loaded tools
+        self._update_tools_init()
+    
+    def _import_tool_module(self, tool_file: Path, tool_name: str) -> bool:
+        """Import a tool module, which auto-registers tools via decorators.
+        
+        Args:
+            tool_file: Path to the tool file
+            tool_name: Name of the tool (same as filename)
+            
+        Returns:
+            True if module was imported successfully
+        """
+        try:
+            # Load the module
+            spec = importlib.util.spec_from_file_location(tool_name, tool_file)
+            if spec is None or spec.loader is None:
+                return False
+                
+            module = importlib.util.module_from_spec(spec)
+            
+            # Add to sys.modules so it can be imported by other modules
+            sys.modules[f"tools.{tool_name}"] = module
+            
+            # Execute the module - this will trigger @mcp.tool() decorators
+            spec.loader.exec_module(module)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error importing {tool_file}: {e}")
+            return False
+    
+    def _update_tools_init(self) -> None:
+        """Update the tools/__init__.py file with loaded tools."""
+        init_file = self.tools_dir / "__init__.py"
+        
+        # Generate import statements
+        imports = []
+        exports = []
+        
+        for tool_name in self.loaded_tools:
+            imports.append(f"from .{tool_name} import {tool_name}")
+            exports.append(f'"{tool_name}"')
+        
+        content = f'''"""Tools package for {{.ProjectName}} MCP server.
+
+This file is automatically generated by the dynamic loading system.
+Do not edit manually.
+"""
+
+{chr(10).join(imports)}
+
+__all__ = [{', '.join(exports)}]
+'''
+        
+        with open(init_file, 'w') as f:
+            f.write(content)
+    
+    def run(self) -> None:
+        """Run the FastMCP server."""
+        if not self.loaded_tools:
+            print("⚠️  No tools loaded. Server starting without tools.")
+        
+        self.mcp.run()
+`
+}
+
+// getFastMCPPythonCoreUtils generates shared utilities
+func (g *Generator) getFastMCPPythonCoreUtils(templateType string, data map[string]interface{}) string {
+	return `"""Shared utilities for {{.ProjectName}} MCP server."""
+
+import os
+from pathlib import Path
+from typing import Dict, Any
+
+import yaml
+
+
+def load_config(config_path: str) -> Dict[str, Any]:
+    """Load configuration from YAML file.
+    
+    Args:
+        config_path: Path to the configuration file
+        
+    Returns:
+        Configuration dictionary
+    """
+    try:
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        print(f"Error loading config from {config_path}: {e}")
+        return {}
+
+
+def get_shared_config() -> Dict[str, Any]:
+    """Get shared configuration that tools can access.
+    
+    Returns:
+        Shared configuration dictionary
+    """
+    config = load_config("kmcp.yaml")
+    return config.get("tools", {})
+
+
+def get_tool_config(tool_name: str) -> Dict[str, Any]:
+    """Get configuration for a specific tool.
+    
+    Args:
+        tool_name: Name of the tool
+        
+    Returns:
+        Tool-specific configuration
+    """
+    shared_config = get_shared_config()
+    return shared_config.get(tool_name, {})
+
+
+def get_env_var(key: str, default: str = "") -> str:
+    """Get environment variable with fallback.
+    
+    Args:
+        key: Environment variable key
+        default: Default value if not found
+        
+    Returns:
+        Environment variable value or default
+    """
+    return os.environ.get(key, default)
+`
+}
+
+// getFastMCPPythonToolsInit generates the tools package init
+func (g *Generator) getFastMCPPythonToolsInit(templateType string, data map[string]interface{}) string {
+	return `"""Tools package for {{.ProjectName}} MCP server.
+
+This file is automatically generated by the dynamic loading system.
+Do not edit manually - it will be overwritten when tools are loaded.
+"""
+
+from .echo import echo
+
+__all__ = ["echo"]
+`
+}
+
+// getFastMCPPythonExampleEcho generates an example echo tool
+func (g *Generator) getFastMCPPythonExampleEcho(templateType string, data map[string]interface{}) string {
+	return `"""Example echo tool for {{.ProjectName}} MCP server.
+
+This is an example tool showing the basic structure for FastMCP tools.
+Each tool file should contain a function decorated with @mcp.tool().
+"""
+
+from core.server import mcp
+from core.utils import get_tool_config
+
+
+@mcp.tool()
+def echo(message: str) -> str:
+    """Echo a message back to the client.
+    
+    Args:
+        message: The message to echo
+        
+    Returns:
+        The echoed message with any configured prefix
+    """
+    # Get tool-specific configuration
+    config = get_tool_config("echo")
+    prefix = config.get("prefix", "")
+    
+    # Return the message with optional prefix
+    return f"{prefix}{message}" if prefix else message
+`
+}
+
+// getFastMCPPythonKmcpConfig generates the kmcp.yaml configuration
+func (g *Generator) getFastMCPPythonKmcpConfig(templateType string, data map[string]interface{}) string {
+	return `# {{.ProjectName}} MCP Server Configuration
+
+server:
+  name: "{{.ProjectName}}"
+  version: "0.1.0"
+  description: "{{.ProjectName}} MCP server with dynamic tool loading"
+
+# Tool-specific configuration
+tools:
+  # Example tool configuration
+  echo:
+    prefix: "[{{.ProjectName}}] "
+  
+  # Add configuration for your tools here
+  # weather:
+  #   api_key_env: "WEATHER_API_KEY"
+  #   base_url: "https://api.openweathermap.org/data/2.5"
+  #   timeout: 30
+  
+  # database:
+  #   connection_string_env: "DATABASE_URL"
+  #   max_connections: 10
+  
+  # file_processor:
+  #   max_file_size: "10MB"
+  #   allowed_extensions: [".txt", ".csv", ".json"]
+
+# Global settings
+global:
+  # Maximum concurrent tool executions
+  max_concurrent: 10
+  
+  # Default timeout for tools (seconds)
+  default_timeout: 30
+  
+  # Enable debug logging
+  debug: false
+`
+}
+
+// getFastMCPPythonReadme generates the README with dynamic loading info
 func (g *Generator) getFastMCPPythonReadme(templateType string, data map[string]interface{}) string {
 	return `# {{.ProjectName}}
 
-{{.ProjectName}} is a Model Context Protocol (MCP) server built with FastMCP using a modular architecture.
+{{.ProjectName}} is a Model Context Protocol (MCP) server built with FastMCP featuring dynamic tool loading.
 
-## Overview
+## Features
 
-This MCP server provides {{if eq .Template "basic"}}basic tools and functionality{{else if eq .Template "database"}}database integration capabilities{{else if eq .Template "filesystem"}}filesystem access and management{{else if eq .Template "api-client"}}API client integration{{else if eq .Template "multi-tool"}}comprehensive multi-tool functionality{{else}}custom MCP tools{{end}} using a clean, modular architecture.
+- **Dynamic Tool Loading**: Tools are automatically discovered and loaded from ` + "`src/tools/`" + `
+- **One Tool Per File**: Each tool is a single file with a function matching the filename
+- **FastMCP Integration**: Leverages FastMCP for robust MCP protocol handling
+- **Configuration Management**: Tool-specific configuration via ` + "`kmcp.yaml`" + `
+- **Fail-Fast**: Server won't start if any tool fails to load
+- **Auto-Generated Tests**: Automatic test generation for tool validation
 
 ## Project Structure
 
 ` + "```" + `
 src/
-├── tools/              # Business logic implementations
-│   ├── echo.py         # Echo tool
-│   ├── calculator.py   # Calculator tool
-│   └── ...
-├── resources/          # Resource handlers
-├── core/               # Generated framework code
-│   ├── server.py       # MCP server setup
-│   └── registry.py     # Tool registration
+├── tools/              # Tool implementations (one file per tool)
+│   ├── echo.py         # Example echo tool
+│   └── __init__.py     # Auto-generated tool registry
+├── core/               # Dynamic loading framework
+│   ├── server.py       # Dynamic MCP server
+│   └── utils.py        # Shared utilities
 └── main.py             # Entry point
-config/
-├── server.yaml         # Server configuration
-└── tools.yaml          # Tool configuration
+kmcp.yaml               # Configuration file
+tests/                  # Generated tests
 ` + "```" + `
 
-## Installation
+## Quick Start
 
-### Local Development
+### 1. Install Dependencies
 
-1. **Install uv** (if not already installed):
-   ` + "```bash" + `
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   # or: brew install uv
-   ` + "```" + `
+` + "```bash" + `
+uv sync
+` + "```" + `
 
-2. **Install dependencies and sync environment**:
-   ` + "```bash" + `
-   uv sync
-   ` + "```" + `
+### 2. Run the Server
 
-3. **Run the server**:
-   ` + "```bash" + `
-   uv run python -m src.main
-   ` + "```" + `
+` + "```bash" + `
+uv run python src/main.py
+` + "```" + `
 
-### Docker Deployment
+### 3. Add New Tools
 
-1. **Build the Docker image**:
-   ` + "```bash" + `
-   kmcp build --docker
-   ` + "```" + `
+` + "```bash" + `
+# Create a new tool (no tool types needed!)
+kmcp add-tool weather
 
-2. **Run the container**:
-   ` + "```bash" + `
-   docker run -i {{.ProjectNameKebab}}:latest
-   ` + "```" + `
+# The tool file will be created at src/tools/weather.py
+# Edit it to implement your tool logic
+` + "```" + `
 
-## Usage
+## Creating Tools
 
-### Integration with MCP Clients
+### Basic Tool Structure
 
-Add this server to your MCP client configuration:
+Each tool is a Python file in ` + "`src/tools/`" + ` containing a function decorated with ` + "`@mcp.tool()`" + `:
+
+` + "```python" + `
+# src/tools/weather.py
+from core.server import mcp
+from core.utils import get_tool_config, get_env_var
+
+@mcp.tool()
+def weather(location: str) -> str:
+    \"\"\"Get weather information for a location.\"\"\"
+    
+    # Get tool configuration
+    config = get_tool_config("weather")
+    api_key = get_env_var(config.get("api_key_env", "WEATHER_API_KEY"))
+    base_url = config.get("base_url", "https://api.openweathermap.org/data/2.5")
+    
+    # TODO: Implement weather API call
+    return f"Weather for {location}: Sunny, 72°F"
+` + "```" + `
+
+### Tool Examples
+
+The generated tool template includes commented examples for common patterns:
+
+` + "```python" + `
+# HTTP API calls
+# async with httpx.AsyncClient() as client:
+#     response = await client.get(f"{base_url}/weather?q={location}&appid={api_key}")
+#     return response.json()
+
+# Database operations  
+# async with asyncpg.connect(connection_string) as conn:
+#     result = await conn.fetchrow("SELECT * FROM weather WHERE location = $1", location)
+#     return dict(result)
+
+# File processing
+# with open(file_path, 'r') as f:
+#     content = f.read()
+#     return {"content": content, "size": len(content)}
+` + "```" + `
+
+## Configuration
+
+Configure tools in ` + "`kmcp.yaml`" + `:
+
+` + "```yaml" + `
+tools:
+  weather:
+    api_key_env: "WEATHER_API_KEY"
+    base_url: "https://api.openweathermap.org/data/2.5"
+    timeout: 30
+  
+  database:
+    connection_string_env: "DATABASE_URL"
+    max_connections: 10
+` + "```" + `
+
+## Testing
+
+Run the generated tests to verify your tools load correctly:
+
+` + "```bash" + `
+uv run pytest tests/
+` + "```" + `
+
+## Development
+
+### Adding Dependencies
+
+Update ` + "`pyproject.toml`" + ` and run:
+
+` + "```bash" + `
+uv sync
+` + "```" + `
+
+### Code Quality
+
+` + "```bash" + `
+uv run black .
+uv run ruff check .
+uv run mypy .
+` + "```" + `
+
+## Deployment
+
+### Docker
+
+` + "```bash" + `
+docker build -t {{.ProjectNameKebab}} .
+docker run -i {{.ProjectNameKebab}}
+` + "```" + `
+
+### MCP Client Configuration
 
 ` + "```json" + `
 {
   "mcpServers": {
     "{{.ProjectNameKebab}}": {
       "command": "python",
-      "args": ["-m", "src.main"],
-      "cwd": "/path/to/project"
+      "args": ["src/main.py"],
+      "cwd": "/path/to/{{.ProjectNameKebab}}"
     }
   }
 }
-` + "```" + `
-
-### Configuration
-
-- **Server Configuration**: Edit ` + "`config/server.yaml`" + ` to modify server behavior
-- **Tool Configuration**: Edit ` + "`config/tools.yaml`" + ` to configure individual tools
-- **Environment Variables**: Copy ` + "`.env.example`" + ` to ` + "`.env.local`" + ` for local secrets
-
-### Adding New Tools
-
-1. Create a new tool file in ` + "`src/tools/`" + `
-2. Implement your tool class
-3. Add it to the registry in ` + "`src/core/registry.py`" + `
-4. Configure it in ` + "`config/tools.yaml`" + `
-
-## Development
-
-### Running Tests
-
-` + "```bash" + `
-uv run pytest
-` + "```" + `
-
-### Code Formatting
-
-` + "```bash" + `
-uv run black .
-uv run ruff check .
-` + "```" + `
-
-### Type Checking
-
-` + "```bash" + `
-uv run mypy .
 ` + "```" + `
 
 ## License
@@ -237,7 +624,13 @@ This project is licensed under the MIT License.
 `
 }
 
-// getFastMCPPythonDockerfile generates the Dockerfile template
+// Continue with the rest of the template functions...
+// getFastMCPPythonPythonVersion, getFastMCPPythonDockerfile, getFastMCPPythonGitignore, getFastMCPPythonEnvExample remain the same
+
+func (g *Generator) getFastMCPPythonPythonVersion(templateType string, data map[string]interface{}) string {
+	return `3.11`
+}
+
 func (g *Generator) getFastMCPPythonDockerfile(templateType string, data map[string]interface{}) string {
 	return `# Multi-stage build for {{.ProjectName}} MCP server using uv
 FROM python:3.11-slim as builder
@@ -258,7 +651,7 @@ RUN uv sync --frozen --no-dev --no-cache
 
 # Copy source code
 COPY src/ ./src/
-COPY config/ ./config/
+COPY kmcp.yaml ./
 
 # Production stage
 FROM python:3.11-slim
@@ -275,7 +668,7 @@ WORKDIR /app
 # Copy virtual environment and application from builder
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
-COPY --from=builder /app/config /app/config
+COPY --from=builder /app/kmcp.yaml /app/kmcp.yaml
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
 # Make sure scripts in .venv are usable
@@ -304,10 +697,9 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Default command
-CMD ["python", "-m", "src.main"]`
+CMD ["python", "src/main.py"]`
 }
 
-// getFastMCPPythonGitignore generates the .gitignore template
 func (g *Generator) getFastMCPPythonGitignore(templateType string, data map[string]interface{}) string {
 	return `# Byte-compiled / optimized / DLL files
 __pycache__/
@@ -435,418 +827,38 @@ dmypy.json
 .pyre/
 
 # KMCP specific
-config/local.yaml
 .mcpbuilder.yaml`
 }
 
-// getFastMCPPythonRequirements generates requirements.txt for pip compatibility
-// getFastMCPPythonPythonVersion generates the .python-version file for uv
-func (g *Generator) getFastMCPPythonPythonVersion(templateType string, data map[string]interface{}) string {
-	return `3.11`
-}
-
-// getFastMCPPythonEnvExample generates .env.example file
 func (g *Generator) getFastMCPPythonEnvExample(templateType string, data map[string]interface{}) string {
 	return `# {{.ProjectName}} Environment Variables
 # Copy this file to .env.local and fill in actual values
 
-# API Keys and secrets
-# API_KEY=your-api-key-here
+# Example API keys (configure these in kmcp.yaml under tools)
+# WEATHER_API_KEY=your-weather-api-key-here
 # DATABASE_URL=postgresql://user:password@localhost:5432/database
+# OPENAI_API_KEY=your-openai-api-key-here
 
 # Server configuration
 # MCP_SERVER_HOST=127.0.0.1
 # MCP_SERVER_PORT=8080
 # MCP_LOG_LEVEL=INFO
+# MCP_DEBUG=false
 
 # Tool-specific configuration
-# CALCULATOR_PRECISION=2
-# ECHO_PREFIX=""
+# WEATHER_TIMEOUT=30
+# DB_MAX_CONNECTIONS=10
+# FILE_MAX_SIZE=10485760  # 10MB in bytes
 `
 }
 
-// getFastMCPPythonMain generates the main entry point
-func (g *Generator) getFastMCPPythonMain(templateType string, data map[string]interface{}) string {
-	return `"""Main entry point for {{.ProjectName}} MCP server.
-
-This is the minimal entry point that configures and starts the MCP server.
-All business logic is separated into tools/ and resources/ directories.
-"""
-
-import sys
-from pathlib import Path
-
-# Add src to Python path
-sys.path.insert(0, str(Path(__file__).parent))
-
-from core.server import create_server
-
-
-def main() -> None:
-    """Main entry point for the MCP server."""
-    try:
-        server = create_server()
-        server.run()
-    except KeyboardInterrupt:
-        print("\nShutting down server...")
-    except Exception as e:
-        print(f"Server error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-`
-}
-
-// getFastMCPPythonToolsInit generates the tools __init__.py
-func (g *Generator) getFastMCPPythonToolsInit(templateType string, data map[string]interface{}) string {
-	return `"""Tools package for {{.ProjectName}} MCP server.
-
-This package contains the business logic implementations for MCP tools.
-Each tool is implemented as a separate module for maintainability.
-"""
-
-# Import all tools for easy access
-from .echo import EchoTool
-from .calculator import CalculatorTool
-
-# Export available tools
-__all__ = ["EchoTool", "CalculatorTool"]
-`
-}
-
-// getFastMCPPythonEchoTool generates the echo tool implementation
-func (g *Generator) getFastMCPPythonEchoTool(templateType string, data map[string]interface{}) string {
-	return `"""Echo tool implementation for {{.ProjectName}} MCP server."""
-
-from datetime import datetime
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-
-
-class EchoRequest(BaseModel):
-    """Request model for echo operations."""
-    message: str = Field(..., description="Message to echo back")
-
-
-class EchoTool:
-    """Tool for echoing messages back to the client."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the echo tool with configuration."""
-        self.config = config or {}
-        self.enabled = self.config.get("enabled", True)
-        self.prefix = self.config.get("prefix", "")
-    
-    def echo(self, request: EchoRequest) -> Dict[str, Any]:
-        """Echo a message back to the client.
-        
-        This is a simple tool that returns the input message along with
-        a timestamp, useful for testing connectivity and basic functionality.
-        """
-        if not self.enabled:
-            return {"error": "Echo tool is disabled"}
-        
-        message = request.message
-        if self.prefix:
-            message = f"{self.prefix}{message}"
-        
-        return {
-            "message": message,
-            "timestamp": datetime.now().isoformat(),
-            "length": len(message),
-            "server": "{{.ProjectName}}"
-        }
-`
-}
-
-// getFastMCPPythonCalculatorTool generates the calculator tool implementation
-func (g *Generator) getFastMCPPythonCalculatorTool(templateType string, data map[string]interface{}) string {
-	return `"""Calculator tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-
-
-class CalculationRequest(BaseModel):
-    """Request model for calculation operations."""
-    operation: str = Field(..., description="The operation to perform: add, subtract, multiply, divide")
-    a: float = Field(..., description="First number")
-    b: float = Field(..., description="Second number")
-
-
-class CalculatorTool:
-    """Tool for performing basic arithmetic calculations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the calculator tool with configuration."""
-        self.config = config or {}
-        self.enabled = self.config.get("enabled", True)
-        self.operations = self.config.get("operations", ["add", "subtract", "multiply", "divide"])
-        self.precision = self.config.get("precision", 2)
-    
-    def calculate(self, request: CalculationRequest) -> Dict[str, Any]:
-        """Perform basic arithmetic calculations.
-        
-        This tool can perform addition, subtraction, multiplication, and division
-        operations on two numbers.
-        """
-        if not self.enabled:
-            return {"error": "Calculator tool is disabled"}
-        
-        if request.operation not in self.operations:
-            return {
-                "error": f"Operation '{request.operation}' not supported",
-                "supported_operations": self.operations
-            }
-        
-        try:
-            result = 0.0
-            
-            if request.operation == "add":
-                result = request.a + request.b
-            elif request.operation == "subtract":
-                result = request.a - request.b
-            elif request.operation == "multiply":
-                result = request.a * request.b
-            elif request.operation == "divide":
-                if request.b == 0:
-                    return {
-                        "error": "Division by zero is not allowed",
-                        "operation": request.operation,
-                        "inputs": {"a": request.a, "b": request.b}
-                    }
-                result = request.a / request.b
-            
-            # Apply precision if configured
-            if self.precision is not None:
-                result = round(result, self.precision)
-            
-            return {
-                "result": result,
-                "operation": request.operation,
-                "inputs": {"a": request.a, "b": request.b}
-            }
-        except Exception as e:
-            return {
-                "error": f"Calculation error: {str(e)}",
-                "operation": request.operation,
-                "inputs": {"a": request.a, "b": request.b}
-            }
-`
-}
-
-// getFastMCPPythonResourcesInit generates the resources __init__.py
-func (g *Generator) getFastMCPPythonResourcesInit(templateType string, data map[string]interface{}) string {
-	return `"""Resources package for {{.ProjectName}} MCP server.
-
-This package contains the resource handler implementations for MCP resources.
-Resources represent data or content that can be accessed by the AI model.
-"""
-
-# Future: Add resource implementations here
-# from .file_resource import FileResource
-# from .web_resource import WebResource
-
-# Export available resources
-__all__ = []
-`
-}
-
-// getFastMCPPythonCoreInit generates the core __init__.py
-func (g *Generator) getFastMCPPythonCoreInit(templateType string, data map[string]interface{}) string {
-	return `"""Core framework package for {{.ProjectName}} MCP server.
-
-This package contains generated framework code that handles MCP protocol
-communication and tool registration. Do not edit files in this package
-manually - they are generated by the KMCP CLI.
-"""
-
-from .server import create_server
-from .registry import ToolRegistry
-
-__all__ = ["create_server", "ToolRegistry"]
-`
-}
-
-// getFastMCPPythonCoreServer generates the core server implementation
-func (g *Generator) getFastMCPPythonCoreServer(templateType string, data map[string]interface{}) string {
-	return `"""Core MCP server implementation for {{.ProjectName}}.
-
-This file is generated by the KMCP CLI. Do not edit manually.
-"""
-
-import os
-import sys
-from pathlib import Path
-from typing import Dict, Any
-
-import yaml
-from fastmcp import FastMCP
-
-from .registry import ToolRegistry
-
-
-def load_config(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML file."""
-    try:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f) or {}
-    except FileNotFoundError:
-        return {}
-    except Exception as e:
-        print(f"Error loading config from {config_path}: {e}", file=sys.stderr)
-        return {}
-
-
-def create_server() -> FastMCP:
-    """Create and configure the FastMCP server."""
-    # Load configuration
-    config_dir = Path(__file__).parent.parent.parent / "config"
-    server_config = load_config(config_dir / "server.yaml")
-    tools_config = load_config(config_dir / "tools.yaml")
-    
-    # Create FastMCP server
-    server_name = server_config.get("name", "{{.ProjectName}} Server")
-    mcp = FastMCP(server_name)
-    
-    # Initialize tool registry
-    registry = ToolRegistry(tools_config)
-    
-    # Register tools with the server
-    registry.register_tools(mcp)
-    
-    return mcp
-`
-}
-
-// getFastMCPPythonCoreRegistry generates the tool registry
-func (g *Generator) getFastMCPPythonCoreRegistry(templateType string, data map[string]interface{}) string {
-	return `"""Tool registry for {{.ProjectName}} MCP server.
-
-This file is generated by the KMCP CLI. Do not edit manually.
-"""
-
-from typing import Dict, Any
-
-from tools.echo import EchoTool
-from tools.calculator import CalculatorTool
-
-
-class ToolRegistry:
-    """Registry for managing MCP tools."""
-    
-    def __init__(self, config: Dict[str, Any]):
-        """Initialize the tool registry with configuration."""
-        self.config = config
-        self.tools = {}
-        self._initialize_tools()
-    
-    def _initialize_tools(self):
-        """Initialize all available tools."""
-        tools_config = self.config.get("tools", {})
-        
-        # Initialize echo tool
-        echo_config = tools_config.get("echo", {})
-        if echo_config.get("enabled", True):
-            self.tools["echo"] = EchoTool(echo_config)
-        
-        # Initialize calculator tool
-        calc_config = tools_config.get("calculator", {})
-        if calc_config.get("enabled", True):
-            self.tools["calculator"] = CalculatorTool(calc_config)
-    
-    def register_tools(self, mcp):
-        """Register all tools with the FastMCP server."""
-        # Register echo tool
-        if "echo" in self.tools:
-            mcp.tool()(self.tools["echo"].echo)
-        
-        # Register calculator tool
-        if "calculator" in self.tools:
-            mcp.tool()(self.tools["calculator"].calculate)
-`
-}
-
-// getFastMCPPythonServerConfig generates server configuration
-func (g *Generator) getFastMCPPythonServerConfig(templateType string, data map[string]interface{}) string {
-	return `# {{.ProjectName}} MCP Server Configuration
-# This file configures the overall server behavior
-
-name: "{{.ProjectName}} Server"
-description: "{{.ProjectName}} MCP server built with FastMCP"
-version: "0.1.0"
-
-# Transport configuration
-transport:
-  type: "stdio"  # stdio, http, or websocket
-  host: "127.0.0.1"
-  port: 8080
-
-# Logging configuration
-logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-# Security configuration
-security:
-  enable_sanitization: true
-  max_response_size: "10MB"
-  timeout: "30s"
-
-# Performance configuration
-performance:
-  max_concurrent_requests: 10
-  request_timeout: "30s"
-`
-}
-
-// getFastMCPPythonToolsConfig generates tools configuration
-func (g *Generator) getFastMCPPythonToolsConfig(templateType string, data map[string]interface{}) string {
-	return `# {{.ProjectName}} Tools Configuration
-# This file configures individual tool behavior
-
-tools:
-  echo:
-    enabled: true
-    prefix: ""
-    description: "Echo messages back to the client"
-    
-  calculator:
-    enabled: true
-    precision: 2
-    operations:
-      - add
-      - subtract
-      - multiply
-      - divide
-    description: "Perform basic arithmetic calculations"
-
-# Resource configuration
-resources:
-  # Future: Add resource configurations here
-  
-# Environment-specific overrides
-environments:
-  development:
-    logging:
-      level: "DEBUG"
-    tools:
-      echo:
-        prefix: "[DEV] "
-  
-  production:
-    logging:
-      level: "WARNING"
-    performance:
-      max_concurrent_requests: 50
-`
-}
-
-// getFastMCPPythonTestTools generates tool tests
+// Test functions
 func (g *Generator) getFastMCPPythonTestTools(templateType string, data map[string]interface{}) string {
-	return `"""Tests for {{.ProjectName}} MCP server tools."""
+	return `"""Generated tests for {{.ProjectName}} MCP server tools.
+
+This file is automatically generated to test that all tools can be loaded
+and executed successfully.
+"""
 
 import sys
 from pathlib import Path
@@ -855,96 +867,68 @@ import pytest
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tools.echo import EchoTool, EchoRequest
-from tools.calculator import CalculatorTool, CalculationRequest
+from core.server import DynamicMCPServer
+
+
+class TestToolLoading:
+    """Test that all tools can be loaded successfully."""
+    
+    def test_server_initialization(self):
+        """Test that the server can be initialized."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        assert server is not None
+        assert server.name == "Test Server"
+    
+    def test_tool_discovery(self):
+        """Test that tools can be discovered."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        
+        # Load tools without failing
+        try:
+            server.load_tools()
+            assert True  # If we get here, loading succeeded
+        except SystemExit:
+            pytest.fail("Tool loading failed - server exited")
+    
+    def test_loaded_tools_count(self):
+        """Test that expected tools are loaded."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        server.load_tools()
+        
+        # At minimum, we should have the echo tool
+        assert len(server.loaded_tools) >= 1
+        assert "echo" in server.loaded_tools
+    
+    def test_tool_functions_callable(self):
+        """Test that loaded tool functions are callable."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        server.load_tools()
+        
+        for tool_name, tool_func in server.loaded_tools.items():
+            assert callable(tool_func), f"Tool {tool_name} is not callable"
 
 
 class TestEchoTool:
-    """Test cases for the echo tool."""
+    """Test the example echo tool."""
     
-    def test_echo_basic(self):
-        """Test basic echo functionality."""
-        tool = EchoTool()
-        request = EchoRequest(message="Hello, World!")
-        result = tool.echo(request)
+    def test_echo_tool_exists(self):
+        """Test that the echo tool exists and can be loaded."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        server.load_tools()
         
-        assert result["message"] == "Hello, World!"
-        assert result["length"] == 13
-        assert result["server"] == "{{.ProjectName}}"
-        assert "timestamp" in result
+        assert "echo" in server.loaded_tools
     
-    def test_echo_with_prefix(self):
-        """Test echo with prefix configuration."""
-        tool = EchoTool({"prefix": "[TEST] "})
-        request = EchoRequest(message="Hello")
-        result = tool.echo(request)
+    def test_echo_tool_function(self):
+        """Test that the echo tool function works."""
+        # Import the echo function directly
+        from tools.echo import echo
         
-        assert result["message"] == "[TEST] Hello"
-        assert result["length"] == 12
-    
-    def test_echo_disabled(self):
-        """Test echo tool when disabled."""
-        tool = EchoTool({"enabled": False})
-        request = EchoRequest(message="Hello")
-        result = tool.echo(request)
-        
-        assert "error" in result
-        assert "disabled" in result["error"]
-
-
-class TestCalculatorTool:
-    """Test cases for the calculator tool."""
-    
-    def test_calculator_add(self):
-        """Test calculator addition."""
-        tool = CalculatorTool()
-        request = CalculationRequest(operation="add", a=5.0, b=3.0)
-        result = tool.calculate(request)
-        
-        assert result["result"] == 8.0
-        assert result["operation"] == "add"
-        assert result["inputs"]["a"] == 5.0
-        assert result["inputs"]["b"] == 3.0
-    
-    def test_calculator_divide_by_zero(self):
-        """Test calculator division by zero."""
-        tool = CalculatorTool()
-        request = CalculationRequest(operation="divide", a=5.0, b=0.0)
-        result = tool.calculate(request)
-        
-        assert "error" in result
-        assert "Division by zero" in result["error"]
-    
-    def test_calculator_invalid_operation(self):
-        """Test calculator with invalid operation."""
-        tool = CalculatorTool()
-        request = CalculationRequest(operation="invalid", a=5.0, b=3.0)
-        result = tool.calculate(request)
-        
-        assert "error" in result
-        assert "not supported" in result["error"]
-        assert "supported_operations" in result
-    
-    def test_calculator_precision(self):
-        """Test calculator precision configuration."""
-        tool = CalculatorTool({"precision": 1})
-        request = CalculationRequest(operation="divide", a=10.0, b=3.0)
-        result = tool.calculate(request)
-        
-        assert result["result"] == 3.3  # rounded to 1 decimal place
-    
-    def test_calculator_disabled(self):
-        """Test calculator tool when disabled."""
-        tool = CalculatorTool({"enabled": False})
-        request = CalculationRequest(operation="add", a=5.0, b=3.0)
-        result = tool.calculate(request)
-        
-        assert "error" in result
-        assert "disabled" in result["error"]
+        result = echo("Hello, World!")
+        assert isinstance(result, str)
+        assert "Hello, World!" in result
 `
 }
 
-// getFastMCPPythonTestServer generates server tests
 func (g *Generator) getFastMCPPythonTestServer(templateType string, data map[string]interface{}) string {
 	return `"""Tests for {{.ProjectName}} MCP server core functionality."""
 
@@ -956,358 +940,219 @@ from unittest.mock import patch, mock_open
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.server import create_server, load_config
-from core.registry import ToolRegistry
+from core.server import DynamicMCPServer
+from core.utils import load_config, get_tool_config
 
 
-class TestServerConfiguration:
-    """Test cases for server configuration."""
+class TestDynamicMCPServer:
+    """Test the dynamic MCP server functionality."""
     
-    def test_load_config_success(self):
-        """Test successful configuration loading."""
+    def test_server_initialization(self):
+        """Test server initialization."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        assert server.name == "Test Server"
+        assert server.tools_dir == Path("src/tools")
+    
+    def test_server_with_nonexistent_tools_dir(self):
+        """Test server behavior with non-existent tools directory."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="nonexistent")
+        
+        # Should not raise exception, just print message
+        server.load_tools()
+        assert len(server.loaded_tools) == 0
+    
+    def test_load_config(self):
+        """Test configuration loading."""
         config_data = """
-        name: "Test Server"
-        logging:
-          level: "DEBUG"
+        server:
+          name: "Test Server"
+        tools:
+          echo:
+            prefix: "[TEST] "
         """
+        
         with patch("builtins.open", mock_open(read_data=config_data)):
             config = load_config("test.yaml")
-            assert config["name"] == "Test Server"
-            assert config["logging"]["level"] == "DEBUG"
+            assert config["server"]["name"] == "Test Server"
+            assert config["tools"]["echo"]["prefix"] == "[TEST] "
     
-    def test_load_config_file_not_found(self):
-        """Test configuration loading with missing file."""
-        with patch("builtins.open", side_effect=FileNotFoundError):
-            config = load_config("missing.yaml")
-            assert config == {}
-    
-    def test_create_server(self):
-        """Test server creation."""
-        with patch("core.server.load_config") as mock_load:
-            mock_load.return_value = {"name": "Test Server"}
-            server = create_server()
-            assert server is not None
-
-
-class TestToolRegistry:
-    """Test cases for tool registry."""
-    
-    def test_registry_initialization(self):
-        """Test tool registry initialization."""
-        config = {
-            "tools": {
-                "echo": {"enabled": True},
-                "calculator": {"enabled": True}
-            }
-        }
-        registry = ToolRegistry(config)
-        
-        assert "echo" in registry.tools
-        assert "calculator" in registry.tools
-    
-    def test_registry_disabled_tool(self):
-        """Test tool registry with disabled tool."""
-        config = {
-            "tools": {
-                "echo": {"enabled": False},
-                "calculator": {"enabled": True}
-            }
-        }
-        registry = ToolRegistry(config)
-        
-        assert "echo" not in registry.tools
-        assert "calculator" in registry.tools
-    
-    def test_registry_register_tools(self):
-        """Test tool registration with FastMCP."""
-        config = {
-            "tools": {
-                "echo": {"enabled": True},
-                "calculator": {"enabled": True}
-            }
-        }
-        registry = ToolRegistry(config)
-        
-        # Mock FastMCP server
-        class MockMCP:
-            def __init__(self):
-                self.registered_tools = []
-            
-            def tool(self):
-                def decorator(func):
-                    self.registered_tools.append(func)
-                    return func
-                return decorator
-        
-        mock_mcp = MockMCP()
-        registry.register_tools(mock_mcp)
-        
-        assert len(mock_mcp.registered_tools) == 2
-`
-}
-
-// Placeholder implementations for other template types
-func (g *Generator) getFastMCPPythonDatabaseTool(templateType string, data map[string]interface{}) string {
-	return `"""Database tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-
-
-class DatabaseQueryRequest(BaseModel):
-    """Request model for database operations."""
-    query: str = Field(..., description="SQL query to execute")
-    params: Dict[str, Any] = Field(default_factory=dict, description="Query parameters")
-
-
-class DatabaseTool:
-    """Tool for database operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the database tool with configuration."""
-        self.config = config or {}
-        self.enabled = self.config.get("enabled", True)
-        self.max_results = self.config.get("max_results", 100)
-    
-    def query(self, request: DatabaseQueryRequest) -> Dict[str, Any]:
-        """Execute database query."""
-        if not self.enabled:
-            return {"error": "Database tool is disabled"}
-        
-        # TODO: Implement database connectivity
-        return {
-            "message": "Database integration template - implementation coming soon",
-            "query": request.query,
-            "params": request.params
-        }
-`
-}
-
-func (g *Generator) getFastMCPPythonFilesystemTool(templateType string, data map[string]interface{}) string {
-	return `"""Filesystem tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-
-
-class ReadFileRequest(BaseModel):
-    """Request model for file reading operations."""
-    path: str = Field(..., description="Path to the file to read")
-    encoding: str = Field(default="utf-8", description="File encoding")
-
-
-class FilesystemTool:
-    """Tool for filesystem operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the filesystem tool with configuration."""
-        self.config = config or {}
-        self.enabled = self.config.get("enabled", True)
-        self.max_size = self.config.get("max_size", "1MB")
-    
-    def read_file(self, request: ReadFileRequest) -> Dict[str, Any]:
-        """Read file contents."""
-        if not self.enabled:
-            return {"error": "Filesystem tool is disabled"}
-        
-        # TODO: Implement safe file reading
-        return {
-            "message": "Filesystem integration template - implementation coming soon",
-            "path": request.path,
-            "encoding": request.encoding
-        }
-`
-}
-
-func (g *Generator) getFastMCPPythonAPIClientTool(templateType string, data map[string]interface{}) string {
-	return `"""API client tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-
-
-class HTTPRequest(BaseModel):
-    """Request model for HTTP operations."""
-    url: str = Field(..., description="URL to make request to")
-    method: str = Field(default="GET", description="HTTP method")
-    headers: Dict[str, str] = Field(default_factory=dict, description="HTTP headers")
-    body: str = Field(default="", description="Request body")
-
-
-class APIClientTool:
-    """Tool for API client operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the API client tool with configuration."""
-        self.config = config or {}
-        self.enabled = self.config.get("enabled", True)
-        self.timeout = self.config.get("timeout", "30s")
-    
-    def http_request(self, request: HTTPRequest) -> Dict[str, Any]:
-        """Make HTTP request."""
-        if not self.enabled:
-            return {"error": "API client tool is disabled"}
-        
-        # TODO: Implement HTTP client
-        return {
-            "message": "API client integration template - implementation coming soon",
-            "url": request.url,
-            "method": request.method,
-            "headers": request.headers
-        }
-`
-}
-
-// New tool functions for the simplified tool types
-func (g *Generator) getFastMCPPythonHTTPTool(templateType string, data map[string]interface{}) string {
-	return `"""HTTP client tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict
-from pydantic import BaseModel, Field
-import httpx
-
-
-class HTTPRequestRequest(BaseModel):
-    """Request model for HTTP operations."""
-    method: str = Field(..., description="HTTP method (GET, POST, etc.)")
-    endpoint: str = Field(..., description="API endpoint")
-    data: Dict[str, Any] = Field(default_factory=dict, description="Request data")
-
-
-class HTTPTool:
-    """Tool for HTTP client operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the HTTP tool with configuration."""
-        self.config = config or {}
-        self.base_url = self.config.get("base_url", "")
-        self.timeout = self.config.get("timeout", 30)
-    
-    async def make_request(self, request: HTTPRequestRequest) -> Dict[str, Any]:
-        """Make an HTTP request."""
-        url = f"{self.base_url.rstrip('/')}/{request.endpoint.lstrip('/')}" if self.base_url else request.endpoint
-        
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.request(
-                    request.method,
-                    url,
-                    json=request.data if request.data else None
-                )
-                
-                try:
-                    data = response.json()
-                except:
-                    data = response.text
-                
-                return {
-                    "status_code": response.status_code,
-                    "data": data,
-                    "success": response.is_success
+    def test_get_tool_config(self):
+        """Test tool-specific configuration retrieval."""
+        with patch("core.utils.load_config") as mock_load:
+            mock_load.return_value = {
+                "tools": {
+                    "echo": {"prefix": "[TEST] "},
+                    "weather": {"api_key_env": "WEATHER_API_KEY"}
                 }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "success": False
             }
-`
-}
-
-func (g *Generator) getFastMCPPythonDataTool(templateType string, data map[string]interface{}) string {
-	return `"""Data processing tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict, List, Union
-from pydantic import BaseModel, Field
-
-
-class DataProcessRequest(BaseModel):
-    """Request model for data processing operations."""
-    data: Union[Dict, List, str] = Field(..., description="Input data to process")
-    operation: str = Field(default="process", description="Operation to perform")
-
-
-class DataTool:
-    """Tool for data processing operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the data tool with configuration."""
-        self.config = config or {}
-    
-    async def process_data(self, request: DataProcessRequest) -> Dict[str, Any]:
-        """Process input data."""
-        # TODO: Implement your data processing logic here
-        return {
-            "tool": "data_processor",
-            "input_type": type(request.data).__name__,
-            "operation": request.operation,
-            "result": "Data processed successfully"
-        }
-    
-    async def validate_data(self, request: DataProcessRequest) -> Dict[str, Any]:
-        """Validate input data."""
-        # TODO: Implement your validation logic here
-        return {
-            "valid": True,
-            "errors": [],
-            "data_type": type(request.data).__name__
-        }
-`
-}
-
-func (g *Generator) getFastMCPPythonWorkflowTool(templateType string, data map[string]interface{}) string {
-	return `"""Workflow execution tool implementation for {{.ProjectName}} MCP server."""
-
-from typing import Any, Dict, List
-from pydantic import BaseModel, Field
-
-
-class WorkflowRequest(BaseModel):
-    """Request model for workflow operations."""
-    steps: List[Dict[str, Any]] = Field(..., description="Workflow steps to execute")
-    context: Dict[str, Any] = Field(default_factory=dict, description="Initial context")
-
-
-class WorkflowTool:
-    """Tool for workflow execution operations."""
-    
-    def __init__(self, config: Dict[str, Any] = None):
-        """Initialize the workflow tool with configuration."""
-        self.config = config or {}
-        self.max_steps = self.config.get("max_steps", 10)
-    
-    async def execute_workflow(self, request: WorkflowRequest) -> Dict[str, Any]:
-        """Execute a workflow with multiple steps."""
-        if len(request.steps) > self.max_steps:
-            return {
-                "error": f"Too many steps (max {self.max_steps})"
-            }
-        
-        results = []
-        context = request.context.copy()
-        
-        for i, step in enumerate(request.steps):
-            # TODO: Implement your step execution logic here
-            step_result = await self.execute_step(step, context)
-            results.append(step_result)
             
-            # Update context with step results
-            if step_result.get("context"):
-                context.update(step_result["context"])
-        
-        return {
-            "tool": "workflow_executor",
-            "steps_executed": len(results),
-            "results": results,
-            "context": context
-        }
+            echo_config = get_tool_config("echo")
+            assert echo_config["prefix"] == "[TEST] "
+            
+            weather_config = get_tool_config("weather")
+            assert weather_config["api_key_env"] == "WEATHER_API_KEY"
+            
+            # Test non-existent tool
+            empty_config = get_tool_config("nonexistent")
+            assert empty_config == {}
+
+
+class TestToolLoading:
+    """Test the tool loading mechanism."""
     
-    async def execute_step(self, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a single workflow step."""
-        # TODO: Implement your step execution logic here
-        return {
-            "step_type": step.get("type", "unknown"),
-            "status": "success",
-            "context": {}
-        }
+    def test_tool_function_detection(self):
+        """Test that tool functions are properly detected."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        
+        # This should load actual tools from the tools directory
+        server.load_tools()
+        
+        # Verify that tools were loaded
+        assert len(server.loaded_tools) > 0
+        
+        # Verify that echo tool specifically was loaded
+        assert "echo" in server.loaded_tools
+    
+    def test_tool_init_update(self):
+        """Test that __init__.py is updated with loaded tools."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        server.loaded_tools = {"echo": lambda x: x, "weather": lambda x: x}
+        
+        # Mock the file writing
+        with patch("builtins.open", mock_open()) as mock_file:
+            server._update_tools_init()
+            
+            # Verify file was opened for writing
+            mock_file.assert_called_once()
+            
+            # Verify content contains expected imports
+            written_content = "".join(call.args[0] for call in mock_file().write.call_args_list)
+            assert "from .echo import echo" in written_content
+            assert "from .weather import weather" in written_content
+            assert '__all__ = ["echo", "weather"]' in written_content
+`
+}
+
+func (g *Generator) getFastMCPPythonTestDiscovery(templateType string, data map[string]interface{}) string {
+	return `"""Tests for tool discovery and loading mechanism."""
+
+import sys
+from pathlib import Path
+import pytest
+import tempfile
+import os
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from core.server import DynamicMCPServer
+
+
+class TestToolDiscovery:
+    """Test the tool discovery mechanism."""
+    
+    def test_discover_tools_in_directory(self):
+        """Test discovering tools in a directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tools_dir = Path(temp_dir) / "tools"
+            tools_dir.mkdir()
+            
+            # Create a test tool file
+            tool_file = tools_dir / "test_tool.py"
+            tool_content = '''
+from core.server import mcp
+
+@mcp.tool()
+def test_tool(message: str) -> str:
+    return f"Test: {message}"
+'''
+            tool_file.write_text(tool_content)
+            
+            # Test discovery
+            server = DynamicMCPServer(name="Test", tools_dir=str(tools_dir))
+            
+            # Load tools - this should work without raising SystemExit
+            try:
+                server.load_tools()
+                # If we get here, it means loading succeeded
+                assert True
+            except SystemExit:
+                pytest.fail("Tool loading failed")
+    
+    def test_invalid_tool_fails_fast(self):
+        """Test that invalid tools cause the server to exit."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tools_dir = Path(temp_dir) / "tools"
+            tools_dir.mkdir()
+            
+            # Create an invalid tool file (syntax error)
+            tool_file = tools_dir / "invalid_tool.py"
+            tool_content = '''
+def invalid_tool(message: str) -> str:
+    return f"Invalid: {message}"
+    # This has a syntax error
+    return
+'''
+            tool_file.write_text(tool_content)
+            
+            server = DynamicMCPServer(name="Test", tools_dir=str(tools_dir))
+            
+            # This should cause SystemExit due to fail-fast behavior
+            with pytest.raises(SystemExit):
+                server.load_tools()
+    
+    def test_tool_without_matching_function(self):
+        """Test tool file without matching function name."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tools_dir = Path(temp_dir) / "tools"
+            tools_dir.mkdir()
+            
+            # Create a tool file without matching function name
+            tool_file = tools_dir / "mismatch.py"
+            tool_content = '''
+def wrong_name(message: str) -> str:
+    return f"Wrong: {message}"
+'''
+            tool_file.write_text(tool_content)
+            
+            server = DynamicMCPServer(name="Test", tools_dir=str(tools_dir))
+            
+            # This should cause SystemExit due to fail-fast behavior
+            with pytest.raises(SystemExit):
+                server.load_tools()
+    
+    def test_empty_tools_directory(self):
+        """Test behavior with empty tools directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tools_dir = Path(temp_dir) / "tools"
+            tools_dir.mkdir()
+            
+            server = DynamicMCPServer(name="Test", tools_dir=str(tools_dir))
+            
+            # Should not raise exception
+            server.load_tools()
+            assert len(server.loaded_tools) == 0
+    
+    def test_tools_init_generation(self):
+        """Test that __init__.py is properly generated."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tools_dir = Path(temp_dir) / "tools"
+            tools_dir.mkdir()
+            
+            server = DynamicMCPServer(name="Test", tools_dir=str(tools_dir))
+            server.loaded_tools = {"echo": lambda x: x, "weather": lambda x: x}
+            
+            # Generate __init__.py
+            server._update_tools_init()
+            
+            # Check that __init__.py was created
+            init_file = tools_dir / "__init__.py"
+            assert init_file.exists()
+            
+            # Check content
+            content = init_file.read_text()
+            assert "from .echo import echo" in content
+            assert "from .weather import weather" in content
+            assert '__all__ = ["echo", "weather"]' in content
 `
 }

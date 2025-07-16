@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
-	"kagent.dev/kmcp/pkg/tools"
 )
 
 const ManifestFileName = "kmcp.yaml"
@@ -216,9 +215,8 @@ func (m *Manager) GetSecretConfig(manifest *ProjectManifest, environment string)
 // Private validation methods
 
 func (m *Manager) validateTool(name string, tool ToolConfig) error {
-	if tool.Type != "" && !isValidToolType(tool.Type) {
-		return fmt.Errorf("invalid tool type: %s", tool.Type)
-	}
+	// No tool type validation needed in dynamic loading approach
+	// Tools are automatically discovered and loaded from src/tools/ directory
 	return nil
 }
 
@@ -270,20 +268,12 @@ func isValidFramework(framework string) bool {
 	return false
 }
 
+// isValidToolType is no longer needed in the dynamic loading approach
+// but kept for backwards compatibility with other frameworks
 func isValidToolType(toolType string) bool {
-	validTypes := []string{
-		tools.ToolTypeBasic,
-		tools.ToolTypeHTTP,
-		tools.ToolTypeData,
-		tools.ToolTypeWorkflow,
-	}
-
-	for _, valid := range validTypes {
-		if toolType == valid {
-			return true
-		}
-	}
-	return false
+	// For dynamic loading (FastMCP Python), tool types are not used
+	// Return true for any value to avoid validation errors
+	return true
 }
 
 func isValidSecretProvider(provider string) bool {
