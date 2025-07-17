@@ -263,11 +263,11 @@ func getDefaultCommand(framework string) string {
 func getDefaultArgs(framework string) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython, manifest.FrameworkOfficialPython:
-		return []string{"-m", "src.main"}
+		return []string{"src/main.py"}
 	case manifest.FrameworkFastMCPTypeScript, manifest.FrameworkEasyMCPTypeScript, manifest.FrameworkOfficialTypeScript:
 		return []string{"dist/index.js"}
 	default:
-		return []string{"-m", "src.main"}
+		return []string{"src/main.py"}
 	}
 }
 
