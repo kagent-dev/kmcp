@@ -255,9 +255,6 @@ func isValidFramework(framework string) bool {
 	validFrameworks := []string{
 		FrameworkFastMCPPython,
 		FrameworkFastMCPTypeScript,
-		FrameworkEasyMCPTypeScript,
-		FrameworkOfficialPython,
-		FrameworkOfficialTypeScript,
 	}
 
 	for _, valid := range validFrameworks {
