@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -36,7 +37,8 @@ Examples:
   kmcp deploy --apply                  # Generate and apply to cluster
   kmcp deploy --image custom:tag       # Use custom image
   kmcp deploy --transport http         # Use HTTP transport
-  kmcp deploy --output deploy.yaml     # Save to file`,
+  kmcp deploy --output deploy.yaml     # Save to file
+  kmcp deploy --file /path/to/kmcp.yaml # Use custom kmcp.yaml file`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeploy,
 }
@@ -54,6 +56,7 @@ var (
 	deployEnv        []string
 	deployForce      bool
 	deployDryRun     bool
+	deployFile       string
 )
 
 func init() {
@@ -70,19 +73,32 @@ func init() {
 	deployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
 	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
+	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
 }
 
 func runDeploy(cmd *cobra.Command, args []string) error {
-	// Get current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+	// Determine project directory
+	var projectDir string
+	var err error
+
+	if deployFile != "" {
+		// Use specified file path
+		projectDir, err = getProjectDirFromFile(deployFile)
+		if err != nil {
+			return fmt.Errorf("failed to get project directory from file: %w", err)
+		}
+	} else {
+		// Use current working directory
+		projectDir, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
 	}
 
 	// Load project manifest
-	manifestManager := manifest.NewManager(cwd)
+	manifestManager := manifest.NewManager(projectDir)
 	if !manifestManager.Exists() {
-		return fmt.Errorf("kmcp.yaml not found. Run 'kmcp init' first")
+		return fmt.Errorf("kmcp.yaml not found in %s. Run 'kmcp init' first or specify a valid path with --file", projectDir)
 	}
 
 	projectManifest, err := manifestManager.Load()
@@ -140,6 +156,25 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// getProjectDirFromFile extracts the project directory from a file path
+func getProjectDirFromFile(filePath string) (string, error) {
+	// Get absolute path of the file
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Get the directory containing the file
+	projectDir := filepath.Dir(absPath)
+
+	// Verify the file exists
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("file does not exist: %s", absPath)
+	}
+
+	return projectDir, nil
 }
 
 func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName string) (*v1alpha1.MCPServer, error) {
@@ -251,9 +286,9 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 
 func getDefaultCommand(framework string) string {
 	switch framework {
-	case manifest.FrameworkFastMCPPython, manifest.FrameworkOfficialPython:
+	case manifest.FrameworkFastMCPPython:
 		return "python"
-	case manifest.FrameworkFastMCPTypeScript, manifest.FrameworkEasyMCPTypeScript, manifest.FrameworkOfficialTypeScript:
+	case manifest.FrameworkFastMCPTypeScript:
 		return "node"
 	default:
 		return "python"
@@ -262,9 +297,9 @@ func getDefaultCommand(framework string) string {
 
 func getDefaultArgs(framework string) []string {
 	switch framework {
-	case manifest.FrameworkFastMCPPython, manifest.FrameworkOfficialPython:
+	case manifest.FrameworkFastMCPPython:
 		return []string{"src/main.py"}
-	case manifest.FrameworkFastMCPTypeScript, manifest.FrameworkEasyMCPTypeScript, manifest.FrameworkOfficialTypeScript:
+	case manifest.FrameworkFastMCPTypeScript:
 		return []string{"dist/index.js"}
 	default:
 		return []string{"src/main.py"}

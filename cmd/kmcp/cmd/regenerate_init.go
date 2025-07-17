@@ -69,4 +69,4 @@ func runRegenerateInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("✅ Successfully regenerated %s/__init__.py\n", regenerateInitToolsDir)
 
 	return nil
-} 
+}
