@@ -175,7 +175,7 @@ func generateTool(toolName, toolPath string) error {
 
 	fmt.Printf("✅ Successfully created tool: %s\n", toolName)
 	fmt.Printf("📁 Generated file: %s\n", toolPath)
-	
+
 	// Regenerate __init__.py file
 	toolsDir := filepath.Dir(toolPath)
 	if err := generator.RegenerateToolsInit(toolsDir); err != nil {
