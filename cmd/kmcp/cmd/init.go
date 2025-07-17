@@ -19,9 +19,6 @@ var initCmd = &cobra.Command{
 This command creates a new MCP server project using one of the supported frameworks:
 - FastMCP Python (recommended) - Dynamic tool loading with FastMCP
 - FastMCP TypeScript - Dynamic tool loading with FastMCP  
-- EasyMCP TypeScript - Simple TypeScript framework
-- Official Python SDK - Official Python MCP SDK
-- Official TypeScript SDK - Official TypeScript MCP SDK
 
 The recommended approach is FastMCP Python which provides:
 - Automatic tool discovery and loading
@@ -38,17 +35,19 @@ var (
 	initNoGit          bool
 	initAuthor         string
 	initEmail          string
+	initPlatform       string
 	initNonInteractive bool
 )
 
 func init() {
 	rootCmd.AddCommand(initCmd)
 
-	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, fastmcp-ts, easymcp-ts, official-python, official-ts)")
+	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, fastmcp-ts)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
 	initCmd.Flags().StringVar(&initEmail, "email", "", "Author email for the project")
+	initCmd.Flags().StringVar(&initPlatform, "platform", "", "Platform to build for (linux/amd64, linux/arm64)")
 	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
 }
 
@@ -108,12 +107,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Get author information
 	author := initAuthor
 	email := initEmail
+	platform := initPlatform
 	if !initNonInteractive {
 		if author == "" {
 			author, _ = promptForAuthor()
 		}
 		if email == "" {
 			email, _ = promptForEmail()
+		}
+		if platform == "" {
+			platform, _ = promptForPlatform()
 		}
 	}
 
@@ -128,7 +131,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create project manifest
-	if err := createProjectManifest(projectPath, projectName, framework, template, author, email); err != nil {
+	if err := createProjectManifest(projectPath, projectName, framework, template, author, email, platform); err != nil {
 		return fmt.Errorf("failed to create project manifest: %w", err)
 	}
 
@@ -157,10 +160,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  cd %s\n", projectName)
 
 	switch framework {
-	case "fastmcp-python", "official-python":
+	case "fastmcp-python":
 		fmt.Printf("  uv sync\n")
-		fmt.Printf("  uv run python -m src.main\n")
-	case "fastmcp-ts", "easymcp-ts", "official-ts":
+		fmt.Printf("  uv run python src/main.py\n")
+	case "fastmcp-ts":
 		fmt.Printf("  npm install\n")
 		fmt.Printf("  kmcp build\n")
 	}
@@ -210,10 +213,7 @@ func promptForFramework() (string, error) {
 	fmt.Println("\nSelect a framework:")
 	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
 	fmt.Println("2. FastMCP TypeScript - Dynamic tool loading with FastMCP")
-	fmt.Println("3. EasyMCP TypeScript - Simple TypeScript framework")
-	fmt.Println("4. Official Python SDK - Official Python MCP SDK")
-	fmt.Println("5. Official TypeScript SDK - Official TypeScript MCP SDK")
-	fmt.Print("Enter choice [1-5]: ")
+	fmt.Print("Enter choice [1-2]: ")
 
 	var choice string
 	if _, err := fmt.Scanln(&choice); err != nil {
@@ -225,12 +225,6 @@ func promptForFramework() (string, error) {
 		return "fastmcp-python", nil
 	case "2":
 		return "fastmcp-ts", nil
-	case "3":
-		return "easymcp-ts", nil
-	case "4":
-		return "official-python", nil
-	case "5":
-		return "official-ts", nil
 	default:
 		return "fastmcp-python", nil // Default to recommended
 	}
@@ -285,14 +279,24 @@ func promptForEmail() (string, error) {
 	return strings.TrimSpace(email), nil
 }
 
+func promptForPlatform() (string, error) {
+	fmt.Print("Enter platform (optional): ")
+	var platform string
+	fmt.Scanln(&platform)
+	return strings.TrimSpace(platform), nil
+}
+
 // createProjectManifest creates the kmcp.yaml manifest file
-func createProjectManifest(projectPath, projectName, framework, template, author, email string) error {
+func createProjectManifest(projectPath, projectName, framework, template, author, email, platform string) error {
 	// Set default author if empty
 	if author == "" {
 		author = "KMCP CLI"
 	}
 	if email == "" {
 		email = "noreply@kagent.dev"
+	}
+	if platform == "" {
+		platform = "linux/amd64"
 	}
 
 	// Create manifest with template-specific tools
@@ -336,7 +340,7 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 			Docker: manifest.DockerConfig{
 				Image:      fmt.Sprintf("%s:latest", strings.ReplaceAll(projectName, "_", "-")),
 				Dockerfile: "Dockerfile",
-				Platform:   []string{"linux/amd64"},
+				Platform:   []string{platform},
 			},
 		},
 	}
@@ -448,28 +452,6 @@ func getFrameworkDependencies(framework, template string) []string {
 			deps = append(deps, "async")
 		}
 		return deps
-	case "official-python":
-		deps := []string{"mcp>=1.0.0"}
-		switch template {
-		case "http":
-			deps = append(deps, "httpx>=0.25.0")
-		case "data":
-			deps = append(deps, "pandas>=2.0.0")
-		case "workflow":
-			deps = append(deps, "asyncio")
-		}
-		return deps
-	case "official-typescript":
-		deps := []string{"@modelcontextprotocol/sdk"}
-		switch template {
-		case "http":
-			deps = append(deps, "axios")
-		case "data":
-			deps = append(deps, "lodash")
-		case "workflow":
-			deps = append(deps, "async")
-		}
-		return deps
 	default:
 		return []string{}
 	}
@@ -478,9 +460,9 @@ func getFrameworkDependencies(framework, template string) []string {
 // getFrameworkDevDependencies returns development dependencies for a framework
 func getFrameworkDevDependencies(framework string) []string {
 	switch framework {
-	case "fastmcp-python", "official-python":
+	case "fastmcp-python":
 		return []string{"pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=22.0.0", "mypy>=1.0.0", "ruff>=0.1.0"}
-	case "fastmcp-ts", "easymcp-ts", "official-ts":
+	case "fastmcp-ts":
 		return []string{"@types/node", "typescript", "tsx", "vitest", "eslint", "prettier"}
 	default:
 		return []string{}

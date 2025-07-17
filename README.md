@@ -84,7 +84,7 @@ kmcp init [project-name] [flags]
 ```
 
 **Flags:**
-- `--framework` - Choose framework (fastmcp-python, fastmcp-ts, easymcp-ts, official-python, official-ts)
+- `--framework` - Choose framework (fastmcp-python, fastmcp-ts)
 - `--template` - Select template (basic, database, filesystem, api-client, multi-tool)
 - `--author` - Set project author
 - `--email` - Set author email
@@ -132,12 +132,6 @@ kmcp init my-python-server \
 kmcp init my-ts-server \
   --framework fastmcp-ts \
   --template filesystem
-
-# EasyMCP TypeScript for simple projects
-kmcp init simple-server \
-  --framework easymcp-ts \
-  --template basic
-```
 
 #### Build and Deploy
 
@@ -206,16 +200,6 @@ KMCP supports the most popular MCP frameworks:
 - **Best for**: Node.js developers, web integration
 - **Features**: Modern TypeScript, OAuth 2.0, server-sent events
 - **Use cases**: REST APIs, web services, real-time applications
-
-### EasyMCP TypeScript
-- **Best for**: Simple projects, learning MCP
-- **Features**: Minimal setup, Express-like API
-- **Use cases**: Prototypes, simple tools, getting started
-
-### Official SDKs
-- **Best for**: Custom architectures, maximum control
-- **Features**: Full protocol access, advanced configurations
-- **Use cases**: Enterprise integrations, specialized requirements
 
 ## Project Structure
 

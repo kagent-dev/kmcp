@@ -105,11 +105,8 @@ type DockerConfig struct {
 
 // Supported frameworks
 const (
-	FrameworkFastMCPPython      = "fastmcp-python"
-	FrameworkFastMCPTypeScript  = "fastmcp-ts"
-	FrameworkEasyMCPTypeScript  = "easymcp-ts"
-	FrameworkOfficialPython     = "official-python"
-	FrameworkOfficialTypeScript = "official-ts"
+	FrameworkFastMCPPython     = "fastmcp-python"
+	FrameworkFastMCPTypeScript = "fastmcp-ts"
 )
 
 // Supported secret providers
