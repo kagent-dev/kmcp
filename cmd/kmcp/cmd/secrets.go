@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -149,7 +148,7 @@ func runAddSecret(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runListSecrets(cmd *cobra.Command, args []string) error {
+func runListSecrets(cmd *cobra.Command, _ []string) error {
 	environment, _ := cmd.Flags().GetString("environment")
 
 	// Load project manifest
@@ -198,7 +197,7 @@ func runListSecrets(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runGenerateK8sSecrets(cmd *cobra.Command, args []string) error {
+func runGenerateK8sSecrets(cmd *cobra.Command, _ []string) error {
 	environment, _ := cmd.Flags().GetString("environment")
 	output, _ := cmd.Flags().GetString("output")
 
@@ -266,7 +265,7 @@ func runGenerateK8sSecrets(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runValidateSecrets(cmd *cobra.Command, args []string) error {
+func runValidateSecrets(cmd *cobra.Command, _ []string) error {
 	environment, _ := cmd.Flags().GetString("environment")
 	scanResponses, _ := cmd.Flags().GetBool("scan-responses")
 
@@ -346,7 +345,8 @@ func runValidateSecrets(cmd *cobra.Command, args []string) error {
 
 		// Simple check to see if sanitization is working
 		sanitizedBytes, _ := yaml.Marshal(sanitized)
-		if strings.Contains(string(sanitizedBytes), "secret123") || strings.Contains(string(sanitizedBytes), "sk-1234567890abcdef") {
+		if strings.Contains(string(sanitizedBytes), "secret123") ||
+			strings.Contains(string(sanitizedBytes), "sk-1234567890abcdef") {
 			fmt.Printf("❌ Potential secret leak detected in test data\n")
 		} else {
 			fmt.Printf("✅ Secret sanitization working correctly\n")
@@ -354,9 +354,4 @@ func runValidateSecrets(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// Helper function to encode string to base64 (for Kubernetes secrets)
-func encodeBase64(input string) string {
-	return base64.StdEncoding.EncodeToString([]byte(input))
 }

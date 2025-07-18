@@ -19,7 +19,7 @@ const (
 	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
 )
 
-type AgentGatewayOutputs struct {
+type Outputs struct {
 	// AgentGateway Deployment
 	Deployment *appsv1.Deployment
 	// AgentGateway Service
@@ -28,15 +28,15 @@ type AgentGatewayOutputs struct {
 	ConfigMap *corev1.ConfigMap
 }
 
-type AgentGatewayTranslator interface {
-	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*AgentGatewayOutputs, error)
+type Translator interface {
+	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*Outputs, error)
 }
 
 type agentGatewayTranslator struct {
 	scheme *runtime.Scheme
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
+func NewAgentGatewayTranslator(scheme *runtime.Scheme) Translator {
 	return &agentGatewayTranslator{
 		scheme: scheme,
 	}
@@ -44,7 +44,7 @@ func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
 
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	server *v1alpha1.MCPServer,
-) (*AgentGatewayOutputs, error) {
+) (*Outputs, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
@@ -57,7 +57,7 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
 	}
-	return &AgentGatewayOutputs{
+	return &Outputs{
 		Deployment: deployment,
 		Service:    service,
 		ConfigMap:  configMap,

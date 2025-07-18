@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Generator handles generating new Python tool files from templates
@@ -22,10 +25,10 @@ func (g *Generator) GenerateToolFile(filePath, toolName string, config map[strin
 	// Prepare template data
 	data := map[string]interface{}{
 		"ToolName":      toolName,
-		"ToolNameTitle": strings.Title(toolName),
+		"ToolNameTitle": cases.Title(language.English).String(toolName),
 		"ToolNameUpper": strings.ToUpper(toolName),
 		"ToolNameLower": strings.ToLower(toolName),
-		"ClassName":     strings.Title(toolName) + "Tool",
+		"ClassName":     cases.Title(language.English).String(toolName) + "Tool",
 		"Config":        config,
 	}
 
