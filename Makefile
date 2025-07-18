@@ -1,3 +1,4 @@
+
 # Image configuration
 DOCKER_REGISTRY ?= ghcr.io
 BASE_IMAGE_REGISTRY ?= cgr.dev
@@ -69,7 +70,6 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: helm-crd
 helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
 	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
-	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/mcpserver-crd.yaml
 	@awk '/^  name: mcpservers.kagent.dev$$/ { \
 		print; \
 		print "  labels:"; \
