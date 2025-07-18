@@ -96,7 +96,11 @@ func (d *Discovery) parseFileContent(content string, toolInfo *ToolInfo) error {
 		}
 
 		// Stop parsing once we exit the function
-		if inFunction && line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && !strings.Contains(line, `"""`) && !strings.Contains(line, `'''`) {
+		if inFunction && line != "" &&
+			!strings.HasPrefix(line, " ") &&
+			!strings.HasPrefix(line, "\t") &&
+			!strings.Contains(line, `"""`) &&
+			!strings.Contains(line, `'''`) {
 			break
 		}
 	}
@@ -111,10 +115,10 @@ func (d *Discovery) parseFileContent(content string, toolInfo *ToolInfo) error {
 
 // parseParameters extracts parameter information from function signature
 func (d *Discovery) parseParameters(paramStr string) []ParameterInfo {
-	var params []ParameterInfo
-
 	// Simple parameter parsing - can be enhanced later
 	parts := strings.Split(paramStr, ",")
+	params := make([]ParameterInfo, 0, len(parts))
+
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" || part == "self" {
@@ -177,7 +181,8 @@ func (d *Discovery) extractDocstring(lines []string, startLine int) string {
 						docstring.WriteString(content)
 					}
 				}
-			} else if strings.Contains(line, `'''`) {
+			}
+			if strings.Contains(line, `'''`) {
 				inDocstring = true
 				quoteType = `'''`
 				// Extract content after opening quotes
@@ -202,12 +207,11 @@ func (d *Discovery) extractDocstring(lines []string, startLine int) string {
 					docstring.WriteString(" " + content)
 				}
 				break
-			} else {
-				if docstring.Len() > 0 {
-					docstring.WriteString(" ")
-				}
-				docstring.WriteString(line)
 			}
+			if docstring.Len() > 0 {
+				docstring.WriteString(" ")
+			}
+			docstring.WriteString(line)
 		}
 	}
 

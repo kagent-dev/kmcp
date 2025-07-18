@@ -22,8 +22,8 @@ import (
 	"os/exec"
 	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 
 	"kagent.dev/kmcp/test/utils"
 )
@@ -51,60 +51,63 @@ var (
 // The default setup requires Kind, builds/loads the Manager Docker image locally, and installs
 // CertManager and Prometheus.
 func TestE2E(t *testing.T) {
-	RegisterFailHandler(Fail)
-	_, _ = fmt.Fprintf(GinkgoWriter, "Starting kmcp integration test suite\n")
-	RunSpecs(t, "e2e suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Starting kmcp integration test suite\n")
+	ginkgo.RunSpecs(t, "e2e suite")
 }
 
-var _ = BeforeSuite(func() {
-	By("Ensure that Prometheus is enabled")
+var _ = ginkgo.BeforeSuite(func() {
+	ginkgo.By("Ensure that Prometheus is enabled")
 	_ = utils.UncommentCode("config/default/kustomization.yaml", "#- ../prometheus", "#")
 
-	By("building the manager(Operator) image")
+	ginkgo.By("building the manager(Operator) image")
 	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
 	_, err := utils.Run(cmd)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the manager(Operator) image")
+	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to build the manager(Operator) image")
 
 	// TODO(user): If you want to change the e2e test vendor from Kind, ensure the image is
 	// built and available before running the tests. Also, remove the following block.
-	By("loading the manager(Operator) image on Kind")
+	ginkgo.By("loading the manager(Operator) image on Kind")
 	err = utils.LoadImageToKindClusterWithName(projectImage)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
+	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
 
 	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.
 	// To prevent errors when tests run in environments with Prometheus or CertManager already installed,
 	// we check for their presence before execution.
 	// Setup Prometheus and CertManager before the suite if not skipped and if not already installed
 	if !skipPrometheusInstall {
-		By("checking if prometheus is installed already")
+		ginkgo.By("checking if prometheus is installed already")
 		isPrometheusOperatorAlreadyInstalled = utils.IsPrometheusCRDsInstalled()
 		if !isPrometheusOperatorAlreadyInstalled {
-			_, _ = fmt.Fprintf(GinkgoWriter, "Installing Prometheus Operator...\n")
-			Expect(utils.InstallPrometheusOperator()).To(Succeed(), "Failed to install Prometheus Operator")
+			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Installing Prometheus Operator...\n")
+			gomega.Expect(utils.InstallPrometheusOperator()).To(gomega.Succeed(), "Failed to install Prometheus Operator")
 		} else {
-			_, _ = fmt.Fprintf(GinkgoWriter, "WARNING: Prometheus Operator is already installed. Skipping installation...\n")
+			_, _ = fmt.Fprintf(
+				ginkgo.GinkgoWriter,
+				"WARNING: Prometheus Operator is already installed. Skipping installation...\n",
+			)
 		}
 	}
 	if !skipCertManagerInstall {
-		By("checking if cert manager is installed already")
+		ginkgo.By("checking if cert manager is installed already")
 		isCertManagerAlreadyInstalled = utils.IsCertManagerCRDsInstalled()
 		if !isCertManagerAlreadyInstalled {
-			_, _ = fmt.Fprintf(GinkgoWriter, "Installing CertManager...\n")
-			Expect(utils.InstallCertManager()).To(Succeed(), "Failed to install CertManager")
+			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Installing CertManager...\n")
+			gomega.Expect(utils.InstallCertManager()).To(gomega.Succeed(), "Failed to install CertManager")
 		} else {
-			_, _ = fmt.Fprintf(GinkgoWriter, "WARNING: CertManager is already installed. Skipping installation...\n")
+			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "WARNING: CertManager is already installed. Skipping installation...\n")
 		}
 	}
 })
 
-var _ = AfterSuite(func() {
+var _ = ginkgo.AfterSuite(func() {
 	// Teardown Prometheus and CertManager after the suite if not skipped and if they were not already installed
 	if !skipPrometheusInstall && !isPrometheusOperatorAlreadyInstalled {
-		_, _ = fmt.Fprintf(GinkgoWriter, "Uninstalling Prometheus Operator...\n")
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Uninstalling Prometheus Operator...\n")
 		utils.UninstallPrometheusOperator()
 	}
 	if !skipCertManagerInstall && !isCertManagerAlreadyInstalled {
-		_, _ = fmt.Fprintf(GinkgoWriter, "Uninstalling CertManager...\n")
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Uninstalling CertManager...\n")
 		utils.UninstallCertManager()
 	}
 })

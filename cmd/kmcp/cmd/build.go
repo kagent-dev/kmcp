@@ -35,7 +35,7 @@ func init() {
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
 }
 
-func runBuild(cmd *cobra.Command, args []string) error {
+func runBuild(_ *cobra.Command, _ []string) error {
 	// Get current working directory
 	cwd, err := os.Getwd()
 	if err != nil {

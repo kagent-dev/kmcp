@@ -96,7 +96,7 @@ func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs *agentgateway.AgentGatewayOutputs) error {
+func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs *agentgateway.Outputs) error {
 	// upsert the outputs to the cluster
 	if outputs.Deployment != nil {
 		if err := upsertOutput(ctx, r.Client, outputs.Deployment); err != nil {
@@ -117,7 +117,11 @@ func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs *age
 	return nil
 }
 
-func (r *MCPServerReconciler) reconcileStatus(ctx context.Context, server *kagentdevv1alpha1.MCPServer, reconcileErr error) {
+func (r *MCPServerReconciler) reconcileStatus(
+	ctx context.Context,
+	server *kagentdevv1alpha1.MCPServer,
+	reconcileErr error,
+) {
 	// Update ObservedGeneration
 	server.Status.ObservedGeneration = server.Generation
 
@@ -125,21 +129,59 @@ func (r *MCPServerReconciler) reconcileStatus(ctx context.Context, server *kagen
 	if err := r.validateMCPServer(server); err != nil {
 		setAcceptedCondition(server, false, kagentdevv1alpha1.MCPServerReasonInvalidConfig, err.Error())
 		// If validation fails, set other conditions as unknown/false
-		setResolvedRefsCondition(server, false, kagentdevv1alpha1.MCPServerReasonImageNotFound, "Configuration validation failed")
-		setProgrammedCondition(server, false, kagentdevv1alpha1.MCPServerReasonDeploymentFailed, "Configuration validation failed")
-		setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, "Configuration validation failed")
+		setResolvedRefsCondition(
+			server,
+			false,
+			kagentdevv1alpha1.MCPServerReasonImageNotFound,
+			"Configuration validation failed",
+		)
+		setProgrammedCondition(
+			server,
+			false,
+			kagentdevv1alpha1.MCPServerReasonDeploymentFailed,
+			"Configuration validation failed",
+		)
+		setReadyCondition(
+			server,
+			false,
+			kagentdevv1alpha1.MCPServerReasonPodsNotReady,
+			"Configuration validation failed",
+		)
 	} else {
-		setAcceptedCondition(server, true, kagentdevv1alpha1.MCPServerReasonAccepted, "MCPServer configuration is valid")
+		setAcceptedCondition(
+			server,
+			true,
+			kagentdevv1alpha1.MCPServerReasonAccepted,
+			"MCPServer configuration is valid",
+		)
 
 		// Set ResolvedRefs condition (for now, assume image exists - could be enhanced later)
-		setResolvedRefsCondition(server, true, kagentdevv1alpha1.MCPServerReasonResolvedRefs, "All references resolved successfully")
+		setResolvedRefsCondition(
+			server,
+			true,
+			kagentdevv1alpha1.MCPServerReasonResolvedRefs,
+			"All references resolved successfully",
+		)
 
 		// Set Programmed condition based on reconcile result
 		if reconcileErr != nil {
-			setProgrammedCondition(server, false, kagentdevv1alpha1.MCPServerReasonDeploymentFailed, reconcileErr.Error())
-			setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, "Resources failed to be created")
+			setProgrammedCondition(
+				server,
+				false,
+				kagentdevv1alpha1.MCPServerReasonDeploymentFailed,
+				reconcileErr.Error(),
+			)
+			setReadyCondition(server,
+				false,
+				kagentdevv1alpha1.MCPServerReasonPodsNotReady,
+				"Resources failed to be created",
+			)
 		} else {
-			setProgrammedCondition(server, true, kagentdevv1alpha1.MCPServerReasonProgrammed, "All resources created successfully")
+			setProgrammedCondition(server,
+				true,
+				kagentdevv1alpha1.MCPServerReasonProgrammed,
+				"All resources created successfully",
+			)
 
 			// Check Ready condition by examining deployment status
 			r.checkReadyCondition(ctx, server)
@@ -155,7 +197,8 @@ func (r *MCPServerReconciler) reconcileStatus(ctx context.Context, server *kagen
 // validateMCPServer validates the MCPServer configuration
 func (r *MCPServerReconciler) validateMCPServer(server *kagentdevv1alpha1.MCPServer) error {
 	// Check if transport type is supported
-	if server.Spec.TransportType != kagentdevv1alpha1.TransportTypeStdio && server.Spec.TransportType != kagentdevv1alpha1.TransportTypeHTTP {
+	if server.Spec.TransportType != kagentdevv1alpha1.TransportTypeStdio &&
+		server.Spec.TransportType != kagentdevv1alpha1.TransportTypeHTTP {
 		return fmt.Errorf("unsupported transport type: %s", server.Spec.TransportType)
 	}
 
@@ -177,22 +220,39 @@ func (r *MCPServerReconciler) checkReadyCondition(ctx context.Context, server *k
 		if client.IgnoreNotFound(err) == nil {
 			setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, "Deployment not found")
 		} else {
-			setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, fmt.Sprintf("Error getting deployment: %s", err.Error()))
+			setReadyCondition(
+				server,
+				false,
+				kagentdevv1alpha1.MCPServerReasonPodsNotReady,
+				fmt.Sprintf("Error getting deployment: %s", err.Error()),
+			)
 		}
 		return
 	}
 
 	// Check if deployment is available
 	if deployment.Status.ReadyReplicas > 0 && deployment.Status.ReadyReplicas == deployment.Status.Replicas {
-		setReadyCondition(server, true, kagentdevv1alpha1.MCPServerReasonReady, "Deployment is ready and all pods are running")
+		setReadyCondition(
+			server,
+			true,
+			kagentdevv1alpha1.MCPServerReasonReady,
+			"Deployment is ready and all pods are running",
+		)
 	} else {
-		message := fmt.Sprintf("Deployment not ready: %d/%d replicas ready", deployment.Status.ReadyReplicas, deployment.Status.Replicas)
+		message := fmt.Sprintf("Deployment not ready: %d/%d replicas ready",
+			deployment.Status.ReadyReplicas, deployment.Status.Replicas)
 		setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, message)
 	}
 }
 
 // setCondition sets the given condition on the MCPServer status.
-func setCondition(server *kagentdevv1alpha1.MCPServer, conditionType kagentdevv1alpha1.MCPServerConditionType, status metav1.ConditionStatus, reason kagentdevv1alpha1.MCPServerConditionReason, message string) {
+func setCondition(
+	server *kagentdevv1alpha1.MCPServer,
+	conditionType kagentdevv1alpha1.MCPServerConditionType,
+	status metav1.ConditionStatus,
+	reason kagentdevv1alpha1.MCPServerConditionReason,
+	message string,
+) {
 	now := metav1.Now()
 	condition := metav1.Condition{
 		Type:               string(conditionType),
@@ -223,7 +283,12 @@ func setCondition(server *kagentdevv1alpha1.MCPServer, conditionType kagentdevv1
 }
 
 // setAcceptedCondition sets the Accepted condition on the MCPServer.
-func setAcceptedCondition(server *kagentdevv1alpha1.MCPServer, accepted bool, reason kagentdevv1alpha1.MCPServerConditionReason, message string) {
+func setAcceptedCondition(
+	server *kagentdevv1alpha1.MCPServer,
+	accepted bool,
+	reason kagentdevv1alpha1.MCPServerConditionReason,
+	message string,
+) {
 	status := metav1.ConditionTrue
 	if !accepted {
 		status = metav1.ConditionFalse
@@ -232,7 +297,12 @@ func setAcceptedCondition(server *kagentdevv1alpha1.MCPServer, accepted bool, re
 }
 
 // setResolvedRefsCondition sets the ResolvedRefs condition on the MCPServer.
-func setResolvedRefsCondition(server *kagentdevv1alpha1.MCPServer, resolved bool, reason kagentdevv1alpha1.MCPServerConditionReason, message string) {
+func setResolvedRefsCondition(
+	server *kagentdevv1alpha1.MCPServer,
+	resolved bool,
+	reason kagentdevv1alpha1.MCPServerConditionReason,
+	message string,
+) {
 	status := metav1.ConditionTrue
 	if !resolved {
 		status = metav1.ConditionFalse
@@ -241,7 +311,12 @@ func setResolvedRefsCondition(server *kagentdevv1alpha1.MCPServer, resolved bool
 }
 
 // setProgrammedCondition sets the Programmed condition on the MCPServer.
-func setProgrammedCondition(server *kagentdevv1alpha1.MCPServer, programmed bool, reason kagentdevv1alpha1.MCPServerConditionReason, message string) {
+func setProgrammedCondition(
+	server *kagentdevv1alpha1.MCPServer,
+	programmed bool,
+	reason kagentdevv1alpha1.MCPServerConditionReason,
+	message string,
+) {
 	status := metav1.ConditionTrue
 	if !programmed {
 		status = metav1.ConditionFalse
@@ -250,7 +325,12 @@ func setProgrammedCondition(server *kagentdevv1alpha1.MCPServer, programmed bool
 }
 
 // setReadyCondition sets the Ready condition on the MCPServer.
-func setReadyCondition(server *kagentdevv1alpha1.MCPServer, ready bool, reason kagentdevv1alpha1.MCPServerConditionReason, message string) {
+func setReadyCondition(
+	server *kagentdevv1alpha1.MCPServer,
+	ready bool,
+	reason kagentdevv1alpha1.MCPServerConditionReason,
+	message string,
+) {
 	status := metav1.ConditionTrue
 	if !ready {
 		status = metav1.ConditionFalse
