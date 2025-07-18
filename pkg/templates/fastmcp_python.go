@@ -95,6 +95,7 @@ Each tool file should contain a function decorated with @mcp.tool().
 """
 
 import sys
+import logging
 from pathlib import Path
 
 # Add src to Python path
@@ -105,6 +106,15 @@ from core.server import DynamicMCPServer
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stderr)
+        ]
+    )
+    
     try:
         # Create server with dynamic tool loading
         server = DynamicMCPServer(
@@ -152,6 +162,7 @@ Each tool file should contain a function decorated with @mcp.tool().
 
 import os
 import sys
+import logging
 import importlib.util
 from pathlib import Path
 from typing import Dict, Any, List, Callable
@@ -203,7 +214,7 @@ class DynamicMCPServer:
         tool_files = [f for f in tool_files if f.name != "__init__.py"]
         
         if not tool_files:
-            print(f"No tool files found in {self.tools_dir}")
+            logging.warning(f"No tool files found in {self.tools_dir}")
             return
             
         loaded_count = 0
@@ -215,19 +226,19 @@ class DynamicMCPServer:
                 if self._import_tool_module(tool_file, tool_name):
                     self.loaded_tools.append(tool_name)
                     loaded_count += 1
-                    print(f"✅ Loaded tool module: {tool_name}")
+                    logging.info(f"Loaded tool module: {tool_name}")
                 else:
-                    print(f"❌ Failed to load tool module: {tool_name}")
+                    logging.warning(f"Failed to load tool module: {tool_name}")
                     
             except Exception as e:
-                print(f"❌ Error loading tool {tool_file.name}: {e}")
+                logging.warning(f"Error loading tool {tool_file.name}: {e}")
                 # Fail fast - if any tool fails to load, stop the server
                 sys.exit(1)
                 
-        print(f"📦 Successfully loaded {loaded_count} tools")
+        logging.info(f"📦 Successfully loaded {loaded_count} tools")
         
         if loaded_count == 0:
-            print("⚠️  No tools loaded. Server starting without tools.")
+            logging.warning("No tools loaded. Server starting without tools.")
     
     def _import_tool_module(self, tool_file: Path, tool_name: str) -> bool:
         """Import a tool module, which auto-registers tools via decorators.
