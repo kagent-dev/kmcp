@@ -115,15 +115,26 @@ func isValidPythonIdentifier(name string) bool {
 	}
 
 	// First character must be letter or underscore
-	if !((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= 'A' && name[0] <= 'Z') || name[0] == '_') {
-		return false
+	firstChar := name[0]
+	if firstChar < 'a' || firstChar > 'z' {
+		if firstChar < 'A' || firstChar > 'Z' {
+			if firstChar != '_' {
+				return false
+			}
+		}
 	}
 
 	// Remaining characters must be letters, digits, or underscores
 	for i := 1; i < len(name); i++ {
 		c := name[i]
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-			return false
+		if c < 'a' || c > 'z' {
+			if c < 'A' || c > 'Z' {
+				if c < '0' || c > '9' {
+					if c != '_' {
+						return false
+					}
+				}
+			}
 		}
 	}
 
