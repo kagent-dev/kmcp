@@ -104,8 +104,8 @@ helm-build: helm-lint helm-package ## Build and package the Helm chart
 
 .PHONY: helm-publish
 helm-publish: helm-package ## Publish Helm chart to OCI registry
-	@echo "Publishing Helm chart to $(HELM_REPO)..."
-	@helm push $(HELM_DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)
+	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
+	@helm push $(HELM_DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
 	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
