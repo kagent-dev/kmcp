@@ -55,7 +55,7 @@ func init() {
 	addToolCmd.Flags().BoolVarP(&addToolInteractive, "interactive", "i", false, "Interactive tool creation")
 }
 
-func runAddTool(cmd *cobra.Command, args []string) error {
+func runAddTool(_ *cobra.Command, args []string) error {
 	toolName := args[0]
 
 	// Validate tool name
@@ -146,7 +146,10 @@ func createToolInteractive(toolName, toolPath string) error {
 	if addToolDescription == "" {
 		fmt.Printf("Enter tool description (optional): ")
 		var desc string
-		fmt.Scanln(&desc)
+		_, err := fmt.Scanln(&desc)
+		if err != nil {
+			return fmt.Errorf("failed to read description: %w", err)
+		}
 		addToolDescription = desc
 	}
 

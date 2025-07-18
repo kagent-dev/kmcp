@@ -11,6 +11,19 @@ import (
 	"kagent.dev/kmcp/pkg/templates"
 )
 
+const (
+	frameworkFastMCPPython = "fastmcp-python"
+	frameworkFastMCPTS     = "fastmcp-ts"
+	templateBasic          = "basic"
+	templateDatabase       = "database"
+	templateFilesystem     = "filesystem"
+	templateAPIClient      = "api-client"
+	templateMultiTool      = "multi-tool"
+	templateWorkflow       = "workflow"
+	templateData           = "data"
+	templateHTTP           = "http"
+)
+
 var initCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new MCP server project",
@@ -51,7 +64,7 @@ func init() {
 	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
 }
 
-func runInit(cmd *cobra.Command, args []string) error {
+func runInit(_ *cobra.Command, args []string) error {
 	var projectName string
 
 	// Get project name from args or prompt
@@ -160,10 +173,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  cd %s\n", projectName)
 
 	switch framework {
-	case "fastmcp-python":
+	case frameworkFastMCPPython:
 		fmt.Printf("  uv sync\n")
 		fmt.Printf("  uv run python src/main.py\n")
-	case "fastmcp-ts":
+	case frameworkFastMCPTS:
 		fmt.Printf("  npm install\n")
 		fmt.Printf("  kmcp build\n")
 	}
@@ -222,18 +235,18 @@ func promptForFramework() (string, error) {
 
 	switch strings.TrimSpace(choice) {
 	case "1", "":
-		return "fastmcp-python", nil
+		return frameworkFastMCPPython, nil
 	case "2":
-		return "fastmcp-ts", nil
+		return frameworkFastMCPTS, nil
 	default:
-		return "fastmcp-python", nil // Default to recommended
+		return frameworkFastMCPPython, nil // Default to recommended
 	}
 }
 
 func promptForTemplate(framework string) (string, error) {
-	if framework == "fastmcp-python" {
+	if framework == frameworkFastMCPPython {
 		// FastMCP Python uses dynamic loading, no template selection needed
-		return "basic", nil
+		return templateBasic, nil
 	}
 
 	fmt.Println("\nSelect a template:")
@@ -251,38 +264,47 @@ func promptForTemplate(framework string) (string, error) {
 
 	switch strings.TrimSpace(choice) {
 	case "1", "":
-		return "basic", nil
+		return templateBasic, nil
 	case "2":
-		return "database", nil
+		return templateDatabase, nil
 	case "3":
-		return "filesystem", nil
+		return templateFilesystem, nil
 	case "4":
-		return "api-client", nil
+		return templateAPIClient, nil
 	case "5":
-		return "multi-tool", nil
+		return templateMultiTool, nil
 	default:
-		return "basic", nil // Default to basic
+		return templateBasic, nil // Default to basic
 	}
 }
 
 func promptForAuthor() (string, error) {
 	fmt.Print("Enter author name (optional): ")
 	var author string
-	fmt.Scanln(&author)
+	_, err := fmt.Scanln(&author)
+	if err != nil {
+		return "", fmt.Errorf("failed to read author: %w", err)
+	}
 	return strings.TrimSpace(author), nil
 }
 
 func promptForEmail() (string, error) {
 	fmt.Print("Enter author email (optional): ")
 	var email string
-	fmt.Scanln(&email)
+	_, err := fmt.Scanln(&email)
+	if err != nil {
+		return "", fmt.Errorf("failed to read email: %w", err)
+	}
 	return strings.TrimSpace(email), nil
 }
 
 func promptForPlatform() (string, error) {
 	fmt.Print("Enter platform (optional): ")
 	var platform string
-	fmt.Scanln(&platform)
+	_, err := fmt.Scanln(&platform)
+	if err != nil {
+		return "", fmt.Errorf("failed to read platform: %w", err)
+	}
 	return strings.TrimSpace(platform), nil
 }
 
@@ -359,7 +381,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 	tools := make(map[string]manifest.ToolConfig)
 
 	switch template {
-	case "basic":
+	case templateBasic:
 		tools["echo"] = manifest.ToolConfig{
 			Name:        "echo",
 			Description: "Echo a message back to the client",
@@ -376,7 +398,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 				"enabled": true,
 			},
 		}
-	case "http":
+	case templateHTTP:
 		tools["http_client"] = manifest.ToolConfig{
 			Name:        "http_client",
 			Description: "Make HTTP requests",
@@ -386,7 +408,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 				"timeout": 30,
 			},
 		}
-	case "data":
+	case templateData:
 		tools["data_processor"] = manifest.ToolConfig{
 			Name:        "data_processor",
 			Description: "Process and manipulate data",
@@ -395,7 +417,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 				"enabled": true,
 			},
 		}
-	case "workflow":
+	case templateWorkflow:
 		tools["workflow_executor"] = manifest.ToolConfig{
 			Name:        "workflow_executor",
 			Description: "Execute multi-step workflows",
@@ -405,23 +427,23 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 				"max_steps": 10,
 			},
 		}
-	case "multi-tool":
+	case templateMultiTool:
 		// Combine all tools
-		for k, v := range getTemplateTools("basic") {
+		for k, v := range getTemplateTools(templateBasic) {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("http") {
+		for k, v := range getTemplateTools(templateHTTP) {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("data") {
+		for k, v := range getTemplateTools(templateData) {
 			tools[k] = v
 		}
-		for k, v := range getTemplateTools("workflow") {
+		for k, v := range getTemplateTools(templateWorkflow) {
 			tools[k] = v
 		}
 	default:
 		// Default to basic tools
-		return getTemplateTools("basic")
+		return getTemplateTools(templateBasic)
 	}
 
 	return tools
@@ -430,25 +452,25 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 // getFrameworkDependencies returns runtime dependencies for a framework
 func getFrameworkDependencies(framework, template string) []string {
 	switch framework {
-	case "fastmcp-python":
+	case frameworkFastMCPPython:
 		deps := []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
 		switch template {
-		case "http":
+		case templateHTTP:
 			deps = append(deps, "httpx>=0.25.0")
-		case "data":
+		case templateData:
 			deps = append(deps, "pandas>=2.0.0", "numpy>=1.21.0")
-		case "workflow":
+		case templateWorkflow:
 			deps = append(deps, "asyncio")
 		}
 		return deps
-	case "fastmcp-ts":
+	case frameworkFastMCPTS:
 		deps := []string{"@fastmcp/core", "@modelcontextprotocol/sdk"}
 		switch template {
-		case "http":
+		case templateHTTP:
 			deps = append(deps, "axios", "fetch")
-		case "data":
+		case templateData:
 			deps = append(deps, "lodash")
-		case "workflow":
+		case templateWorkflow:
 			deps = append(deps, "async")
 		}
 		return deps
@@ -460,9 +482,9 @@ func getFrameworkDependencies(framework, template string) []string {
 // getFrameworkDevDependencies returns development dependencies for a framework
 func getFrameworkDevDependencies(framework string) []string {
 	switch framework {
-	case "fastmcp-python":
+	case frameworkFastMCPPython:
 		return []string{"pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=22.0.0", "mypy>=1.0.0", "ruff>=0.1.0"}
-	case "fastmcp-ts":
+	case frameworkFastMCPTS:
 		return []string{"@types/node", "typescript", "tsx", "vitest", "eslint", "prettier"}
 	default:
 		return []string{}

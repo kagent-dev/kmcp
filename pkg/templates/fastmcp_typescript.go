@@ -1,9 +1,16 @@
 package templates
 
+const (
+	templateHTTP      = "http"
+	templateData      = "data"
+	templateWorkflow  = "workflow"
+	templateMultiTool = "multi-tool"
+)
+
 // getFastMCPTypeScriptFiles returns the file templates for FastMCP TypeScript projects
 func (g *Generator) getFastMCPTypeScriptFiles(templateType string, data map[string]interface{}) map[string]string {
 	files := map[string]string{
-		"package.json":  g.getFastMCPTypeScriptPackageJson(templateType, data),
+		"package.json":  g.getFastMCPTypeScriptPackageJSON(templateType, data),
 		"tsconfig.json": g.getFastMCPTypeScriptTsConfig(templateType, data),
 		"README.md":     g.getFastMCPTypeScriptReadme(templateType, data),
 		"Dockerfile":    g.getFastMCPTypeScriptDockerfile(templateType, data),
@@ -43,13 +50,13 @@ func (g *Generator) getFastMCPTypeScriptFiles(templateType string, data map[stri
 
 	// Add template-specific files
 	switch templateType {
-	case "http":
+	case templateHTTP:
 		files["src/tools/http-client.ts"] = g.getFastMCPTypeScriptHTTPTool(templateType, data)
-	case "data":
+	case templateData:
 		files["src/tools/data-processor.ts"] = g.getFastMCPTypeScriptDataTool(templateType, data)
-	case "workflow":
+	case templateWorkflow:
 		files["src/tools/workflow-executor.ts"] = g.getFastMCPTypeScriptWorkflowTool(templateType, data)
-	case "multi-tool":
+	case templateMultiTool:
 		files["src/tools/http-client.ts"] = g.getFastMCPTypeScriptHTTPTool(templateType, data)
 		files["src/tools/data-processor.ts"] = g.getFastMCPTypeScriptDataTool(templateType, data)
 		files["src/tools/workflow-executor.ts"] = g.getFastMCPTypeScriptWorkflowTool(templateType, data)
@@ -58,8 +65,8 @@ func (g *Generator) getFastMCPTypeScriptFiles(templateType string, data map[stri
 	return files
 }
 
-// getFastMCPTypeScriptPackageJson generates the package.json template
-func (g *Generator) getFastMCPTypeScriptPackageJson(templateType string, data map[string]interface{}) string {
+// getFastMCPTypeScriptPackageJSON generates the package.json template
+func (g *Generator) getFastMCPTypeScriptPackageJSON(_ string, _ map[string]interface{}) string {
 	return `{
   "name": "{{.ProjectNameKebab}}",
   "version": "0.1.0",
@@ -124,7 +131,7 @@ func (g *Generator) getFastMCPTypeScriptPackageJson(templateType string, data ma
 }
 
 // getFastMCPTypeScriptTsConfig generates the tsconfig.json template
-func (g *Generator) getFastMCPTypeScriptTsConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptTsConfig(_ string, _ map[string]interface{}) string {
 	return `{
   "compilerOptions": {
     "target": "ES2020",
@@ -164,14 +171,20 @@ func (g *Generator) getFastMCPTypeScriptTsConfig(templateType string, data map[s
 }
 
 // getFastMCPTypeScriptReadme generates the README.md template
-func (g *Generator) getFastMCPTypeScriptReadme(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptReadme(_ string, _ map[string]interface{}) string {
 	return `# {{.ProjectName}}
 
 {{.ProjectName}} is a Model Context Protocol (MCP) server built with FastMCP TypeScript using a modular architecture.
 
 ## Overview
 
-This MCP server provides {{if eq .Template "basic"}}basic tools and functionality{{else if eq .Template "database"}}database integration capabilities{{else if eq .Template "filesystem"}}filesystem access and management{{else if eq .Template "api-client"}}API client integration{{else if eq .Template "multi-tool"}}comprehensive multi-tool functionality{{else}}custom MCP tools{{end}} using a clean, modular architecture.
+This MCP server provides \
+{{if eq .Template "basic"}}basic tools and functionality\
+{{else if eq .Template "database"}}database integration capabilities\
+{{else if eq .Template "filesystem"}}filesystem access and management\
+{{else if eq .Template "api-client"}}API client integration\
+{{else if eq .Template "multi-tool"}}comprehensive multi-tool functionality\
+{{else}}custom MCP tools{{end}} using a clean, modular architecture.
 
 ## Project Structure
 
@@ -294,7 +307,7 @@ This project is licensed under the MIT License.
 }
 
 // getFastMCPTypeScriptDockerfile generates the Dockerfile template
-func (g *Generator) getFastMCPTypeScriptDockerfile(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptDockerfile(_ string, _ map[string]interface{}) string {
 	return `# Multi-stage build for {{.ProjectName}} MCP server
 FROM node:18-alpine as builder
 
@@ -353,7 +366,7 @@ CMD ["node", "dist/main.js"]`
 }
 
 // getFastMCPTypeScriptGitignore generates the .gitignore template
-func (g *Generator) getFastMCPTypeScriptGitignore(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptGitignore(_ string, _ map[string]interface{}) string {
 	return `# Dependencies
 node_modules/
 npm-debug.log*
@@ -467,7 +480,7 @@ config/local.yaml
 }
 
 // getFastMCPTypeScriptEnvExample generates .env.example file
-func (g *Generator) getFastMCPTypeScriptEnvExample(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptEnvExample(_ string, _ map[string]interface{}) string {
 	return `# {{.ProjectName}} Environment Variables
 # Copy this file to .env and fill in actual values
 
@@ -487,7 +500,7 @@ func (g *Generator) getFastMCPTypeScriptEnvExample(templateType string, data map
 }
 
 // getFastMCPTypeScriptMain generates the main entry point
-func (g *Generator) getFastMCPTypeScriptMain(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptMain(_ string, _ map[string]interface{}) string {
 	return `/**
  * Main entry point for {{.ProjectName}} MCP server.
  * 
@@ -523,7 +536,7 @@ if (require.main === module) {
 }
 
 // getFastMCPTypeScriptToolsIndex generates the tools index
-func (g *Generator) getFastMCPTypeScriptToolsIndex(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptToolsIndex(_ string, _ map[string]interface{}) string {
 	return `/**
  * Tools package for {{.ProjectName}} MCP server.
  * 
@@ -541,7 +554,7 @@ export type { CalculationRequest } from './calculator';
 }
 
 // getFastMCPTypeScriptEchoTool generates the echo tool implementation
-func (g *Generator) getFastMCPTypeScriptEchoTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptEchoTool(_ string, _ map[string]interface{}) string {
 	return `/**
  * Echo tool implementation for {{.ProjectName}} MCP server.
  */
@@ -605,7 +618,7 @@ export class EchoTool {
 }
 
 // getFastMCPTypeScriptCalculatorTool generates the calculator tool implementation
-func (g *Generator) getFastMCPTypeScriptCalculatorTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptCalculatorTool(_ string, _ map[string]interface{}) string {
 	return `/**
  * Calculator tool implementation for {{.ProjectName}} MCP server.
  */
@@ -718,7 +731,7 @@ export class CalculatorTool {
 // Continue with remaining methods...
 
 // getFastMCPTypeScriptResourcesIndex generates the resources index
-func (g *Generator) getFastMCPTypeScriptResourcesIndex(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptResourcesIndex(_ string, _ map[string]interface{}) string {
 	return `/**
  * Resources package for {{.ProjectName}} MCP server.
  * 
@@ -736,7 +749,7 @@ export {};
 }
 
 // getFastMCPTypeScriptCoreIndex generates the core index
-func (g *Generator) getFastMCPTypeScriptCoreIndex(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptCoreIndex(_ string, _ map[string]interface{}) string {
 	return `/**
  * Core framework package for {{.ProjectName}} MCP server.
  * 
@@ -751,7 +764,7 @@ export { ToolRegistry } from './registry';
 }
 
 // getFastMCPTypeScriptCoreServer generates the core server implementation
-func (g *Generator) getFastMCPTypeScriptCoreServer(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptCoreServer(_ string, _ map[string]interface{}) string {
 	return `/**
  * Core MCP server implementation for {{.ProjectName}}.
  * 
@@ -816,7 +829,7 @@ export async function createServer(): Promise<FastMCPServer> {
 }
 
 // getFastMCPTypeScriptCoreRegistry generates the tool registry
-func (g *Generator) getFastMCPTypeScriptCoreRegistry(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptCoreRegistry(_ string, _ map[string]interface{}) string {
 	return `/**
  * Tool registry for {{.ProjectName}} MCP server.
  * 
@@ -883,7 +896,7 @@ export class ToolRegistry {
 }
 
 // getFastMCPTypeScriptServerConfig generates server configuration
-func (g *Generator) getFastMCPTypeScriptServerConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptServerConfig(_ string, _ map[string]interface{}) string {
 	return `# {{.ProjectName}} MCP Server Configuration
 # This file configures the overall server behavior
 
@@ -915,7 +928,7 @@ performance:
 }
 
 // getFastMCPTypeScriptToolsConfig generates tools configuration
-func (g *Generator) getFastMCPTypeScriptToolsConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptToolsConfig(_ string, _ map[string]interface{}) string {
 	return `# {{.ProjectName}} Tools Configuration
 # This file configures individual tool behavior
 
@@ -959,7 +972,7 @@ environments:
 // Continue with remaining template methods...
 
 // getFastMCPTypeScriptTestTools generates tool tests
-func (g *Generator) getFastMCPTypeScriptTestTools(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptTestTools(_ string, _ map[string]interface{}) string {
 	return `/**
  * Tests for {{.ProjectName}} MCP server tools.
  */
@@ -1049,7 +1062,7 @@ describe('CalculatorTool', () => {
 }
 
 // getFastMCPTypeScriptTestServer generates server tests
-func (g *Generator) getFastMCPTypeScriptTestServer(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptTestServer(_ string, _ map[string]interface{}) string {
 	return `/**
  * Tests for {{.ProjectName}} MCP server core functionality.
  */
@@ -1096,7 +1109,7 @@ describe('ToolRegistry', () => {
 }
 
 // getFastMCPTypeScriptJestConfig generates Jest configuration
-func (g *Generator) getFastMCPTypeScriptJestConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptJestConfig(_ string, _ map[string]interface{}) string {
 	return `module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -1125,7 +1138,7 @@ func (g *Generator) getFastMCPTypeScriptJestConfig(templateType string, data map
 }
 
 // getFastMCPTypeScriptNodemonConfig generates Nodemon configuration
-func (g *Generator) getFastMCPTypeScriptNodemonConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptNodemonConfig(_ string, _ map[string]interface{}) string {
 	return `{
   "watch": ["src", "config"],
   "ext": "ts,yaml,yml,json",
@@ -1139,7 +1152,7 @@ func (g *Generator) getFastMCPTypeScriptNodemonConfig(templateType string, data 
 }
 
 // getFastMCPTypeScriptEslintConfig generates ESLint configuration
-func (g *Generator) getFastMCPTypeScriptEslintConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptEslintConfig(_ string, _ map[string]interface{}) string {
 	return `module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -1171,7 +1184,7 @@ func (g *Generator) getFastMCPTypeScriptEslintConfig(templateType string, data m
 }
 
 // getFastMCPTypeScriptPrettierConfig generates Prettier configuration
-func (g *Generator) getFastMCPTypeScriptPrettierConfig(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptPrettierConfig(_ string, _ map[string]interface{}) string {
 	return `{
   "semi": true,
   "trailingComma": "es5",
@@ -1184,7 +1197,7 @@ func (g *Generator) getFastMCPTypeScriptPrettierConfig(templateType string, data
 }
 
 // Placeholder implementations for template-specific tools
-func (g *Generator) getFastMCPTypeScriptHTTPTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptHTTPTool(_ string, _ map[string]interface{}) string {
 	return `/**
  * HTTP client tool implementation for {{.ProjectName}} MCP server.
  */
@@ -1235,7 +1248,7 @@ export class HTTPTool {
 `
 }
 
-func (g *Generator) getFastMCPTypeScriptDataTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptDataTool(_ string, _ map[string]interface{}) string {
 	return `/**
  * Data processor tool implementation for {{.ProjectName}} MCP server.
  */
@@ -1284,7 +1297,7 @@ export class DataTool {
 `
 }
 
-func (g *Generator) getFastMCPTypeScriptWorkflowTool(templateType string, data map[string]interface{}) string {
+func (g *Generator) getFastMCPTypeScriptWorkflowTool(_ string, _ map[string]interface{}) string {
 	return `/**
  * Workflow executor tool implementation for {{.ProjectName}} MCP server.
  */

@@ -182,14 +182,12 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 	cmd := exec.Command("docker", args...)
 	cmd.Dir = opts.ProjectDir
 
-	// Set up output handling
 	if opts.Verbose {
-		// Stream output in real-time for verbose mode
+		// Show real-time output for verbose mode
 		return b.runCommandWithOutput(cmd, imageName)
-	} else {
-		// Capture output and show progress for non-verbose mode
-		return b.runCommandWithProgress(cmd, imageName)
 	}
+	// Capture output and show progress for non-verbose mode
+	return b.runCommandWithProgress(cmd, imageName)
 }
 
 // checkDockerAvailable verifies that Docker is available and running
@@ -273,16 +271,12 @@ func (b *Builder) runCommandWithProgress(cmd *exec.Cmd, imageName string) error 
 }
 
 // streamOutput reads from a pipe and outputs lines with optional prefix
-func (b *Builder) streamOutput(pipe io.ReadCloser, prefix string) {
+func (b *Builder) streamOutput(pipe io.ReadCloser, _ string) {
 	defer pipe.Close()
 
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if prefix != "" {
-			fmt.Printf("%s%s\n", prefix, line)
-		} else {
-			fmt.Println(line)
-		}
+		fmt.Println(line)
 	}
 }

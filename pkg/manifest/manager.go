@@ -214,13 +214,13 @@ func (m *Manager) GetSecretConfig(manifest *ProjectManifest, environment string)
 
 // Private validation methods
 
-func (m *Manager) validateTool(name string, tool ToolConfig) error {
+func (m *Manager) validateTool(_ string, _ ToolConfig) error {
 	// No tool type validation needed in dynamic loading approach
 	// Tools are automatically discovered and loaded from src/tools/ directory
 	return nil
 }
 
-func (m *Manager) validateResource(name string, resource ResourceConfig) error {
+func (m *Manager) validateResource(_ string, _ ResourceConfig) error {
 	// Add resource validation logic as needed
 	return nil
 }
@@ -263,14 +263,6 @@ func isValidFramework(framework string) bool {
 		}
 	}
 	return false
-}
-
-// isValidToolType is no longer needed in the dynamic loading approach
-// but kept for backwards compatibility with other frameworks
-func isValidToolType(toolType string) bool {
-	// For dynamic loading (FastMCP Python), tool types are not used
-	// Return true for any value to avoid validation errors
-	return true
 }
 
 func isValidSecretProvider(provider string) bool {
