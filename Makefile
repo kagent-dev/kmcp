@@ -16,9 +16,16 @@ LOCALARCH ?= $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 BUILDKIT_VERSION = v0.23.0
 BUILDX_NO_DEFAULT_ATTESTATIONS=1
 BUILDX_BUILDER_NAME ?= kmcp-builder-$(BUILDKIT_VERSION)
+DOCKER_BUILDER ?= docker buildx
+DOCKER_BUILD_ARGS ?= --builder $(BUILDX_BUILDER_NAME) --pull --load --platform linux/$(LOCALARCH)
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+# Image configuration
+CONTROLLER_IMAGE_NAME ?= controller
+CONTROLLER_IMAGE_TAG ?= $(VERSION)
+CONTROLLER_IMG ?= $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):$(CONTROLLER_IMAGE_TAG)
+
+# Image URL to use all building/pushing image targets (backward compatibility)
+IMG ?= $(CONTROLLER_IMG)
 DIST_FOLDER ?= dist
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -27,12 +34,6 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
-
-# CONTAINER_TOOL defines the container tool to be used for building images.
-# Be aware that the target commands are only tested with Docker which is
-# scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
-CONTAINER_TOOL ?= docker
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -185,11 +186,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG} .
+	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t ${CONTROLLER_IMG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+	$(DOCKER_BUILDER) push ${CONTROLLER_IMG}
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -202,10 +203,10 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name $(BUILDX_BUILDER_NAME)
-	$(CONTAINER_TOOL) buildx use $(BUILDX_BUILDER_NAME)
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
-	- $(CONTAINER_TOOL) buildx rm $(BUILDX_BUILDER_NAME)
+	- $(DOCKER_BUILDER) create --name $(BUILDX_BUILDER_NAME)
+	$(DOCKER_BUILDER) use $(BUILDX_BUILDER_NAME)
+	- $(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) --tag ${CONTROLLER_IMG} -f Dockerfile.cross .
+	- $(DOCKER_BUILDER) rm $(BUILDX_BUILDER_NAME)
 	rm Dockerfile.cross
 
 .PHONY: build-installer

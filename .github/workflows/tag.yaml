@@ -44,8 +44,8 @@ jobs:
         use: 'true'
     - name: 'Build Images'
       env:
-        DOCKER_BUILD_ARGS: "--push --platform linux/amd64,linux/arm64"
         DOCKER_BUILDER: "docker buildx"
+        DOCKER_BUILD_ARGS: "--push --platform linux/amd64,linux/arm64"
       run: |
         # if workflow_dispatch is used, use the version input
         if [ -n "${{ github.event.inputs.version }}" ]; then
@@ -54,7 +54,7 @@ jobs:
           export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
         fi
         echo "Building Docker image with version: ${VERSION}"
-        make docker-buildx IMG=ghcr.io/${{ github.repository }}:${VERSION} VERSION=${VERSION}
+        make docker-buildx VERSION=${VERSION}
   push-helm-chart:
     needs:
     - push-images
