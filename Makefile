@@ -90,7 +90,8 @@ helm-lint: helm-templates ## Lint the Helm chart
 .PHONY: helm-package
 helm-package: helm-templates ## Package the Helm chart
 	mkdir -p $(DIST_FOLDER)
-	helm package helm/kmcp -d $(DIST_FOLDER)
+	@echo "Packaging Helm chart with version $(VERSION)..."
+	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
 
 .PHONY: helm-cleanup
 helm-cleanup: ## Clean up Helm chart packages

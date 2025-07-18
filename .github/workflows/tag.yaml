@@ -53,7 +53,8 @@ jobs:
         else
           export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
         fi
-        make docker-buildx IMG=ghcr.io/${{ github.repository }}:${VERSION}
+        echo "Building Docker image with version: ${VERSION}"
+        make docker-buildx IMG=ghcr.io/${{ github.repository }}:${VERSION} VERSION=${VERSION}
   push-helm-chart:
     needs:
     - push-images
@@ -80,7 +81,8 @@ jobs:
         else
           export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
         fi
-        make helm-publish
+        echo "Publishing Helm chart with version: ${VERSION}"
+        make helm-publish VERSION=${VERSION}
   release:
     # Only run release after images and helm chart are pushed
     # In the future we can take the chart from the helm action,
@@ -101,8 +103,9 @@ jobs:
         else
           export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
         fi
-        make build
-        make helm-package
+        echo "Building release artifacts with version: ${VERSION}"
+        make build VERSION=${VERSION}
+        make helm-package VERSION=${VERSION}
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
