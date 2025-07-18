@@ -197,11 +197,12 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	// Determine transport type
 	transportType := v1alpha1.TransportTypeStdio
 	if deployTransport != "" {
-		if deployTransport == transportHTTP {
+		switch deployTransport {
+		case transportHTTP:
 			transportType = v1alpha1.TransportTypeHTTP
-		} else if deployTransport == transportStdio {
+		case transportStdio:
 			transportType = v1alpha1.TransportTypeStdio
-		} else {
+		default:
 			return nil, fmt.Errorf("invalid transport type: %s (must be 'stdio' or 'http')", deployTransport)
 		}
 	}
@@ -329,13 +330,14 @@ func applyToCluster(yamlContent, deploymentName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
 
 	// Write YAML content to temp file
 	if _, err := tmpFile.Write([]byte(yamlContent)); err != nil {
 		return fmt.Errorf("failed to write to temp file: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
 
 	// Apply using kubectl
 	if err := runKubectl("apply", "-f", tmpFile.Name()); err != nil {
@@ -346,6 +348,9 @@ func applyToCluster(yamlContent, deploymentName string) error {
 	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", deploymentName, deployNamespace)
 	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", deploymentName, deployNamespace)
 
+	if err := os.Remove(tmpFile.Name()); err != nil {
+		fmt.Printf("failed to remove temp file: %v\n", err)
+	}
 	return nil
 }
 
