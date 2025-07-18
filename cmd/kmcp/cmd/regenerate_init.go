@@ -36,10 +36,15 @@ var regenerateInitToolsDir string
 
 func init() {
 	rootCmd.AddCommand(regenerateInitCmd)
-	regenerateInitCmd.Flags().StringVar(&regenerateInitToolsDir, "tools-dir", "src/tools", "Tools directory to regenerate __init__.py for")
+	regenerateInitCmd.Flags().StringVar(
+		&regenerateInitToolsDir,
+		"tools-dir",
+		"src/tools",
+		"Tools directory to regenerate __init__.py for",
+	)
 }
 
-func runRegenerateInit(cmd *cobra.Command, args []string) error {
+func runRegenerateInit(_ *cobra.Command, _ []string) error {
 	// Check if we're in a valid KMCP project
 	if !isKMCPProject() {
 		return fmt.Errorf("not in a KMCP project directory. Run 'kmcp init' first")

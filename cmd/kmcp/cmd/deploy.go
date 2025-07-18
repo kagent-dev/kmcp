@@ -14,6 +14,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	transportHTTP  = "http"
+	transportStdio = "stdio"
+)
+
 var deployCmd = &cobra.Command{
 	Use:   "deploy [name]",
 	Short: "Deploy MCP server to Kubernetes",
@@ -55,7 +60,6 @@ var (
 	deployArgs       []string
 	deployEnv        []string
 	deployForce      bool
-	deployDryRun     bool
 	deployFile       string
 )
 
@@ -76,7 +80,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
 }
 
-func runDeploy(cmd *cobra.Command, args []string) error {
+func runDeploy(_ *cobra.Command, args []string) error {
 	// Determine project directory
 	var projectDir string
 	var err error
@@ -193,9 +197,9 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	// Determine transport type
 	transportType := v1alpha1.TransportTypeStdio
 	if deployTransport != "" {
-		if deployTransport == "http" {
+		if deployTransport == transportHTTP {
 			transportType = v1alpha1.TransportTypeHTTP
-		} else if deployTransport == "stdio" {
+		} else if deployTransport == transportStdio {
 			transportType = v1alpha1.TransportTypeStdio
 		} else {
 			return nil, fmt.Errorf("invalid transport type: %s (must be 'stdio' or 'http')", deployTransport)

@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // ProjectConfig contains configuration for generating a new project
@@ -43,10 +46,7 @@ func (g *Generator) GenerateProject(config ProjectConfig) error {
 	}
 
 	// Get template data
-	templateData, err := g.getTemplateData(config)
-	if err != nil {
-		return fmt.Errorf("failed to prepare template data: %w", err)
-	}
+	templateData := g.getTemplateData(config)
 
 	// Generate files based on framework and template
 	switch config.Framework {
@@ -60,7 +60,7 @@ func (g *Generator) GenerateProject(config ProjectConfig) error {
 }
 
 // getTemplateData prepares template variables for rendering
-func (g *Generator) getTemplateData(config ProjectConfig) (map[string]interface{}, error) {
+func (g *Generator) getTemplateData(config ProjectConfig) map[string]interface{} {
 	// Convert project name to different formats
 	data := map[string]interface{}{
 		"ProjectName":       config.Name,
@@ -84,7 +84,7 @@ func (g *Generator) getTemplateData(config ProjectConfig) (map[string]interface{
 		data["Email"] = "noreply@kagent.dev"
 	}
 
-	return data, nil
+	return data
 }
 
 // generateFastMCPPython creates a FastMCP Python project
@@ -190,7 +190,7 @@ func (g *Generator) toCamelCase(s string) string {
 	}
 	result := strings.ToLower(words[0])
 	for _, word := range words[1:] {
-		result += strings.Title(strings.ToLower(word))
+		result += cases.Title(language.English).String(strings.ToLower(word))
 	}
 	return result
 }
