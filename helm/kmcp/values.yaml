@@ -12,16 +12,6 @@ image:
 # Image pull secrets for private registries
 imagePullSecrets: []
 
-# Override the name of the chart
-nameOverride: ""
-
-# Override the full name of the chart
-fullnameOverride: ""
-
-# Target namespace for installation
-# If not specified, defaults to the release namespace
-namespace: ""
-
 # Controller configuration
 controller:
   # Number of replicas

@@ -1,5 +1,6 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+DIST_FOLDER ?= dist
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -48,21 +49,51 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: helm-crd
 helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
 	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
-	@mkdir -p helm/kmcp/templates/crds
-	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/mcpserver-crd.yaml
 	@awk '/^  name: mcpservers.kagent.dev$$/ { \
 		print; \
 		print "  labels:"; \
 		print "    {{- include \"kmcp.labels\" . | nindent 4 }}"; \
 		next; \
 	} \
-	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/crds/mcpserver-crd.yaml
-	@echo '{{- end }}' >> helm/kmcp/templates/crds/mcpserver-crd.yaml
-	@echo "Helm CRD template generated at helm/kmcp/templates/crds/mcpserver-crd.yaml"
+	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/mcpserver-crd.yaml
+	@echo '{{- end }}' >> helm/kmcp/templates/mcpserver-crd.yaml
+	@echo "Helm CRD template generated at helm/kmcp/templates/mcpserver-crd.yaml"
 
 .PHONY: helm-templates
 helm-templates: helm-crd ## Generate all Helm templates from source definitions.
 	@echo "All Helm templates updated successfully"
+
+.PHONY: helm-lint
+helm-lint: helm-templates ## Lint the Helm chart
+	helm lint helm/kmcp
+
+.PHONY: helm-package
+helm-package: helm-templates ## Package the Helm chart
+	mkdir -p $(DIST_FOLDER)
+	helm package helm/kmcp -d $(DIST_FOLDER)
+
+.PHONY: helm-cleanup
+helm-cleanup: ## Clean up Helm chart packages
+	rm -f $(DIST_FOLDER)/*.tgz
+
+.PHONY: helm-build
+helm-build: helm-lint helm-package ## Build and package the Helm chart
+	@echo "Helm chart built successfully"
+
+.PHONY: helm-test
+helm-test: helm-templates ## Run Helm chart unit tests
+	@echo "Running Helm chart unit tests..."
+	@command -v helm >/dev/null 2>&1 || { \
+		echo "Helm is not installed. Please install Helm manually."; \
+		exit 1; \
+	}
+	@helm plugin list | grep -q 'unittest' || { \
+		echo "Installing helm-unittest plugin..."; \
+		helm plugin install https://github.com/quintush/helm-unittest; \
+	}
+	@helm unittest helm/kmcp
+	@echo "Helm chart unit tests completed successfully"
 
 .PHONY: manifests-all
 manifests-all: manifests helm-templates ## Generate both Kustomize and Helm manifests from source definitions.
@@ -153,9 +184,9 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 
 .PHONY: build-installer
 build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
+	mkdir -p $(DIST_FOLDER)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > dist/install.yaml
+	$(KUSTOMIZE) build config/default > $(DIST_FOLDER)/install.yaml
 
 ##@ Deployment
 
