@@ -140,13 +140,13 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 
 	// Check if Docker is available
 	if err := b.checkDockerAvailable(); err != nil {
-		return fmt.Errorf("Docker not available: %w", err)
+		return fmt.Errorf("docker not available: %w", err)
 	}
 
 	// Check if Dockerfile exists
 	dockerfilePath := filepath.Join(opts.ProjectDir, "Dockerfile")
 	if !b.fileExists(dockerfilePath) {
-		return fmt.Errorf("Dockerfile not found at %s", dockerfilePath)
+		return fmt.Errorf("dockerfile not found at %s", dockerfilePath)
 	}
 
 	// Generate image name if not provided
@@ -194,7 +194,7 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 func (b *Builder) checkDockerAvailable() error {
 	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Docker is not available or not running. Please ensure Docker is installed and running")
+		return fmt.Errorf("docker is not available or not running. Please ensure Docker is installed and running")
 	}
 	return nil
 }
