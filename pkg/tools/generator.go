@@ -53,7 +53,6 @@ func (g *Generator) GenerateToolFile(filePath, toolName string, config map[strin
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
 
 	// Execute the template
 	if err := tmpl.Execute(file, data); err != nil {
@@ -64,6 +63,10 @@ func (g *Generator) GenerateToolFile(filePath, toolName string, config map[strin
 	toolsDir := filepath.Dir(filePath)
 	if err := g.RegenerateToolsInit(toolsDir); err != nil {
 		return fmt.Errorf("failed to regenerate __init__.py: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
 	}
 
 	return nil
