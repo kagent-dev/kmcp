@@ -1,3 +1,22 @@
+# Image configuration
+DOCKER_REGISTRY ?= ghcr.io
+BASE_IMAGE_REGISTRY ?= cgr.dev
+DOCKER_REPO ?= kagent-dev/kmcp
+HELM_REPO ?= oci://ghcr.io/kagent-dev
+HELM_DIST_FOLDER ?= dist
+
+BUILD_DATE := $(shell date -u '+%Y-%m-%d')
+GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/-dirty//' | grep v || echo "v0.0.1+$(GIT_COMMIT)")
+
+# Local architecture detection to build for the current platform
+LOCALARCH ?= $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+
+# Docker buildx configuration
+BUILDKIT_VERSION = v0.23.0
+BUILDX_NO_DEFAULT_ATTESTATIONS=1
+BUILDX_BUILDER_NAME ?= kmcp-builder-$(BUILDKIT_VERSION)
+
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 DIST_FOLDER ?= dist
@@ -80,6 +99,12 @@ helm-cleanup: ## Clean up Helm chart packages
 .PHONY: helm-build
 helm-build: helm-lint helm-package ## Build and package the Helm chart
 	@echo "Helm chart built successfully"
+
+.PHONY: helm-publish
+helm-publish: helm-package ## Publish Helm chart to OCI registry
+	@echo "Publishing Helm chart to $(HELM_REPO)..."
+	@helm push $(HELM_DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)
+	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
 helm-test: helm-templates ## Run Helm chart unit tests
@@ -176,10 +201,10 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name kmcp-builder
-	$(CONTAINER_TOOL) buildx use kmcp-builder
+	- $(CONTAINER_TOOL) buildx create --name $(BUILDX_BUILDER_NAME)
+	$(CONTAINER_TOOL) buildx use $(BUILDX_BUILDER_NAME)
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
-	- $(CONTAINER_TOOL) buildx rm kmcp-builder
+	- $(CONTAINER_TOOL) buildx rm $(BUILDX_BUILDER_NAME)
 	rm Dockerfile.cross
 
 .PHONY: build-installer
