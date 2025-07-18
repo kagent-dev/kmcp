@@ -91,8 +91,3 @@ service:
   type: ClusterIP
   port: 8443
   targetPort: 8443
-
-# Custom Resource Definition configuration
-crd:
-  # Specifies whether CRDs should be created
-  create: true 
