@@ -272,7 +272,11 @@ func (b *Builder) runCommandWithProgress(cmd *exec.Cmd, imageName string) error 
 
 // streamOutput reads from a pipe and outputs lines with optional prefix
 func (b *Builder) streamOutput(pipe io.ReadCloser, _ string) {
-	defer pipe.Close()
+	defer func() {
+		if err := pipe.Close(); err != nil {
+			fmt.Printf("Error closing pipe: %v\n", err)
+		}
+	}()
 
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
