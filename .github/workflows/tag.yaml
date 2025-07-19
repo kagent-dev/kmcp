@@ -14,10 +14,6 @@ on:
 # GITHUB_REF = Tag ref of release refs/tags/<tag_name>
 jobs:
   push-images:
-    strategy:
-      matrix:
-        image:
-          - controller
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,7 +50,7 @@ jobs:
           export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
         fi
         echo "Building Docker image with version: ${VERSION}"
-        make docker-buildx VERSION=${VERSION}
+        make docker-build VERSION=${VERSION}
   push-helm-chart:
     needs:
     - push-images
@@ -110,5 +106,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       # TODO: Add kmcp binary to the release
-      # with:
-      #   files: |
+      with:
+        files: |
+          dist/kmcp-*.tgz
+
