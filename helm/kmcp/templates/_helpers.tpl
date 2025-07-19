@@ -63,7 +63,7 @@ Create the namespace to use
 Create the image reference
 */}}
 {{- define "kmcp.image" -}}
-{{- $tag := .Values.image.tag | default .Chart.AppVersion }}
+{{- $tag := .Values.image.tag | default .Chart.Version }}
 {{- printf "%s:%s" .Values.image.repository $tag }}
 {{- end }}
 

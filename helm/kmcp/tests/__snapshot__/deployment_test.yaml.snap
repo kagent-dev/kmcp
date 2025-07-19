@@ -7,7 +7,6 @@ should create deployment with default values:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -86,7 +85,6 @@ should include health probe ports when health probe enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -165,7 +163,6 @@ should include image pull secrets when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -246,7 +243,6 @@ should include metrics port when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -325,7 +321,6 @@ should include node selector when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -406,7 +401,6 @@ should include pod annotations when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -487,7 +481,6 @@ should include tolerations when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -571,7 +564,6 @@ should set custom replica count:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -650,7 +642,6 @@ should set custom resources:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -729,7 +720,6 @@ should set pod security context:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -808,7 +798,6 @@ should set security context:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -887,7 +876,6 @@ should set termination grace period:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager

@@ -7,7 +7,6 @@ should create cluster role binding when RBAC enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-manager-rolebinding
@@ -28,7 +27,6 @@ should create cluster role when RBAC enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-manager-role
@@ -93,7 +91,6 @@ should create leader election role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-leader-election-role
@@ -139,7 +136,6 @@ should create leader election role binding:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-leader-election-rolebinding
@@ -161,7 +157,6 @@ should create metrics auth cluster role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-auth-role
@@ -187,7 +182,6 @@ should create metrics auth cluster role binding:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-auth-rolebinding
@@ -208,7 +202,6 @@ should create metrics reader cluster role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-reader
@@ -227,7 +220,6 @@ should create service account when enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-kmcp-controller-manager
@@ -241,7 +233,6 @@ should include mcpservers finalizers rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-manager-role
@@ -306,7 +297,6 @@ should include mcpservers resource rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-manager-role
@@ -371,7 +361,6 @@ should include mcpservers status rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-manager-role
@@ -439,7 +428,6 @@ should include service account annotations when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-kmcp-controller-manager

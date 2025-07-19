@@ -7,7 +7,6 @@ should create deployment when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -86,7 +85,6 @@ should create deployment with default values:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -165,7 +163,6 @@ should create deployment with minimal configuration:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -240,7 +237,6 @@ should include metrics port in deployment when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -319,7 +315,6 @@ should use custom namespace:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager
@@ -398,7 +393,6 @@ should use custom release name:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-manager

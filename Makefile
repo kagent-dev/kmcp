@@ -75,7 +75,10 @@ helm-lint:
 helm-package:
 	mkdir -p $(DIST_FOLDER)
 	@echo "Packaging Helm chart with version $(VERSION)..."
+	@cp helm/kmcp/Chart.yaml helm/kmcp/Chart.yaml.bak
+	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
+	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
 
 .PHONY: helm-cleanup
 helm-cleanup: ## Clean up Helm chart packages
