@@ -67,29 +67,12 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-.PHONY: helm-crd
-helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
-	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
-	@awk '/^  name: mcpservers.kagent.dev$$/ { \
-		print; \
-		print "  labels:"; \
-		print "    {{- include \"kmcp.labels\" . | nindent 4 }}"; \
-		next; \
-	} \
-	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/mcpserver-crd.yaml
-	@echo '{{- end }}' >> helm/kmcp/templates/mcpserver-crd.yaml
-	@echo "Helm CRD template generated at helm/kmcp/templates/mcpserver-crd.yaml"
-
-.PHONY: helm-templates
-helm-templates: helm-crd ## Generate all Helm templates from source definitions.
-	@echo "All Helm templates updated successfully"
-
 .PHONY: helm-lint
-helm-lint: helm-templates ## Lint the Helm chart
+helm-lint:
 	helm lint helm/kmcp
 
 .PHONY: helm-package
-helm-package: helm-templates ## Package the Helm chart
+helm-package:
 	mkdir -p $(DIST_FOLDER)
 	@echo "Packaging Helm chart with version $(VERSION)..."
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
@@ -109,7 +92,7 @@ helm-publish: helm-package ## Publish Helm chart to OCI registry
 	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
-helm-test: helm-templates ## Run Helm chart unit tests
+helm-test:
 	@echo "Running Helm chart unit tests..."
 	@command -v helm >/dev/null 2>&1 || { \
 		echo "Helm is not installed. Please install Helm manually."; \
@@ -123,7 +106,7 @@ helm-test: helm-templates ## Run Helm chart unit tests
 	@echo "Helm chart unit tests completed successfully"
 
 .PHONY: manifests-all
-manifests-all: manifests helm-templates ## Generate both Kustomize and Helm manifests from source definitions.
+manifests-all: manifests ## Generate Kustomize from source definitions.
 	@echo "All manifests (Kustomize and Helm) updated successfully"
 
 .PHONY: generate
