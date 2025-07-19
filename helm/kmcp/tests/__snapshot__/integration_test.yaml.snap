@@ -10,7 +10,7 @@ should create deployment when metrics enabled:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -89,7 +89,7 @@ should create deployment with default values:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -168,7 +168,7 @@ should create deployment with minimal configuration:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -243,7 +243,7 @@ should include metrics port in deployment when metrics enabled:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -322,7 +322,7 @@ should use custom namespace:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -401,7 +401,7 @@ should use custom release name:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller-manager
       namespace: NAMESPACE
     spec:
       replicas: 1

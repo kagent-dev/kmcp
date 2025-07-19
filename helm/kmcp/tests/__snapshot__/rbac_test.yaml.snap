@@ -10,11 +10,11 @@ should create cluster role binding when RBAC enabled:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-manager-rolebinding
+      name: RELEASE-NAME-manager-rolebinding
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
-      name: RELEASE-NAME-kmcp-manager-role
+      name: RELEASE-NAME-manager-role
     subjects:
       - kind: ServiceAccount
         name: RELEASE-NAME-kmcp-controller-manager
@@ -31,7 +31,7 @@ should create cluster role when RBAC enabled:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-manager-role
+      name: RELEASE-NAME-manager-role
     rules:
       - apiGroups:
           - ""
@@ -96,7 +96,7 @@ should create leader election role:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-leader-election-role
+      name: RELEASE-NAME-leader-election-role
       namespace: NAMESPACE
     rules:
       - apiGroups:
@@ -142,12 +142,12 @@ should create leader election role binding:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-leader-election-rolebinding
+      name: RELEASE-NAME-leader-election-rolebinding
       namespace: NAMESPACE
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: Role
-      name: RELEASE-NAME-kmcp-leader-election-role
+      name: RELEASE-NAME-leader-election-role
     subjects:
       - kind: ServiceAccount
         name: RELEASE-NAME-kmcp-controller-manager
@@ -164,7 +164,7 @@ should create metrics auth cluster role:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-metrics-auth-role
+      name: RELEASE-NAME-metrics-auth-role
     rules:
       - apiGroups:
           - authentication.k8s.io
@@ -190,11 +190,11 @@ should create metrics auth cluster role binding:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-metrics-auth-rolebinding
+      name: RELEASE-NAME-metrics-auth-rolebinding
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
-      name: RELEASE-NAME-kmcp-metrics-auth-role
+      name: RELEASE-NAME-metrics-auth-role
     subjects:
       - kind: ServiceAccount
         name: RELEASE-NAME-kmcp-controller-manager
@@ -211,7 +211,7 @@ should create metrics reader cluster role:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-metrics-reader
+      name: RELEASE-NAME-metrics-reader
     rules:
       - nonResourceURLs:
           - /metrics
@@ -244,7 +244,7 @@ should include mcpservers finalizers rules:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-manager-role
+      name: RELEASE-NAME-manager-role
     rules:
       - apiGroups:
           - ""
@@ -309,7 +309,7 @@ should include mcpservers resource rules:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-manager-role
+      name: RELEASE-NAME-manager-role
     rules:
       - apiGroups:
           - ""
@@ -374,7 +374,7 @@ should include mcpservers status rules:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-manager-role
+      name: RELEASE-NAME-manager-role
     rules:
       - apiGroups:
           - ""

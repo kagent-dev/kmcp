@@ -10,7 +10,7 @@ should create service when metrics enabled:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager-metrics-service
+      name: RELEASE-NAME-controller-manager-metrics-service
       namespace: NAMESPACE
     spec:
       ports:
@@ -35,7 +35,7 @@ should set custom service port:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager-metrics-service
+      name: RELEASE-NAME-controller-manager-metrics-service
       namespace: NAMESPACE
     spec:
       ports:
@@ -60,7 +60,7 @@ should set custom service type:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager-metrics-service
+      name: RELEASE-NAME-controller-manager-metrics-service
       namespace: NAMESPACE
     spec:
       ports:
@@ -85,7 +85,7 @@ should set custom target port:
         app.kubernetes.io/version: 0.1.0
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager-metrics-service
+      name: RELEASE-NAME-controller-manager-metrics-service
       namespace: NAMESPACE
     spec:
       ports:

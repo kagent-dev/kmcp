@@ -3,7 +3,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kmcp.fullname" . }}-metrics-reader
+  name: {{ .Release.Name }}-metrics-reader
   labels:
     {{- include "kmcp.labels" . | nindent 4 }}
 rules:
