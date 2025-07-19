@@ -1,11 +1,13 @@
+{{- if .Values.rbac.create }}
+{{- if .Values.controller.leaderElection.enabled }}
 # permissions to do leader election.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  name: {{ .Release.Name }}-leader-election-role
+  namespace: {{ include "kmcp.namespace" . }}
   labels:
-    app.kubernetes.io/name: kmcp
-    app.kubernetes.io/managed-by: kustomize
-  name: leader-election-role
+    {{- include "kmcp.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -38,3 +40,5 @@ rules:
   verbs:
   - create
   - patch
+{{- end }}
+{{- end }} 

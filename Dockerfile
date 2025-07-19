@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM docker.io/golang:1.24 AS builder
+FROM --platform=${BUILDPLATFORM} docker.io/golang:1.24 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -30,5 +30,10 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
+
+
+LABEL org.opencontainers.image.source=https://github.com/kagent-dev/kmcp
+LABEL org.opencontainers.image.description="KMCP is the Kubernetes MCP Server Controller."
+LABEL org.opencontainers.image.authors="KAgent Creators 🤖"
 
 ENTRYPOINT ["/manager"]

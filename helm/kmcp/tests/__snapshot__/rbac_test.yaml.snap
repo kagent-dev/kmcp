@@ -1,0 +1,434 @@
+should create cluster role binding when RBAC enabled:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-manager-rolebinding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: RELEASE-NAME-manager-role
+    subjects:
+      - kind: ServiceAccount
+        name: RELEASE-NAME-kmcp-controller-manager
+        namespace: NAMESPACE
+should create cluster role when RBAC enabled:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-manager-role
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+          - services
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/finalizers
+        verbs:
+          - update
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/status
+        verbs:
+          - get
+          - patch
+          - update
+should create leader election role:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-leader-election-role
+      namespace: NAMESPACE
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - coordination.k8s.io
+        resources:
+          - leases
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - ""
+        resources:
+          - events
+        verbs:
+          - create
+          - patch
+should create leader election role binding:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-leader-election-rolebinding
+      namespace: NAMESPACE
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: RELEASE-NAME-leader-election-role
+    subjects:
+      - kind: ServiceAccount
+        name: RELEASE-NAME-kmcp-controller-manager
+        namespace: NAMESPACE
+should create metrics auth cluster role:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-metrics-auth-role
+    rules:
+      - apiGroups:
+          - authentication.k8s.io
+        resources:
+          - tokenreviews
+        verbs:
+          - create
+      - apiGroups:
+          - authorization.k8s.io
+        resources:
+          - subjectaccessreviews
+        verbs:
+          - create
+should create metrics auth cluster role binding:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-metrics-auth-rolebinding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: RELEASE-NAME-metrics-auth-role
+    subjects:
+      - kind: ServiceAccount
+        name: RELEASE-NAME-kmcp-controller-manager
+        namespace: NAMESPACE
+should create metrics reader cluster role:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-metrics-reader
+    rules:
+      - nonResourceURLs:
+          - /metrics
+        verbs:
+          - get
+should create service account when enabled:
+  1: |
+    apiVersion: v1
+    automountServiceAccountToken: true
+    kind: ServiceAccount
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-kmcp-controller-manager
+      namespace: NAMESPACE
+should include mcpservers finalizers rules:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-manager-role
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+          - services
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/finalizers
+        verbs:
+          - update
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/status
+        verbs:
+          - get
+          - patch
+          - update
+should include mcpservers resource rules:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-manager-role
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+          - services
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/finalizers
+        verbs:
+          - update
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/status
+        verbs:
+          - get
+          - patch
+          - update
+should include mcpservers status rules:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-manager-role
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+          - services
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers
+        verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/finalizers
+        verbs:
+          - update
+      - apiGroups:
+          - kagent.dev
+        resources:
+          - mcpservers/status
+        verbs:
+          - get
+          - patch
+          - update
+should include service account annotations when specified:
+  1: |
+    apiVersion: v1
+    automountServiceAccountToken: true
+    kind: ServiceAccount
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/kmcp-role
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-kmcp-controller-manager
+      namespace: NAMESPACE

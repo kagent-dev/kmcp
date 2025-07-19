@@ -1,0 +1,22 @@
+# Exclude test files from Helm chart package
+tests/
+tests/*
+*_test.go
+*_test.yaml
+*_test.yml
+__snapshot__/
+*.snap
+*.test.yaml
+*.test.yml
+
+# Exclude development files
+.git/
+.gitignore
+README.md
+Makefile
+*.md
+
+# Exclude build artifacts
+bin/
+dist/
+*.tgz 

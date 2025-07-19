@@ -1,0 +1,18 @@
+{{- if .Values.controller.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-controller-manager-metrics-service
+  namespace: {{ include "kmcp.namespace" . }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: https
+    port: {{ .Values.service.port }}
+    protocol: TCP
+    targetPort: {{ .Values.service.targetPort }}
+  selector:
+    {{- include "kmcp.selectorLabels" . | nindent 4 }}
+{{- end }} 

@@ -1,0 +1,16 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-manager-rolebinding
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-manager-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kmcp.serviceAccountName" . }}
+  namespace: {{ include "kmcp.namespace" . }}
+{{- end }} 

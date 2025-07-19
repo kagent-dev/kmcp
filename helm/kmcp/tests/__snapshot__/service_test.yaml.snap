@@ -1,0 +1,96 @@
+should create service when metrics enabled:
+  1: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-controller-manager-metrics-service
+      namespace: NAMESPACE
+    spec:
+      ports:
+        - name: https
+          port: 8443
+          protocol: TCP
+          targetPort: 8443
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+      type: ClusterIP
+should set custom service port:
+  1: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-controller-manager-metrics-service
+      namespace: NAMESPACE
+    spec:
+      ports:
+        - name: https
+          port: 9090
+          protocol: TCP
+          targetPort: 8443
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+      type: ClusterIP
+should set custom service type:
+  1: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-controller-manager-metrics-service
+      namespace: NAMESPACE
+    spec:
+      ports:
+        - name: https
+          port: 8443
+          protocol: TCP
+          targetPort: 8443
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+      type: LoadBalancer
+should set custom target port:
+  1: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-0.1.0
+      name: RELEASE-NAME-controller-manager-metrics-service
+      namespace: NAMESPACE
+    spec:
+      ports:
+        - name: https
+          port: 8443
+          protocol: TCP
+          targetPort: 9090
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+      type: ClusterIP

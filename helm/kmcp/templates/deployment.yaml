@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-controller-manager
+  namespace: {{ include "kmcp.namespace" . }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controller.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kmcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "kmcp.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kmcp.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: manager
+        image: {{ include "kmcp.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /manager
+        args:
+        {{- include "kmcp.controllerArgs" . | nindent 8 }}
+        ports:
+        {{- if .Values.controller.metrics.enabled }}
+        - containerPort: {{ .Values.controller.metrics.bindAddress | regexFind "[0-9]+" }}
+          name: metrics
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.controller.healthProbe.bindAddress }}
+        - containerPort: {{ .Values.controller.healthProbe.bindAddress | regexFind "[0-9]+" }}
+          name: health
+          protocol: TCP
+        {{- end }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        {{- if .Values.controller.healthProbe.bindAddress }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          initialDelaySeconds: {{ .Values.controller.healthProbe.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.controller.healthProbe.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: {{ .Values.controller.healthProbe.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.controller.healthProbe.readinessProbe.periodSeconds }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts: []
+      volumes: []
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }} 
