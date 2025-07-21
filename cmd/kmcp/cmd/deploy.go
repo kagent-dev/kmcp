@@ -467,30 +467,6 @@ func deployControllerToCluster() error {
 	return nil
 }
 
-// findRegistryConfig finds the appropriate registry config file
-func findRegistryConfig() string {
-	// Common registry config locations
-	configPaths := []string{
-		"~/.docker/config.json",
-		"~/.config/docker/config.json",
-		"~/.helm/registry/config.json",
-	}
-
-	for _, path := range configPaths {
-		expandedPath, err := filepath.Abs(os.ExpandEnv(path))
-		if err != nil {
-			continue
-		}
-
-		if _, err := os.Stat(expandedPath); err == nil {
-			return expandedPath
-		}
-	}
-
-	// If no config found, return empty string (helm will use default)
-	return ""
-}
-
 // checkKubectlAvailable checks if kubectl is available in the system
 func checkKubectlAvailable() error {
 	cmd := exec.Command("kubectl", "version", "--client")
