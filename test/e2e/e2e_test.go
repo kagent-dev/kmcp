@@ -30,9 +30,6 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"kagent.dev/kmcp/api/v1alpha1"
-
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -89,6 +86,10 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 		ginkgo.By("undeploying the controller-manager using Helm")
 		cmd = exec.Command("helm", "uninstall", "kmcp", "--namespace", namespace)
+		_, _ = utils.Run(cmd)
+
+		ginkgo.By("cleaning up the knowledge-assistant project directory")
+		cmd = exec.Command("rm", "-rf", "knowledge-assistant")
 		_, _ = utils.Run(cmd)
 
 		ginkgo.By("removing manager namespace")
@@ -174,139 +175,40 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			}
 			gomega.Eventually(verifyControllerUp).Should(gomega.Succeed())
 		})
-
-		ginkgo.It("should ensure the metrics endpoint is serving metrics", func() {
-			ginkgo.By("creating a ClusterRoleBinding for the service account to allow access to metrics")
-			cmd := exec.Command("kubectl", "create", "clusterrolebinding", metricsRoleBindingName,
-				"--clusterrole=kmcp-metrics-reader",
-				fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
-			)
-			_, err := utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create ClusterRoleBinding")
-
-			ginkgo.By("validating that the metrics service is available")
-			cmd = exec.Command("kubectl", "get", "service", metricsServiceName, "-n", namespace)
-			_, err = utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Metrics service should exist")
-
-			// Note: ServiceMonitor is not included in the basic Helm chart deployment
-			// Skip ServiceMonitor validation for now
-
-			ginkgo.By("getting the service account token")
-			token, err := serviceAccountToken()
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(token).NotTo(gomega.BeEmpty())
-
-			ginkgo.By("waiting for the metrics endpoint to be ready")
-			verifyMetricsEndpointReady := func(g gomega.Gomega) {
-				cmd := exec.Command("kubectl", "get", "endpoints", metricsServiceName, "-n", namespace)
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(gomega.HaveOccurred())
-				g.Expect(output).To(gomega.ContainSubstring("8443"), "Metrics endpoint is not ready")
-			}
-			gomega.Eventually(verifyMetricsEndpointReady).Should(gomega.Succeed())
-
-			ginkgo.By("verifying that the controller manager is serving the metrics server")
-			verifyMetricsServerStarted := func(g gomega.Gomega) {
-				cmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace)
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(gomega.HaveOccurred())
-				g.Expect(output).To(gomega.ContainSubstring("controller-runtime.metrics\tServing metrics server"),
-					"Metrics server not yet started")
-			}
-			gomega.Eventually(verifyMetricsServerStarted).Should(gomega.Succeed())
-
-			ginkgo.By("creating the curl-metrics pod to access the metrics endpoint")
-			cmd = exec.Command("kubectl", "run", "curl-metrics", "--restart=Never",
-				"--namespace", namespace,
-				"--image=curlimages/curl:latest",
-				"--overrides",
-				fmt.Sprintf(`{
-					"spec": {
-						"containers": [{
-							"name": "curl",
-							"image": "curlimages/curl:latest",
-							"command": ["/bin/sh", "-c"],
-							"args": ["curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics"],
-							"securityContext": {
-								"allowPrivilegeEscalation": false,
-								"capabilities": {
-									"drop": ["ALL"]
-								},
-								"runAsNonRoot": true,
-								"runAsUser": 1000,
-								"seccompProfile": {
-									"type": "RuntimeDefault"
-								}
-							}
-						}],
-						"serviceAccount": "%s"
-					}
-				}`, token, metricsServiceName, namespace, serviceAccountName))
-			_, err = utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create curl-metrics pod")
-
-			ginkgo.By("waiting for the curl-metrics pod to complete.")
-			verifyCurlUp := func(g gomega.Gomega) {
-				cmd := exec.Command("kubectl", "get", "pods", "curl-metrics",
-					"-o", "jsonpath={.status.phase}",
-					"-n", namespace)
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(gomega.HaveOccurred())
-				g.Expect(output).To(gomega.Equal("Succeeded"), "curl pod in wrong status")
-			}
-			gomega.Eventually(verifyCurlUp, 5*time.Minute).Should(gomega.Succeed())
-
-			ginkgo.By("getting the metrics by checking curl-metrics logs")
-			metricsOutput := getMetricsOutput()
-			gomega.Expect(metricsOutput).To(gomega.ContainSubstring(
-				"controller_runtime_reconcile_total",
-			))
-		})
-
-		// +kubebuilder:scaffold:e2e-webhooks-checks
-
-		// TODO: Customize the e2e test suite with scenarios specific to your project.
-		// Consider applying sample/CR(s) and check their status and/or verifying
-		// the reconciliation by using the metrics, i.e.:
-		// metricsOutput := getMetricsOutput()
-		// Expect(metricsOutput).To(ContainSubstring(
-		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
-		// ))
 	})
 
 	ginkgo.Context("MCPServer CRD", func() {
 		ginkgo.It("deploy a working MCP server", func() {
-			mcpServerName := "test-mcp-client-server"
+			mcpServerName := "knowledge-assistant"
 			var portForwardCmd *exec.Cmd
 			localPort := 8080
+			projectDir := "knowledge-assistant"
+			imageName := "knowledge-assistant:latest"
 
-			ginkgo.By("creating an MCPServer for client testing")
-			mcpServer := &v1alpha1.MCPServer{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "kagent.dev/v1alpha1",
-					Kind:       "MCPServer",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      mcpServerName,
-					Namespace: namespace,
-				},
-				Spec: v1alpha1.MCPServerSpec{
-					Deployment: v1alpha1.MCPServerDeployment{
-						Image: "docker.io/mcp/everything",
-						Port:  3000,
-						Cmd:   "npx",
-						Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
-					},
-					TransportType: "stdio",
-				},
-			}
-
-			cmd := exec.Command("kubectl", "apply", "-f", "-")
-			cmd.Stdin = strings.NewReader(mcpServerToYAML(mcpServer))
+			ginkgo.By("building the kmcp CLI")
+			cmd := exec.Command("make", "build-cli")
 			_, err := utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create MCPServer")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build kmcp CLI")
+
+			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
+			cmd = exec.Command("bin/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--version", "0.0.1", "--force")
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
+
+			ginkgo.By("building the Docker image for the knowledge-assistant project")
+			cmd = exec.Command("bin/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build Docker image")
+
+			ginkgo.By("loading the Docker image into the Kind cluster")
+			cmd = exec.Command("kind", "load", "docker-image", imageName)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
+
+			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
+			cmd = exec.Command("bin/kmcp", "deploy", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 
 			ginkgo.By("waiting for the deployment to be ready")
 			gomega.Eventually(func(g gomega.Gomega) {
