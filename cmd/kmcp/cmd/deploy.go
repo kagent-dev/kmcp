@@ -47,7 +47,7 @@ Examples:
   kmcp deploy --deploy-controller      # Deploy controller
   kmcp deploy --deploy-controller --controller-version 0.0.1 # Deploy controller with specific version
   kmcp deploy --deploy-controller --controller-namespace my-namespace # Deploy controller to custom namespace
-  kmcp deploy --deploy-controller --registry-config ~/.docker/config.json # Deploy controller with custom registry config`,
+  kmcp deploy --deploy-controller --registry-config ~/.docker/config.json # Specify docker registry config`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeploy,
 }
@@ -87,8 +87,18 @@ func init() {
 	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
 	deployCmd.Flags().BoolVar(&deployController, "deploy-controller", false, "Deploy the KMCP controller to the cluster")
-	deployCmd.Flags().StringVar(&deployControllerVersion, "controller-version", "", "Version of the controller to deploy (defaults to kmcp version)")
-	deployCmd.Flags().StringVar(&deployControllerNamespace, "controller-namespace", "kmcp-system", "Namespace for the KMCP controller (defaults to kmcp-system)")
+	deployCmd.Flags().StringVar(
+		&deployControllerVersion,
+		"controller-version",
+		"",
+		"Version of the controller to deploy (defaults to kmcp version)",
+	)
+	deployCmd.Flags().StringVar(
+		&deployControllerNamespace,
+		"controller-namespace",
+		"kmcp-system",
+		"Namespace for the KMCP controller (defaults to kmcp-system)",
+	)
 	// TODO: this var is currently required because the controller image is in a private registry but this may change in the future
 	deployCmd.Flags().StringVar(&deployRegistryConfig, "registry-config", "", "Path to docker registry config file")
 }
@@ -441,9 +451,18 @@ func deployControllerToCluster() error {
 		return fmt.Errorf("helm install failed: %w", err)
 	}
 
-	fmt.Printf("✅ KMCP controller deployed successfully with version %s\n", controllerVersion)
-	fmt.Printf("💡 Check controller status with: kubectl get pods -n %s\n", deployControllerNamespace)
-	fmt.Printf("💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n", deployControllerNamespace)
+	fmt.Printf(
+		"✅ KMCP controller deployed successfully with version %s\n",
+		controllerVersion,
+	)
+	fmt.Printf(
+		"💡 Check controller status with: kubectl get pods -n %s\n",
+		deployControllerNamespace,
+	)
+	fmt.Printf(
+		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n",
+		deployControllerNamespace,
+	)
 
 	return nil
 }
