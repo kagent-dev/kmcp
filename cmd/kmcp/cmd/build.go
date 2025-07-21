@@ -15,7 +15,12 @@ var buildCmd = &cobra.Command{
 	Long: `Build an MCP server from the current project.
 	
 This command will detect the project type and build the appropriate
-MCP server package or Docker image.`,
+MCP server package or Docker image.
+
+Examples:
+  kmcp build                    # Build from current directory
+  kmcp build --dir /path/to/project  # Build from specific directory
+  kmcp build --docker --dir ./my-project  # Build Docker image from specific directory`,
 	RunE: runBuild,
 }
 
@@ -24,6 +29,7 @@ var (
 	buildOutput   string
 	buildTag      string
 	buildPlatform string
+	buildDir      string
 )
 
 func init() {
@@ -33,27 +39,41 @@ func init() {
 	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", "", "Output directory or image name")
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag")
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
+	buildCmd.Flags().StringVarP(&buildDir, "dir", "d", "", "Build directory (default: current directory)")
 }
 
 func runBuild(_ *cobra.Command, _ []string) error {
-	// Get current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+	// Determine build directory
+	buildDirectory := buildDir
+	if buildDirectory == "" {
+		var err error
+		buildDirectory, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+	} else {
+		// Convert relative path to absolute path
+		if !filepath.IsAbs(buildDirectory) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %w", err)
+			}
+			buildDirectory = filepath.Join(cwd, buildDirectory)
+		}
 	}
 
 	if verbose {
-		fmt.Printf("Building MCP server in: %s\n", cwd)
+		fmt.Printf("Building MCP server in: %s\n", buildDirectory)
 	}
 
 	// Check if this is a valid MCP project
-	if err := validateMCPProject(cwd); err != nil {
+	if err := validateMCPProject(buildDirectory); err != nil {
 		return fmt.Errorf("invalid MCP project: %w", err)
 	}
 
 	// Create build options
 	opts := build.Options{
-		ProjectDir: cwd,
+		ProjectDir: buildDirectory,
 		Docker:     buildDocker,
 		Output:     buildOutput,
 		Tag:        buildTag,
