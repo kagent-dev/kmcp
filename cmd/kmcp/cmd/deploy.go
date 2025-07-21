@@ -36,38 +36,46 @@ The generated MCPServer will include:
 - Environment variables and secrets
 
 Examples:
-  kmcp deploy                          # Deploy with project name
+  kmcp deploy                          # Deploy with project name to cluster
   kmcp deploy my-server                # Deploy with custom name
   kmcp deploy --namespace staging      # Deploy to staging namespace
-  kmcp deploy --apply                  # Generate and apply to cluster
+  kmcp deploy --dry-run                # Generate manifest without applying to cluster
   kmcp deploy --image custom:tag       # Use custom image
   kmcp deploy --transport http         # Use HTTP transport
   kmcp deploy --output deploy.yaml     # Save to file
-  kmcp deploy --file /path/to/kmcp.yaml # Use custom kmcp.yaml file`,
+  kmcp deploy --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
+  kmcp deploy --deploy-controller      # Deploy controller
+  kmcp deploy --deploy-controller --controller-version 0.0.1 # Deploy controller with specific version
+  kmcp deploy --deploy-controller --controller-namespace my-namespace # Deploy controller to custom namespace
+  kmcp deploy --deploy-controller --registry-config ~/.docker/config.json # Deploy controller with custom registry config`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeploy,
 }
 
 var (
-	deployNamespace  string
-	deployApply      bool
-	deployOutput     string
-	deployImage      string
-	deployTransport  string
-	deployPort       int
-	deployTargetPort int
-	deployCommand    string
-	deployArgs       []string
-	deployEnv        []string
-	deployForce      bool
-	deployFile       string
+	deployNamespace           string
+	deployDryRun              bool
+	deployOutput              string
+	deployImage               string
+	deployTransport           string
+	deployPort                int
+	deployTargetPort          int
+	deployCommand             string
+	deployArgs                []string
+	deployEnv                 []string
+	deployForce               bool
+	deployFile                string
+	deployController          bool
+	deployControllerVersion   string
+	deployControllerNamespace string
+	deployRegistryConfig      string
 )
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
 
 	deployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
-	deployCmd.Flags().BoolVar(&deployApply, "apply", false, "Apply the generated resources to the cluster")
+	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
 	deployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
 	deployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
@@ -78,6 +86,11 @@ func init() {
 	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
+	deployCmd.Flags().BoolVar(&deployController, "deploy-controller", false, "Deploy the KMCP controller to the cluster")
+	deployCmd.Flags().StringVar(&deployControllerVersion, "controller-version", "", "Version of the controller to deploy (defaults to kmcp version)")
+	deployCmd.Flags().StringVar(&deployControllerNamespace, "controller-namespace", "kmcp-system", "Namespace for the KMCP controller (defaults to kmcp-system)")
+	// TODO: this var is currently required because the controller image is in a private registry but this may change in the future
+	deployCmd.Flags().StringVar(&deployRegistryConfig, "registry-config", "", "Path to docker registry config file")
 }
 
 func runDeploy(_ *cobra.Command, args []string) error {
@@ -108,6 +121,13 @@ func runDeploy(_ *cobra.Command, args []string) error {
 	projectManifest, err := manifestManager.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load project manifest: %w", err)
+	}
+
+	// Deploy controller if requested
+	if deployController {
+		if err := deployControllerToCluster(); err != nil {
+			return fmt.Errorf("failed to deploy controller: %w", err)
+		}
 	}
 
 	// Determine deployment name
@@ -146,14 +166,12 @@ func runDeploy(_ *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to write to file: %w", err)
 		}
 		fmt.Printf("✅ MCPServer manifest written to: %s\n", deployOutput)
-	} else if !deployApply {
-		// Print to stdout
-		fmt.Print(yamlContent)
 	}
 
-	// Apply to cluster if requested
-	if deployApply {
-
+	if deployDryRun {
+		// Print to stdout
+		fmt.Print(yamlContent)
+	} else {
 		if err := applyToCluster(yamlContent, deploymentName); err != nil {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
@@ -325,6 +343,11 @@ func parseEnvVars(envVars []string) map[string]string {
 func applyToCluster(yamlContent, deploymentName string) error {
 	fmt.Printf("🚀 Applying MCPServer to cluster...\n")
 
+	// Check if kubectl is available
+	if err := checkKubectlAvailable(); err != nil {
+		return fmt.Errorf("kubectl is required for cluster deployment: %w", err)
+	}
+
 	// Create temporary file for kubectl apply
 	tmpFile, err := os.CreateTemp("", "mcpserver-*.yaml")
 	if err != nil {
@@ -360,6 +383,120 @@ func runKubectl(args ...string) error {
 	}
 
 	cmd := exec.Command("kubectl", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// getKMCPVersion returns the current kmcp version
+func getKMCPVersion() string {
+	return Version
+}
+
+// deployControllerToCluster deploys the kmcp controller using helm
+func deployControllerToCluster() error {
+	fmt.Printf("🚀 Deploying KMCP controller to cluster...\n")
+
+	// Check if helm is available
+	if err := checkHelmAvailable(); err != nil {
+		return fmt.Errorf("helm is required for controller deployment: %w", err)
+	}
+
+	// Determine controller version
+	controllerVersion := deployControllerVersion
+	if controllerVersion == "" {
+		controllerVersion = getKMCPVersion()
+	}
+
+	// Validate controller version format
+	if controllerVersion == "" {
+		return fmt.Errorf("invalid controller version: version cannot be empty")
+	}
+
+	// Determine registry config file
+	registryConfig := deployRegistryConfig
+	if registryConfig == "" {
+		fmt.Print("Docker registry config must be set use --registry-config\n")
+	}
+	if registryConfig != "" && verbose {
+		fmt.Printf("Using registry config: %s\n", registryConfig)
+	}
+
+	// Build helm install command
+	args := []string{
+		"install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
+		"--version", controllerVersion,
+		"--namespace", deployControllerNamespace,
+		"--create-namespace",
+	}
+
+	// Add registry config if found
+	if registryConfig != "" {
+		args = append(args, "--registry-config", registryConfig)
+	}
+
+	// Run helm install
+	if err := runHelm(args...); err != nil {
+		return fmt.Errorf("helm install failed: %w", err)
+	}
+
+	fmt.Printf("✅ KMCP controller deployed successfully with version %s\n", controllerVersion)
+	fmt.Printf("💡 Check controller status with: kubectl get pods -n %s\n", deployControllerNamespace)
+	fmt.Printf("💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n", deployControllerNamespace)
+
+	return nil
+}
+
+// findRegistryConfig finds the appropriate registry config file
+func findRegistryConfig() string {
+	// Common registry config locations
+	configPaths := []string{
+		"~/.docker/config.json",
+		"~/.config/docker/config.json",
+		"~/.helm/registry/config.json",
+	}
+
+	for _, path := range configPaths {
+		expandedPath, err := filepath.Abs(os.ExpandEnv(path))
+		if err != nil {
+			continue
+		}
+
+		if _, err := os.Stat(expandedPath); err == nil {
+			return expandedPath
+		}
+	}
+
+	// If no config found, return empty string (helm will use default)
+	return ""
+}
+
+// checkKubectlAvailable checks if kubectl is available in the system
+func checkKubectlAvailable() error {
+	cmd := exec.Command("kubectl", "version", "--client")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("kubectl not found or not working: %w", err)
+	}
+	return nil
+}
+
+// checkHelmAvailable checks if helm is available in the system
+func checkHelmAvailable() error {
+	cmd := exec.Command("helm", "version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("helm not found or not working: %w", err)
+	}
+	return nil
+}
+
+// runHelm executes helm commands
+func runHelm(args ...string) error {
+	if verbose {
+		fmt.Printf("Running: helm %s\n", strings.Join(args, " "))
+	}
+
+	cmd := exec.Command("helm", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
