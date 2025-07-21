@@ -122,7 +122,7 @@ build: manifests generate fmt vet ## Build manager binary.
 
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
-	go build -o bin/kmcp cmd/kmcp/main.go
+	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o bin/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
