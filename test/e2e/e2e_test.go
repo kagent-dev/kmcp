@@ -28,9 +28,6 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"kagent.dev/kmcp/api/v1alpha1"
-
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,6 +75,10 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 		ginkgo.By("undeploying the controller-manager using Helm")
 		cmd = exec.Command("helm", "uninstall", "kmcp", "--namespace", namespace)
+		_, _ = utils.Run(cmd)
+
+		ginkgo.By("cleaning up the knowledge-assistant project directory")
+		cmd = exec.Command("rm", "-rf", "knowledge-assistant")
 		_, _ = utils.Run(cmd)
 
 		ginkgo.By("removing manager namespace")
@@ -163,50 +164,40 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			}
 			gomega.Eventually(verifyControllerUp).Should(gomega.Succeed())
 		})
-
-		// +kubebuilder:scaffold:e2e-webhooks-checks
-
-		// TODO: Customize the e2e test suite with scenarios specific to your project.
-		// Consider applying sample/CR(s) and check their status and/or verifying
-		// the reconciliation by using the metrics, i.e.:
-		// metricsOutput := getMetricsOutput()
-		// Expect(metricsOutput).To(ContainSubstring(
-		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
-		// ))
 	})
 
 	ginkgo.Context("MCPServer CRD", func() {
 		ginkgo.It("deploy a working MCP server", func() {
-			mcpServerName := "test-mcp-client-server"
+			mcpServerName := "knowledge-assistant"
 			var portForwardCmd *exec.Cmd
 			localPort := 8080
+			projectDir := "knowledge-assistant"
+			imageName := "knowledge-assistant:latest"
 
-			ginkgo.By("creating an MCPServer for client testing")
-			mcpServer := &v1alpha1.MCPServer{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "kagent.dev/v1alpha1",
-					Kind:       "MCPServer",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      mcpServerName,
-					Namespace: namespace,
-				},
-				Spec: v1alpha1.MCPServerSpec{
-					Deployment: v1alpha1.MCPServerDeployment{
-						Image: "docker.io/mcp/everything",
-						Port:  3000,
-						Cmd:   "npx",
-						Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
-					},
-					TransportType: "stdio",
-				},
-			}
-
-			cmd := exec.Command("kubectl", "apply", "-f", "-")
-			cmd.Stdin = strings.NewReader(mcpServerToYAML(mcpServer))
+			ginkgo.By("building the kmcp CLI")
+			cmd := exec.Command("make", "build-cli")
 			_, err := utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create MCPServer")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build kmcp CLI")
+
+			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
+			cmd = exec.Command("bin/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--version", "0.0.1", "--force")
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
+
+			ginkgo.By("building the Docker image for the knowledge-assistant project")
+			cmd = exec.Command("bin/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build Docker image")
+
+			ginkgo.By("loading the Docker image into the Kind cluster")
+			cmd = exec.Command("kind", "load", "docker-image", imageName)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
+
+			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
+			cmd = exec.Command("bin/kmcp", "deploy", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 
 			ginkgo.By("waiting for the deployment to be ready")
 			gomega.Eventually(func(g gomega.Gomega) {
