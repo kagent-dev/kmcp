@@ -2,12 +2,17 @@
 Expand the name of the chart.
 */}}
 {{- define "kmcp.name" -}}
+<<<<<<< HEAD
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+=======
+{{- .Chart.Name | trunc 63 | trimSuffix "-" }}
+>>>>>>> main
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+<<<<<<< HEAD
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "kmcp.fullname" -}}
@@ -21,6 +26,11 @@ If release name contains chart name it will be used as a full name.
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
+=======
+*/}}
+{{- define "kmcp.fullname" -}}
+{{- printf "%s-%s" .Release.Name .Chart.Name | trunc 63 | trimSuffix "-" }}
+>>>>>>> main
 {{- end }}
 
 {{/*
@@ -66,18 +76,14 @@ Create the name of the service account to use
 Create the namespace to use
 */}}
 {{- define "kmcp.namespace" -}}
-{{- if .Values.namespace }}
-{{- .Values.namespace }}
-{{- else }}
 {{- .Release.Namespace }}
-{{- end }}
 {{- end }}
 
 {{/*
 Create the image reference
 */}}
 {{- define "kmcp.image" -}}
-{{- $tag := .Values.image.tag | default .Chart.AppVersion }}
+{{- $tag := .Values.image.tag | default .Chart.Version }}
 {{- printf "%s:%s" .Values.image.repository $tag }}
 {{- end }}
 

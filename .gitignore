@@ -1,3 +1,5 @@
+.DS_Store
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -25,3 +27,5 @@ go.work
 *.swp
 *.swo
 *~
+# helm
+dist/

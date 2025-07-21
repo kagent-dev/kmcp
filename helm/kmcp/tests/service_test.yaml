@@ -1,0 +1,60 @@
+suite: Test service template
+templates:
+  - service.yaml
+
+tests:
+  - it: should create service when metrics enabled
+    template: service.yaml
+    set:
+      controller.metrics.enabled: true
+      service.type: ClusterIP
+      service.port: 8443
+      service.targetPort: 8443
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should not create service when metrics disabled
+    template: service.yaml
+    set:
+      controller.metrics.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should set custom service type
+    template: service.yaml
+    set:
+      controller.metrics.enabled: true
+      service.type: LoadBalancer
+      service.port: 8443
+      service.targetPort: 8443
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set custom service port
+    template: service.yaml
+    set:
+      controller.metrics.enabled: true
+      service.type: ClusterIP
+      service.port: 9090
+      service.targetPort: 8443
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set custom target port
+    template: service.yaml
+    set:
+      controller.metrics.enabled: true
+      service.type: ClusterIP
+      service.port: 8443
+      service.targetPort: 9090
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {} 

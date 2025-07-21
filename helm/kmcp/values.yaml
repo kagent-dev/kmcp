@@ -4,23 +4,11 @@
 
 # Image configuration
 image:
-  repository: controller
+  repository: ghcr.io/kagent-dev/kmcp/controller
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
 
 # Image pull secrets for private registries
 imagePullSecrets: []
-
-# Override the name of the chart
-nameOverride: ""
-
-# Override the full name of the chart
-fullnameOverride: ""
-
-# Target namespace for installation
-# If not specified, defaults to the release namespace
-namespace: ""
 
 # Controller configuration
 controller:
@@ -101,8 +89,3 @@ service:
   type: ClusterIP
   port: 8443
   targetPort: 8443
-
-# Custom Resource Definition configuration
-crd:
-  # Specifies whether CRDs should be created
-  create: true 
