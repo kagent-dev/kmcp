@@ -48,7 +48,7 @@ var (
 	initNoGit          bool
 	initAuthor         string
 	initEmail          string
-	initPlatform       string
+	initVersion        string
 	initNonInteractive bool
 )
 
@@ -60,7 +60,7 @@ func init() {
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
 	initCmd.Flags().StringVar(&initEmail, "email", "", "Author email for the project")
-	initCmd.Flags().StringVar(&initPlatform, "platform", "", "Platform to build for (linux/amd64, linux/arm64)")
+	initCmd.Flags().StringVar(&initVersion, "version", "", "MCP server version (defaults to kmcp version)")
 	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
 }
 
@@ -120,16 +120,12 @@ func runInit(_ *cobra.Command, args []string) error {
 	// Get author information
 	author := initAuthor
 	email := initEmail
-	platform := initPlatform
 	if !initNonInteractive {
 		if author == "" {
 			author, _ = promptForAuthor()
 		}
 		if email == "" {
 			email, _ = promptForEmail()
-		}
-		if platform == "" {
-			platform, _ = promptForPlatform()
 		}
 	}
 
@@ -144,7 +140,7 @@ func runInit(_ *cobra.Command, args []string) error {
 	}
 
 	// Create project manifest
-	if err := createProjectManifest(projectPath, projectName, framework, template, author, email, platform); err != nil {
+	if err := createProjectManifest(projectPath, projectName, framework, template, author, email); err != nil {
 		return fmt.Errorf("failed to create project manifest: %w", err)
 	}
 
@@ -183,6 +179,10 @@ func runInit(_ *cobra.Command, args []string) error {
 
 	fmt.Printf("\nTo build a Docker image:\n")
 	fmt.Printf("  kmcp build --docker\n")
+
+	fmt.Printf("\nTo build a Docker image in a specific directory:\n")
+	fmt.Printf("  kmcp build --docker --dir ./my-project\n")
+
 	fmt.Printf("\nTo develop using Docker only (no local Python/uv required):\n")
 	fmt.Printf("  kmcp build --docker --verbose  # Build and test\n")
 	fmt.Printf("  kmcp deploy --apply           # Deploy to Kubernetes\n")
@@ -298,18 +298,8 @@ func promptForEmail() (string, error) {
 	return strings.TrimSpace(email), nil
 }
 
-func promptForPlatform() (string, error) {
-	fmt.Print("Enter platform (optional): ")
-	var platform string
-	_, err := fmt.Scanln(&platform)
-	if err != nil {
-		return "", fmt.Errorf("failed to read platform: %w", err)
-	}
-	return strings.TrimSpace(platform), nil
-}
-
 // createProjectManifest creates the kmcp.yaml manifest file
-func createProjectManifest(projectPath, projectName, framework, template, author, email, platform string) error {
+func createProjectManifest(projectPath, projectName, framework, template, author, email string) error {
 	// Set default author if empty
 	if author == "" {
 		author = "KMCP CLI"
@@ -317,15 +307,17 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 	if email == "" {
 		email = "noreply@kagent.dev"
 	}
-	if platform == "" {
-		platform = "linux/amd64"
+
+	version := initVersion
+	if version == "" {
+		version = Version
 	}
 
 	// Create manifest with template-specific tools
 	projectManifest := &manifest.ProjectManifest{
 		Name:        projectName,
 		Framework:   framework,
-		Version:     "0.1.0",
+		Version:     version,
 		Description: fmt.Sprintf("%s MCP server built with %s", projectName, framework),
 		Author:      author,
 		Email:       email,
@@ -362,7 +354,6 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 			Docker: manifest.DockerConfig{
 				Image:      fmt.Sprintf("%s:latest", strings.ReplaceAll(projectName, "_", "-")),
 				Dockerfile: "Dockerfile",
-				Platform:   []string{platform},
 			},
 		},
 	}

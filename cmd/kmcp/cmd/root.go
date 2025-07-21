@@ -4,6 +4,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version will be set by ldflags during build
+var Version = ""
+
 var rootCmd = &cobra.Command{
 	Use:   "kmcp",
 	Short: "KMCP - Kubernetes Model Context Protocol CLI",
@@ -11,7 +14,7 @@ var rootCmd = &cobra.Command{
 	
 It provides a unified development experience for creating, building, and deploying
 MCP servers locally and to Kubernetes clusters.`,
-	Version: "0.1.0",
+	Version: Version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
