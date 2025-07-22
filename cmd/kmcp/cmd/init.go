@@ -111,7 +111,6 @@ func runInit(_ *cobra.Command, args []string) error {
 		fmt.Println("Tools will be automatically discovered from the src/tools/ directory.")
 		fmt.Println("Use 'kmcp add-tool <name>' to add new tools after project creation.")
 	} else if !initNonInteractive {
-		// TODO: Refactor the TypeScript generator to use the new framework-based approach.
 		selected, err := promptForTemplate(framework)
 		if err != nil {
 			return fmt.Errorf("failed to select template: %w", err)
