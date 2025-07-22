@@ -319,8 +319,6 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 
 func getDefaultCommand(framework string) string {
 	switch framework {
-	case manifest.FrameworkFastMCPPython:
-		return "python"
 	default:
 		return "python"
 	}
