@@ -1,0 +1,62 @@
+"""Shared utilities for {{.ProjectName}} MCP server."""
+
+import os
+from pathlib import Path
+from typing import Dict, Any
+
+import yaml
+
+
+def load_config(config_path: str) -> Dict[str, Any]:
+    """Load configuration from YAML file.
+    
+    Args:
+        config_path: Path to the configuration file
+        
+    Returns:
+        Configuration dictionary
+    """
+    try:
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        print(f"Error loading config from {config_path}: {e}")
+        return {}
+
+
+def get_shared_config() -> Dict[str, Any]:
+    """Get shared configuration that tools can access.
+    
+    Returns:
+        Shared configuration dictionary
+    """
+    config = load_config("kmcp.yaml")
+    return config.get("tools", {})
+
+
+def get_tool_config(tool_name: str) -> Dict[str, Any]:
+    """Get configuration for a specific tool.
+    
+    Args:
+        tool_name: Name of the tool
+        
+    Returns:
+        Tool-specific configuration
+    """
+    shared_config = get_shared_config()
+    return shared_config.get(tool_name, {})
+
+
+def get_env_var(key: str, default: str = "") -> str:
+    """Get environment variable with fallback.
+    
+    Args:
+        key: Environment variable key
+        default: Default value if not found
+        
+    Returns:
+        Environment variable value or default
+    """
+    return os.environ.get(key, default) 
