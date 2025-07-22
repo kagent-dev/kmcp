@@ -115,10 +115,22 @@ kmcp build [flags]
 
 ### `kmcp deploy` - Deploy to Kubernetes
 
+Deploy components to Kubernetes clusters:
+
+```bash
+kmcp deploy [command] [flags]
+```
+
+**Subcommands:**
+- `mcp [name]` - Deploy MCP server to Kubernetes
+- `controller` - Deploy KMCP controller to cluster
+
+#### `kmcp deploy mcp` - Deploy MCP Server
+
 Deploy an MCP server to Kubernetes by generating MCPServer CRDs:
 
 ```bash
-kmcp deploy [name] [flags]
+kmcp deploy mcp [name] [flags]
 ```
 
 **Flags:**
@@ -134,9 +146,19 @@ kmcp deploy [name] [flags]
 - `--env` - Environment variables (KEY=VALUE)
 - `--force` - Force deployment even if validation fails
 - `--file, -f` - Path to kmcp.yaml file (default: current directory)
-- `--deploy-controller` - Deploy the KMCP controller to the cluster
-- `--controller-version` - Version of the controller to deploy (defaults to kmcp version)
-- `--controller-namespace` - Namespace for the KMCP controller (defaults to kmcp-system)
+- `--verbose, -v` - Show detailed output
+
+#### `kmcp deploy controller` - Deploy KMCP Controller
+
+Deploy the KMCP controller to a Kubernetes cluster using Helm:
+
+```bash
+kmcp deploy controller [flags]
+```
+
+**Flags:**
+- `--version` - Version of the controller to deploy (defaults to kmcp version)
+- `--namespace` - Namespace for the KMCP controller (defaults to kmcp-system)
 - `--registry-config` - Path to Docker registry config file
 - `--verbose, -v` - Show detailed output
 

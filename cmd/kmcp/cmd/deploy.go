@@ -20,7 +20,17 @@ const (
 )
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy [name]",
+	Use:   "deploy",
+	Short: "Deploy to Kubernetes",
+	Long: `Deploy components to Kubernetes clusters.
+
+This command provides functionality to deploy MCP servers and the KMCP controller
+to Kubernetes clusters.`,
+}
+
+// deployMCPCmd deploys an MCP server to Kubernetes
+var deployMCPCmd = &cobra.Command{
+	Use:   "mcp [name]",
 	Short: "Deploy MCP server to Kubernetes",
 	Long: `Deploy an MCP server to Kubernetes by generating MCPServer CRDs.
 
@@ -36,74 +46,99 @@ The generated MCPServer will include:
 - Environment variables and secrets
 
 Examples:
-  kmcp deploy                          # Deploy with project name to cluster
-  kmcp deploy my-server                # Deploy with custom name
-  kmcp deploy --namespace staging      # Deploy to staging namespace
-  kmcp deploy --dry-run                # Generate manifest without applying to cluster
-  kmcp deploy --image custom:tag       # Use custom image
-  kmcp deploy --transport http         # Use HTTP transport
-  kmcp deploy --output deploy.yaml     # Save to file
-  kmcp deploy --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
-  kmcp deploy --deploy-controller      # Deploy controller
-  kmcp deploy --deploy-controller --controller-version 0.0.1 # Deploy controller with specific version
-  kmcp deploy --deploy-controller --controller-namespace my-namespace # Deploy controller to custom namespace
-  kmcp deploy --deploy-controller --registry-config ~/.docker/config.json # Specify docker registry config`,
+  kmcp deploy mcp                          # Deploy with project name to cluster
+  kmcp deploy mcp my-server                # Deploy with custom name
+  kmcp deploy mcp --namespace staging      # Deploy to staging namespace
+  kmcp deploy mcp --dry-run                # Generate manifest without applying to cluster
+  kmcp deploy mcp --image custom:tag       # Use custom image
+  kmcp deploy mcp --transport http         # Use HTTP transport
+  kmcp deploy mcp --output deploy.yaml     # Save to file
+  kmcp deploy mcp --file /path/to/kmcp.yaml # Use custom kmcp.yaml file`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: runDeploy,
+	RunE: runDeployMCP,
+}
+
+// deployControllerCmd deploys the KMCP controller to the cluster
+var deployControllerCmd = &cobra.Command{
+	Use:   "controller",
+	Short: "Deploy KMCP controller to cluster",
+	Long: `Deploy the KMCP controller to a Kubernetes cluster using Helm.
+
+This command installs the KMCP controller from the Helm chart repository.
+The controller manages MCPServer custom resources and handles their lifecycle.
+
+Examples:
+  kmcp deploy controller                                    # Deploy with default settings
+  kmcp deploy controller --version 0.0.1                   # Deploy specific version
+  kmcp deploy controller --namespace my-namespace          # Deploy to custom namespace
+  kmcp deploy controller --registry-config ~/.docker/config.json # Use custom registry config`,
+	RunE: runDeployController,
 }
 
 var (
-	deployNamespace           string
-	deployDryRun              bool
-	deployOutput              string
-	deployImage               string
-	deployTransport           string
-	deployPort                int
-	deployTargetPort          int
-	deployCommand             string
-	deployArgs                []string
-	deployEnv                 []string
-	deployForce               bool
-	deployFile                string
-	deployController          bool
-	deployControllerVersion   string
-	deployControllerNamespace string
-	deployRegistryConfig      string
+	// MCP deployment flags
+	deployNamespace  string
+	deployDryRun     bool
+	deployOutput     string
+	deployImage      string
+	deployTransport  string
+	deployPort       int
+	deployTargetPort int
+	deployCommand    string
+	deployArgs       []string
+	deployEnv        []string
+	deployForce      bool
+	deployFile       string
+
+	// Controller deployment flags
+	controllerVersion        string
+	controllerNamespace      string
+	controllerRegistryConfig string
 )
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
 
-	deployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
-	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
-	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
-	deployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
-	deployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
-	deployCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: from project config)")
-	deployCmd.Flags().IntVar(&deployTargetPort, "target-port", 0, "Target port for HTTP transport")
-	deployCmd.Flags().StringVar(&deployCommand, "command", "", "Command to run (overrides project config)")
-	deployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
-	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
-	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
-	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
-	deployCmd.Flags().BoolVar(&deployController, "deploy-controller", false, "Deploy the KMCP controller to the cluster")
-	deployCmd.Flags().StringVar(
-		&deployControllerVersion,
-		"controller-version",
+	// Add subcommands
+	deployCmd.AddCommand(deployMCPCmd)
+	deployCmd.AddCommand(deployControllerCmd)
+
+	// MCP deployment flags
+	deployMCPCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
+	deployMCPCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
+	deployMCPCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
+	deployMCPCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
+	deployMCPCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
+	deployMCPCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: from project config)")
+	deployMCPCmd.Flags().IntVar(&deployTargetPort, "target-port", 0, "Target port for HTTP transport")
+	deployMCPCmd.Flags().StringVar(&deployCommand, "command", "", "Command to run (overrides project config)")
+	deployMCPCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
+	deployMCPCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
+	deployMCPCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
+	deployMCPCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
+
+	// Controller deployment flags
+	deployControllerCmd.Flags().StringVar(
+		&controllerVersion,
+		"version",
 		"",
 		"Version of the controller to deploy (defaults to kmcp version)",
 	)
-	deployCmd.Flags().StringVar(
-		&deployControllerNamespace,
-		"controller-namespace",
+	deployControllerCmd.Flags().StringVar(
+		&controllerNamespace,
+		"namespace",
 		"kmcp-system",
 		"Namespace for the KMCP controller (defaults to kmcp-system)",
 	)
-	// TODO: this var is currently required because the controller img is in a private registry but this may change
-	deployCmd.Flags().StringVar(&deployRegistryConfig, "registry-config", "", "Path to docker registry config file")
+	deployControllerCmd.Flags().StringVar(
+		&controllerRegistryConfig,
+		"registry-config",
+		"",
+		"Path to docker registry config file",
+	)
 }
 
-func runDeploy(_ *cobra.Command, args []string) error {
+func runDeployMCP(_ *cobra.Command, args []string) error {
 	// Determine project directory
 	var projectDir string
 	var err error
@@ -133,13 +168,6 @@ func runDeploy(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load project manifest: %w", err)
 	}
 
-	// Deploy controller if requested
-	if deployController {
-		if err := deployControllerToCluster(); err != nil {
-			return fmt.Errorf("failed to deploy controller: %w", err)
-		}
-	}
-
 	// Determine deployment name
 	deploymentName := projectManifest.Name
 	if len(args) > 0 {
@@ -166,7 +194,7 @@ func runDeploy(_ *cobra.Command, args []string) error {
 	}
 
 	// Add YAML document separator and standard header
-	yamlContent := fmt.Sprintf("---\n# MCPServer deployment generated by kmcp deploy\n# Project: %s\n# Framework: %s\n%s",
+	yamlContent := fmt.Sprintf("---\n# MCPServer deployment generated by kmcp deploy mcp\n# Project: %s\n# Framework: %s\n%s",
 		projectManifest.Name, projectManifest.Framework, string(yamlData))
 
 	// Handle output
@@ -186,6 +214,68 @@ func runDeploy(_ *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
 	}
+
+	return nil
+}
+
+func runDeployController(_ *cobra.Command, _ []string) error {
+	fmt.Printf("🚀 Deploying KMCP controller to cluster...\n")
+
+	// Check if helm is available
+	if err := checkHelmAvailable(); err != nil {
+		return fmt.Errorf("helm is required for controller deployment: %w", err)
+	}
+
+	// Determine controller version
+	version := controllerVersion
+	if version == "" {
+		version = getKMCPVersion()
+	}
+
+	// Validate controller version format
+	if version == "" {
+		return fmt.Errorf("invalid controller version: version cannot be empty")
+	}
+
+	// Determine registry config file
+	registryConfig := controllerRegistryConfig
+	if registryConfig == "" {
+		fmt.Print("Docker registry config must be set use --registry-config\n")
+	}
+	if registryConfig != "" && verbose {
+		fmt.Printf("Using registry config: %s\n", registryConfig)
+	}
+
+	// Build helm install command
+	args := []string{
+		"install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
+		"--version", version,
+		"--namespace", controllerNamespace,
+		"--create-namespace",
+	}
+
+	// Add registry config if found
+	if registryConfig != "" {
+		args = append(args, "--registry-config", registryConfig)
+	}
+
+	// Run helm install
+	if err := runHelm(args...); err != nil {
+		return fmt.Errorf("helm install failed: %w", err)
+	}
+
+	fmt.Printf(
+		"✅ KMCP controller deployed successfully with version %s\n",
+		version,
+	)
+	fmt.Printf(
+		"💡 Check controller status with: kubectl get pods -n %s\n",
+		controllerNamespace,
+	)
+	fmt.Printf(
+		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n",
+		controllerNamespace,
+	)
 
 	return nil
 }
@@ -396,69 +486,6 @@ func runKubectl(args ...string) error {
 // getKMCPVersion returns the current kmcp version
 func getKMCPVersion() string {
 	return Version
-}
-
-// deployControllerToCluster deploys the kmcp controller using helm
-func deployControllerToCluster() error {
-	fmt.Printf("🚀 Deploying KMCP controller to cluster...\n")
-
-	// Check if helm is available
-	if err := checkHelmAvailable(); err != nil {
-		return fmt.Errorf("helm is required for controller deployment: %w", err)
-	}
-
-	// Determine controller version
-	controllerVersion := deployControllerVersion
-	if controllerVersion == "" {
-		controllerVersion = getKMCPVersion()
-	}
-
-	// Validate controller version format
-	if controllerVersion == "" {
-		return fmt.Errorf("invalid controller version: version cannot be empty")
-	}
-
-	// Determine registry config file
-	registryConfig := deployRegistryConfig
-	if registryConfig == "" {
-		fmt.Print("Docker registry config must be set use --registry-config\n")
-	}
-	if registryConfig != "" && verbose {
-		fmt.Printf("Using registry config: %s\n", registryConfig)
-	}
-
-	// Build helm install command
-	args := []string{
-		"install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
-		"--version", controllerVersion,
-		"--namespace", deployControllerNamespace,
-		"--create-namespace",
-	}
-
-	// Add registry config if found
-	if registryConfig != "" {
-		args = append(args, "--registry-config", registryConfig)
-	}
-
-	// Run helm install
-	if err := runHelm(args...); err != nil {
-		return fmt.Errorf("helm install failed: %w", err)
-	}
-
-	fmt.Printf(
-		"✅ KMCP controller deployed successfully with version %s\n",
-		controllerVersion,
-	)
-	fmt.Printf(
-		"💡 Check controller status with: kubectl get pods -n %s\n",
-		deployControllerNamespace,
-	)
-	fmt.Printf(
-		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n",
-		deployControllerNamespace,
-	)
-
-	return nil
 }
 
 // checkKubectlAvailable checks if kubectl is available in the system
