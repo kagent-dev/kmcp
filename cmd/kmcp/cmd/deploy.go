@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"kagent.dev/kmcp/api/v1alpha1"
 	"kagent.dev/kmcp/pkg/manifest"
+	"kagent.dev/kmcp/pkg/wellknown"
 	"sigs.k8s.io/yaml"
 )
 
@@ -45,6 +47,11 @@ The generated MCPServer will include:
 - Port and command configuration
 - Environment variables and secrets
 
+The command can also apply Kubernetes secret YAML files to the cluster before deploying the MCPServer.
+The secrets will be referenced in the MCPServer CRD for mounting as volumes to the MCP server container.
+Secret namespace will be overridden with the deployment namespace to avoid the need for reference grants
+to enable cross-namespace references.
+
 Examples:
   kmcp deploy mcp                          # Deploy with project name to cluster
   kmcp deploy mcp my-server                # Deploy with custom name
@@ -53,7 +60,8 @@ Examples:
   kmcp deploy mcp --image custom:tag       # Use custom image
   kmcp deploy mcp --transport http         # Use HTTP transport
   kmcp deploy mcp --output deploy.yaml     # Save to file
-  kmcp deploy mcp --file /path/to/kmcp.yaml # Use custom kmcp.yaml file`,
+  kmcp deploy mcp --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
+  kmcp deploy mcp --secrets secret1.yaml,secret2.yaml # Apply secret files to cluster`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeployMCP,
 }
@@ -89,6 +97,7 @@ var (
 	deployEnv        []string
 	deployForce      bool
 	deployFile       string
+	deploySecrets    []string
 
 	// Controller deployment flags
 	controllerVersion        string
@@ -116,6 +125,7 @@ func init() {
 	deployMCPCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployMCPCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployMCPCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
+	deployMCPCmd.Flags().StringSliceVar(&deploySecrets, "secrets", []string{}, "Paths to Kubernetes secret YAML files to apply to cluster")
 
 	// Controller deployment flags
 	deployControllerCmd.Flags().StringVar(
@@ -210,6 +220,14 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 		// Print to stdout
 		fmt.Print(yamlContent)
 	} else {
+		// Apply secrets first if provided
+		if len(deploySecrets) > 0 {
+			if err := applySecretFiles(deploySecrets); err != nil {
+				return fmt.Errorf("failed to apply secrets: %w", err)
+			}
+		}
+
+		// Apply MCPServer to cluster
 		if err := applyToCluster(yamlContent, deploymentName); err != nil {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
@@ -356,6 +374,22 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 		}
 	}
 
+	// Parse secret files and extract references
+	var secretRefs []corev1.ObjectReference
+	if len(deploySecrets) > 0 {
+		if verbose {
+			fmt.Printf("🔍 Parsing %d secret file(s) for references...\n", len(deploySecrets))
+		}
+		var err error
+		secretRefs, err = parseSecretFiles(deploySecrets)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse secret files: %w", err)
+		}
+		if verbose {
+			fmt.Printf("✅ Found %d secret reference(s) to include in MCPServer\n", len(secretRefs))
+		}
+	}
+
 	// Create MCPServer spec
 	mcpServer := &v1alpha1.MCPServer{
 		TypeMeta: metav1.TypeMeta{
@@ -380,11 +414,12 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 		},
 		Spec: v1alpha1.MCPServerSpec{
 			Deployment: v1alpha1.MCPServerDeployment{
-				Image: imageName,
-				Port:  uint16(port),
-				Cmd:   command,
-				Args:  args,
-				Env:   envVars,
+				Image:      imageName,
+				Port:       uint16(port),
+				Cmd:        command,
+				Args:       args,
+				Env:        envVars,
+				SecretRefs: secretRefs,
 			},
 			TransportType: transportType,
 		},
@@ -517,4 +552,71 @@ func runHelm(args ...string) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+// applySecretFiles applies Kubernetes secret YAML files to the cluster
+func applySecretFiles(secretFiles []string) error {
+	fmt.Printf("🔐 Applying %d secret file(s) to cluster...\n", len(secretFiles))
+
+	// Check if kubectl is available
+	if err := checkKubectlAvailable(); err != nil {
+		return fmt.Errorf("kubectl is required for secret deployment: %w", err)
+	}
+
+	for i, secretFile := range secretFiles {
+		// Validate file exists
+		if _, err := os.Stat(secretFile); os.IsNotExist(err) {
+			return fmt.Errorf("secret file does not exist: %s", secretFile)
+		}
+
+		if verbose {
+			fmt.Printf("Applying secret file %d/%d: %s\n", i+1, len(secretFiles), secretFile)
+		}
+
+		// Apply secret using kubectl
+		if err := runKubectl("apply", "-f", secretFile); err != nil {
+			return fmt.Errorf("failed to apply secret file %s: %w", secretFile, err)
+		}
+	}
+
+	fmt.Printf("✅ Successfully applied %d secret file(s)\n", len(secretFiles))
+	return nil
+}
+
+// parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces
+func parseSecretFiles(secretFiles []string) ([]corev1.ObjectReference, error) {
+	var secretRefs []corev1.ObjectReference
+
+	for _, secretFile := range secretFiles {
+		data, err := os.ReadFile(secretFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read secret file %s: %w", secretFile, err)
+		}
+
+		var secret corev1.Secret
+		if err := yaml.Unmarshal(data, &secret); err != nil {
+			return nil, fmt.Errorf("failed to parse secret file %s: %w", secretFile, err)
+		}
+
+		name := secret.GetName()
+		namespace := secret.GetNamespace()
+
+		if name == "" {
+			return nil, fmt.Errorf("secret in file %s has no name", secretFile)
+		}
+
+		// always override namespace with deployment namespace to avoid the need for reference grants
+		namespace = deployNamespace
+		secretRefs = append(secretRefs, corev1.ObjectReference{
+			Kind:      wellknown.SecretKind,
+			Name:      name,
+			Namespace: namespace,
+		})
+
+		if verbose {
+			fmt.Printf("📋 Found secret reference: %s.%s\n", namespace, name)
+		}
+	}
+
+	return secretRefs, nil
 }
