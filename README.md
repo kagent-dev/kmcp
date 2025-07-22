@@ -73,10 +73,6 @@ make build-cli
 #### Option 3: Download Binary
 Download the latest binary from the [releases page](https://github.com/kagent-dev/kmcp/releases).
 
-### Commands
-
-#### `kmcp init` - Initialize New Projects
-
 ## CLI Commands
 
 ### `kmcp init` - Initialize New MCP Server Project
