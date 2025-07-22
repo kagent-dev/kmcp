@@ -3,7 +3,6 @@ DOCKER_REGISTRY ?= ghcr.io
 BASE_IMAGE_REGISTRY ?= cgr.dev
 DOCKER_REPO ?= kagent-dev/kmcp
 HELM_REPO ?= oci://ghcr.io/kagent-dev
-HELM_DIST_FOLDER ?= dist
 
 BUILD_DATE := $(shell date -u '+%Y-%m-%d')
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
@@ -78,6 +77,7 @@ helm-package:
 	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
 	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
+	@echo "Helm package created: $(DIST_FOLDER)/kmcp-$(VERSION).tgz"
 
 .PHONY: helm-cleanup
 helm-cleanup: ## Clean up Helm chart packages
@@ -90,7 +90,7 @@ helm-build: helm-lint helm-package ## Build and package the Helm chart
 .PHONY: helm-publish
 helm-publish: helm-package ## Publish Helm chart to OCI registry
 	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
-	@helm push $(HELM_DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
+	@helm push $(DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
 	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
@@ -164,7 +164,8 @@ build: manifests generate fmt vet ## Build manager binary.
 
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
-	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o bin/kmcp cmd/kmcp/main.go
+	mkdir -p $(DIST_FOLDER)
+	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
