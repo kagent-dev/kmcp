@@ -179,12 +179,12 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build kmcp CLI")
 
 			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
-			cmd = exec.Command("bin/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--version", "0.0.1", "--force")
+			cmd = exec.Command("dist/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--version", "0.0.1", "--force")
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
 			ginkgo.By("building the Docker image for the knowledge-assistant project")
-			cmd = exec.Command("bin/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
+			cmd = exec.Command("dist/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build Docker image")
 
@@ -194,7 +194,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
 
 			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
-			cmd = exec.Command("bin/kmcp", "deploy", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
+			cmd = exec.Command("dist/kmcp", "deploy", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 
