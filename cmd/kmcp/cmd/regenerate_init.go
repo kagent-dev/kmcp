@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"kagent.dev/kmcp/pkg/tools"
+	"kagent.dev/kmcp/pkg/frameworks"
+	"kagent.dev/kmcp/pkg/manifest"
 )
 
 var regenerateInitCmd = &cobra.Command{
@@ -45,9 +46,20 @@ func init() {
 }
 
 func runRegenerateInit(_ *cobra.Command, _ []string) error {
-	// Check if we're in a valid KMCP project
-	if !isKMCPProject() {
-		return fmt.Errorf("not in a KMCP project directory. Run 'kmcp init' first")
+	// Get project root and framework
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return err
+	}
+	manifestManager := manifest.NewManager(projectRoot)
+	projectManifest, err := manifestManager.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load project manifest: %w", err)
+	}
+
+	// This command is only for Python projects
+	if projectManifest.Framework != "fastmcp-python" {
+		return fmt.Errorf("regenerate-init is only for fastmcp-python projects")
 	}
 
 	// Check if tools directory exists
@@ -66,8 +78,20 @@ func runRegenerateInit(_ *cobra.Command, _ []string) error {
 	}
 
 	// Create generator and regenerate
-	generator := tools.NewGenerator()
-	if err := generator.RegenerateToolsInit(absToolsDir); err != nil {
+	generator, err := frameworks.GetGenerator(projectManifest.Framework)
+	if err != nil {
+		return err
+	}
+
+	// We need to cast the generator to the Python generator to access RegenerateToolsInit
+	pythonGenerator, ok := generator.(interface {
+		RegenerateToolsInit(string) error
+	})
+	if !ok {
+		return fmt.Errorf("failed to cast to Python generator")
+	}
+
+	if err := pythonGenerator.RegenerateToolsInit(absToolsDir); err != nil {
 		return fmt.Errorf("failed to regenerate __init__.py: %w", err)
 	}
 

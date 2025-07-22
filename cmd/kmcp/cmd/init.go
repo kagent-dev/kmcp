@@ -14,7 +14,7 @@ import (
 
 const (
 	frameworkFastMCPPython = "fastmcp-python"
-	frameworkFastMCPTS     = "fastmcp-ts"
+	frameworkMCPGo         = "mcp-go"
 	templateBasic          = "basic"
 	templateDatabase       = "database"
 	templateFilesystem     = "filesystem"
@@ -32,7 +32,7 @@ var initCmd = &cobra.Command{
 
 This command creates a new MCP server project using one of the supported frameworks:
 - FastMCP Python (recommended) - Dynamic tool loading with FastMCP
-- FastMCP TypeScript - Dynamic tool loading with FastMCP  
+- MCP Go - Go framework for building MCP servers
 
 The recommended approach is FastMCP Python which provides:
 - Automatic tool discovery and loading
@@ -56,7 +56,7 @@ var (
 func init() {
 	rootCmd.AddCommand(initCmd)
 
-	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, fastmcp-ts)")
+	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, mcp-go)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
@@ -101,7 +101,7 @@ func runInit(_ *cobra.Command, args []string) error {
 		}
 		framework = selected
 	} else if framework == "" {
-		framework = "fastmcp-python" // Default framework
+		framework = frameworkFastMCPPython // Default framework
 	}
 
 	// Get template selection
@@ -111,6 +111,7 @@ func runInit(_ *cobra.Command, args []string) error {
 		fmt.Println("Tools will be automatically discovered from the src/tools/ directory.")
 		fmt.Println("Use 'kmcp add-tool <name>' to add new tools after project creation.")
 	} else if !initNonInteractive {
+		// TODO: Refactor the TypeScript generator to use the new framework-based approach.
 		selected, err := promptForTemplate(framework)
 		if err != nil {
 			return fmt.Errorf("failed to select template: %w", err)
@@ -176,9 +177,9 @@ func runInit(_ *cobra.Command, args []string) error {
 	case frameworkFastMCPPython:
 		fmt.Printf("  uv sync\n")
 		fmt.Printf("  uv run python src/main.py\n")
-	case frameworkFastMCPTS:
-		fmt.Printf("  npm install\n")
-		fmt.Printf("  kmcp build\n")
+	case frameworkMCPGo:
+		fmt.Printf("  go mod tidy\n")
+		fmt.Printf("  go run main.go\n")
 	}
 
 	fmt.Printf("\nTo build a Docker image:\n")
@@ -229,7 +230,7 @@ func promptForProjectName() (string, error) {
 func promptForFramework() (string, error) {
 	fmt.Println("\nSelect a framework:")
 	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
-	fmt.Println("2. FastMCP TypeScript - Dynamic tool loading with FastMCP")
+	fmt.Println("2. MCP Go - Go framework for building MCP servers")
 	fmt.Print("Enter choice [1-2]: ")
 
 	var choice string
@@ -241,7 +242,7 @@ func promptForFramework() (string, error) {
 	case "1", "":
 		return frameworkFastMCPPython, nil
 	case "2":
-		return frameworkFastMCPTS, nil
+		return frameworkMCPGo, nil
 	default:
 		return frameworkFastMCPPython, nil // Default to recommended
 	}
@@ -458,17 +459,8 @@ func getFrameworkDependencies(framework, template string) []string {
 			deps = append(deps, "asyncio")
 		}
 		return deps
-	case frameworkFastMCPTS:
-		deps := []string{"@fastmcp/core", "@modelcontextprotocol/sdk"}
-		switch template {
-		case templateHTTP:
-			deps = append(deps, "axios", "fetch")
-		case templateData:
-			deps = append(deps, "lodash")
-		case templateWorkflow:
-			deps = append(deps, "async")
-		}
-		return deps
+	case frameworkMCPGo:
+		return []string{"mcp-go"}
 	default:
 		return []string{}
 	}
@@ -479,8 +471,8 @@ func getFrameworkDevDependencies(framework string) []string {
 	switch framework {
 	case frameworkFastMCPPython:
 		return []string{"pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=22.0.0", "mypy>=1.0.0", "ruff>=0.1.0"}
-	case frameworkFastMCPTS:
-		return []string{"@types/node", "typescript", "tsx", "vitest", "eslint", "prettier"}
+	case frameworkMCPGo:
+		return []string{"golangci-lint"}
 	default:
 		return []string{}
 	}
