@@ -26,7 +26,6 @@ CONTROLLER_IMG ?= $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):$(C
 
 # Image URL to use all building/pushing image targets (backward compatibility)
 IMG ?= $(CONTROLLER_IMG)
-ADDITIONAL_IMAGES ?=
 DIST_FOLDER ?= dist
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -180,10 +179,6 @@ docker-build: ## Build docker image with the manager.
 	$(DOCKER_BUILDER) use $(BUILDX_BUILDER_NAME)
 	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t ${CONTROLLER_IMG} .
 	- $(DOCKER_BUILDER) rm $(BUILDX_BUILDER_NAME)
-
-.PHONY: kind-load-images
-kind-load-images: ## Load images into Kind cluster. Defaults to current kind cluster.
-	kind load docker-image ${IMG} $(ADDITIONAL_IMAGES)
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
