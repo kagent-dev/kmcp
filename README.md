@@ -88,7 +88,7 @@ kmcp init [project-name] [flags]
 ```
 
 **Flags:**
-- `--framework, -f` - Choose framework (fastmcp-python, fastmcp-ts)
+- `--framework, -f` - Choose framework (fastmcp-python)
 - `--force` - Overwrite existing directory
 - `--no-git` - Skip git initialization
 - `--author` - Set project author
@@ -158,27 +158,6 @@ kmcp init my-python-server \
   --non-interactive
 ```
 
-#### Create a TypeScript Project
-
-```bash
-# FastMCP TypeScript with filesystem template
-kmcp init my-ts-server \
-  --framework fastmcp-ts \
-  --template filesystem
-
-#### Build and Deploy
-
-```bash
-# Build Docker image
-kmcp build --docker --tag my-server:v1.0.0
-
-# Build for specific platform
-kmcp build --docker --platform linux/amd64 --tag my-server:latest
-
-# Build with verbose output
-kmcp build --docker --verbose --tag my-server:dev
-```
-
 ## Kubernetes Controller
 
 KMCP also includes a Kubernetes controller for cloud-native MCP server deployment.
@@ -228,11 +207,6 @@ KMCP supports the most popular MCP frameworks:
 - **Best for**: Production Python applications
 - **Features**: Comprehensive toolkit, official SDK integration
 - **Use cases**: Database integration, API clients, complex workflows
-
-### FastMCP TypeScript
-- **Best for**: Node.js developers, web integration
-- **Features**: Modern TypeScript, OAuth 2.0, server-sent events
-- **Use cases**: REST APIs, web services, real-time applications
 
 ## Project Structure
 
@@ -299,8 +273,6 @@ The following tasks remain to complete the initial phase of KMCP:
   - [ ] CLI tool management commands (`add-tool`, `remove-tool`, etc.)
   - [ ] **Kubernetes-native secret management** - Built-in secret handling and sanitization
   - [ ] **Multi-environment support** - Local development to production workflows
-- [ ] **EasyMCP TypeScript templates** - Add missing template variations
-- [ ] **Official SDK templates** - Basic templates for official Python/TypeScript SDKs
 - [ ] **Multi-tool template** - Advanced template with multiple tools/resources
 - [ ] **API client template** - Template for REST/GraphQL API integration
 - [ ] **Template validation** - Ensure all templates build and run correctly
@@ -380,6 +352,3 @@ limitations under the License.
 - [MCP Documentation](https://modelcontextprotocol.io/)
 - [Anthropic's MCP Announcement](https://www.anthropic.com/news/model-context-protocol)
 - [FastMCP Python Documentation](https://github.com/jlowin/fastmcp)
-- [FastMCP TypeScript Documentation](https://github.com/sammcj/fastmcp-typescript)
-- [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [Official MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
