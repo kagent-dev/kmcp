@@ -99,7 +99,7 @@ func init() {
 		"kmcp-system",
 		"Namespace for the KMCP controller (defaults to kmcp-system)",
 	)
-	// TODO: this var is currently required because the controller image is in a private registry but this may change in the future
+	// TODO: this var is currently required because the controller img is in a private registry but this may change
 	deployCmd.Flags().StringVar(&deployRegistryConfig, "registry-config", "", "Path to docker registry config file")
 }
 

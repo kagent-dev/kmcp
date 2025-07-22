@@ -35,7 +35,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"kagent.dev/kmcp/test/utils"
-	"sigs.k8s.io/yaml"
 )
 
 // namespace where the project is deployed in
@@ -374,14 +373,6 @@ func getService(name, namespace string) *corev1.Service {
 		return nil
 	}
 	return &service
-}
-
-func mcpServerToYAML(mcpServer interface{}) string {
-	yamlBytes, err := yaml.Marshal(mcpServer)
-	if err != nil {
-		return ""
-	}
-	return string(yamlBytes)
 }
 
 // getImageRepository extracts the repository part from a full image name
