@@ -321,8 +321,6 @@ func getDefaultCommand(framework string) string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
 		return "python"
-	case manifest.FrameworkFastMCPTypeScript:
-		return "node"
 	default:
 		return "python"
 	}
@@ -332,8 +330,6 @@ func getDefaultArgs(framework string) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
 		return []string{"src/main.py"}
-	case manifest.FrameworkFastMCPTypeScript:
-		return []string{"dist/index.js"}
 	default:
 		return []string{"src/main.py"}
 	}
