@@ -150,10 +150,15 @@ func (g *Generator) GenerateToolFile(filePath, toolName string, config map[strin
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
 
 	// Execute the template
-	return tmpl.Execute(file, data)
+	err = tmpl.Execute(file, data)
+
+	// Close the file and check for errors
+	if closeErr := file.Close(); err == nil {
+		err = closeErr
+	}
+	return err
 }
 
 // RegenerateToolsInit regenerates the __init__.py file in the tools directory
