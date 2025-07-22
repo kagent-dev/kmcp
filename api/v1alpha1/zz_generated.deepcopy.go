@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -81,6 +82,11 @@ func (in *MCPServerDeployment) DeepCopyInto(out *MCPServerDeployment) {
 		for key, val := range *in {
 			(*out)[key] = val
 		}
+	}
+	if in.SecretRefs != nil {
+		in, out := &in.SecretRefs, &out.SecretRefs
+		*out = make([]corev1.ObjectReference, len(*in))
+		copy(*out, *in)
 	}
 }
 
