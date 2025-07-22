@@ -3,6 +3,7 @@ package frameworks
 import (
 	"fmt"
 
+	"kagent.dev/kmcp/pkg/frameworks/golang"
 	"kagent.dev/kmcp/pkg/frameworks/python"
 	"kagent.dev/kmcp/pkg/templates"
 )
@@ -18,10 +19,9 @@ func GetGenerator(framework string) (Generator, error) {
 	switch framework {
 	case "fastmcp-python":
 		return python.NewGenerator(), nil
-	case "fastmcp-ts":
-		// This will be implemented in a future step.
-		// return typescript.NewGenerator(), nil
-		return nil, fmt.Errorf("generator for framework '%s' not yet implemented", framework)
+	case "mcp-go":
+		// TODO: Implement the Go generator.
+		return golang.NewGenerator(), nil
 	default:
 		return nil, fmt.Errorf("unsupported framework: %s", framework)
 	}
