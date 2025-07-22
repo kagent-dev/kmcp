@@ -77,6 +77,10 @@ Download the latest binary from the [releases page](https://github.com/kagent-de
 
 #### `kmcp init` - Initialize New Projects
 
+## CLI Commands
+
+### `kmcp init` - Initialize New MCP Server Project
+
 Create a new MCP server project with interactive prompts:
 
 ```bash
@@ -84,14 +88,14 @@ kmcp init [project-name] [flags]
 ```
 
 **Flags:**
-- `--framework` - Choose framework (fastmcp-python, fastmcp-ts)
-- `--template` - Select template (basic, database, filesystem, api-client, multi-tool)
-- `--author` - Set project author
-- `--email` - Set author email
+- `--framework, -f` - Choose framework (fastmcp-python, fastmcp-ts)
 - `--force` - Overwrite existing directory
 - `--no-git` - Skip git initialization
+- `--author` - Set project author
+- `--email` - Set author email
+- `--version` - MCP server version (defaults to kmcp version)
 - `--non-interactive` - Use defaults without prompts
-- `--verbose` - Show detailed output
+- `--verbose, -v` - Show detailed output
 
 #### `kmcp build` - Build MCP Servers
 
@@ -103,10 +107,39 @@ kmcp build [flags]
 
 **Flags:**
 - `--docker` - Build Docker image
-- `--tag` - Docker image tag (default: "latest")
-- `--output` - Output name (default: current directory name)
-- `--platform` - Target platform (e.g., linux/amd64)
-- `--verbose` - Show detailed build output
+- `--output, -o` - Output directory or image name
+- `--tag, -t` - Docker image tag
+- `--platform` - Target platform (e.g., linux/amd64, linux/arm64)
+- `--dir, -d` - Build directory (default: current directory)
+- `--verbose, -v` - Show detailed build output
+
+### `kmcp deploy` - Deploy to Kubernetes
+
+Deploy an MCP server to Kubernetes by generating MCPServer CRDs:
+
+```bash
+kmcp deploy [name] [flags]
+```
+
+**Flags:**
+- `--namespace, -n` - Kubernetes namespace (default: "default")
+- `--dry-run` - Generate manifest without applying to cluster
+- `--output, -o` - Output file for the generated YAML
+- `--image` - Docker image to deploy (overrides build image)
+- `--transport` - Transport type (stdio, http)
+- `--port` - Container port (default: from project config)
+- `--target-port` - Target port for HTTP transport
+- `--command` - Command to run (overrides project config)
+- `--args` - Command arguments
+- `--env` - Environment variables (KEY=VALUE)
+- `--force` - Force deployment even if validation fails
+- `--file, -f` - Path to kmcp.yaml file (default: current directory)
+- `--deploy-controller` - Deploy the KMCP controller to the cluster
+- `--controller-version` - Version of the controller to deploy (defaults to kmcp version)
+- `--controller-namespace` - Namespace for the KMCP controller (defaults to kmcp-system)
+- `--registry-config` - Path to Docker registry config file
+- `--verbose, -v` - Show detailed output
+
 
 ### Examples
 
