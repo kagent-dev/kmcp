@@ -51,9 +51,6 @@ jobs:
         fi
         echo "Building Docker image with version: ${VERSION}"
         make docker-build VERSION=${VERSION}
-    - name: 'Build CLI'
-      run: |
-        make build-cli VERSION=${VERSION}
   push-helm-chart:
     needs:
     - push-images
