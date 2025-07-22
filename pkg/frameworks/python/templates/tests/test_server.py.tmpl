@@ -1,0 +1,82 @@
+"""Tests for {{.ProjectName}} MCP server core functionality."""
+
+import sys
+from pathlib import Path
+import pytest
+from unittest.mock import patch, mock_open
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from core.server import DynamicMCPServer
+from core.utils import load_config, get_tool_config
+
+
+class TestDynamicMCPServer:
+    """Test the dynamic MCP server functionality."""
+    
+    def test_server_initialization(self):
+        """Test server initialization."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        assert server.name == "Test Server"
+        assert server.tools_dir == Path("src/tools")
+    
+    def test_server_with_nonexistent_tools_dir(self):
+        """Test server behavior with non-existent tools directory."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="nonexistent")
+        
+        # Should not raise exception, just print message
+        server.load_tools()
+        assert len(server.loaded_tools) == 0
+    
+    def test_load_config(self):
+        """Test configuration loading."""
+        config_data = """
+        server:
+          name: "Test Server"
+        tools:
+          echo:
+            prefix: "[TEST] "
+        """
+        
+        with patch("builtins.open", mock_open(read_data=config_data)):
+            config = load_config("test.yaml")
+            assert config["server"]["name"] == "Test Server"
+            assert config["tools"]["echo"]["prefix"] == "[TEST] "
+    
+    def test_get_tool_config(self):
+        """Test tool-specific configuration retrieval."""
+        with patch("core.utils.load_config") as mock_load:
+            mock_load.return_value = {
+                "tools": {
+                    "echo": {"prefix": "[TEST] "},
+                    "weather": {"api_key_env": "WEATHER_API_KEY"}
+                }
+            }
+            
+            echo_config = get_tool_config("echo")
+            assert echo_config["prefix"] == "[TEST] "
+            
+            weather_config = get_tool_config("weather")
+            assert weather_config["api_key_env"] == "WEATHER_API_KEY"
+            
+            # Test non-existent tool
+            empty_config = get_tool_config("nonexistent")
+            assert empty_config == {}
+
+
+class TestToolLoading:
+    """Test the tool loading mechanism."""
+    
+    def test_tool_function_detection(self):
+        """Test that tool functions are properly detected."""
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        
+        # This should load actual tools from the tools directory
+        server.load_tools()
+        
+        # Verify that tools were loaded
+        assert len(server.loaded_tools) > 0
+        
+        # Verify that echo tool specifically was loaded
+        assert "echo" in server.loaded_tools 

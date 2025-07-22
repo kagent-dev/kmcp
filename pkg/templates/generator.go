@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -73,7 +74,7 @@ func (g *Generator) getTemplateData(config ProjectConfig) map[string]interface{}
 		"Template":          config.Template,
 		"Author":            config.Author,
 		"Email":             config.Email,
-		"Year":              "2025", // You could make this dynamic
+		"Year":              time.Now().Year(),
 	}
 
 	// Set default author if empty
