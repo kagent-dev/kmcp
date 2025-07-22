@@ -135,10 +135,6 @@ run: manifests generate fmt vet ## Run a controller from your host.
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
-.PHONY: kind-load-images
-kind-load-images: ## Load images into Kind cluster. Defaults to current kind cluster.
-	kind load docker-image ${IMG} $(ADDITIONAL_IMAGES)
-
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
