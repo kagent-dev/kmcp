@@ -189,7 +189,7 @@ func runInit(_ *cobra.Command, args []string) error {
 
 	fmt.Printf("\nTo develop using Docker only (no local Python/uv required):\n")
 	fmt.Printf("  kmcp build --docker --verbose  # Build and test\n")
-	fmt.Printf("  kmcp deploy --apply           # Deploy to Kubernetes\n")
+	fmt.Printf("  kmcp deploy mcp --apply       # Deploy MCP server to Kubernetes\n")
 
 	fmt.Printf("\nTo manage secrets:\n")
 	fmt.Printf("  kmcp secrets add-secret API_KEY --environment local\n")
