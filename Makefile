@@ -2,6 +2,35 @@
 IMG ?= controller:latest
 ADDITIONAL_IMAGES ?=
 
+# Image configuration
+DOCKER_REGISTRY ?= ghcr.io
+BASE_IMAGE_REGISTRY ?= cgr.dev
+DOCKER_REPO ?= kagent-dev/kmcp
+HELM_REPO ?= oci://ghcr.io/kagent-dev
+
+BUILD_DATE := $(shell date -u '+%Y-%m-%d')
+GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/-dirty//' | grep v || echo "v0.0.1+$(GIT_COMMIT)")
+
+# Local architecture detection to build for the current platform
+LOCALARCH ?= $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+
+# Docker buildx configuration
+BUILDKIT_VERSION = v0.23.0
+BUILDX_NO_DEFAULT_ATTESTATIONS=1
+BUILDX_BUILDER_NAME ?= kmcp-builder-$(BUILDKIT_VERSION)
+DOCKER_BUILDER ?= docker buildx
+DOCKER_BUILD_ARGS ?= --builder $(BUILDX_BUILDER_NAME) --pull --load --platform linux/$(LOCALARCH)
+
+# Image configuration
+CONTROLLER_IMAGE_NAME ?= controller
+CONTROLLER_IMAGE_TAG ?= $(VERSION)
+CONTROLLER_IMG ?= $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):$(CONTROLLER_IMAGE_TAG)
+
+# Image URL to use all building/pushing image targets (backward compatibility)
+IMG ?= $(CONTROLLER_IMG)
+DIST_FOLDER ?= dist
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -61,9 +90,43 @@ helm-crd: manifests ## Generate Helm CRD template from the generated CRD definit
 	@echo '{{- end }}' >> helm/kmcp/templates/crds/mcpserver-crd.yaml
 	@echo "Helm CRD template generated at helm/kmcp/templates/crds/mcpserver-crd.yaml"
 
-.PHONY: helm-templates
-helm-templates: helm-crd ## Generate all Helm templates from source definitions.
-	@echo "All Helm templates updated successfully"
+.PHONY: helm-package
+helm-package:
+	mkdir -p $(DIST_FOLDER)
+	@echo "Packaging Helm chart with version $(VERSION)..."
+	@cp helm/kmcp/Chart.yaml helm/kmcp/Chart.yaml.bak
+	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
+	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
+	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
+	@echo "Helm package created: $(DIST_FOLDER)/kmcp-$(VERSION).tgz"
+
+.PHONY: helm-cleanup
+helm-cleanup: ## Clean up Helm chart packages
+	rm -f $(DIST_FOLDER)/*.tgz
+
+.PHONY: helm-build
+helm-build: helm-lint helm-package ## Build and package the Helm chart
+	@echo "Helm chart built successfully"
+
+.PHONY: helm-publish
+helm-publish: helm-package ## Publish Helm chart to OCI registry
+	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
+	@helm push $(DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
+	@echo "Helm chart published successfully"
+
+.PHONY: helm-test
+helm-test:
+	@echo "Running Helm chart unit tests..."
+	@command -v helm >/dev/null 2>&1 || { \
+		echo "Helm is not installed. Please install Helm manually."; \
+		exit 1; \
+	}
+	@helm plugin list | grep -q 'unittest' || { \
+		echo "Installing helm-unittest plugin..."; \
+		helm plugin install https://github.com/quintush/helm-unittest; \
+	}
+	@helm unittest helm/kmcp
+	@echo "Helm chart unit tests completed successfully"
 
 .PHONY: manifests-all
 manifests-all: manifests helm-templates ## Generate both Kustomize and Helm manifests from source definitions.
@@ -122,7 +185,8 @@ build: manifests generate fmt vet ## Build manager binary.
 
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
-	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o bin/kmcp cmd/kmcp/main.go
+	mkdir -p $(DIST_FOLDER)
+	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

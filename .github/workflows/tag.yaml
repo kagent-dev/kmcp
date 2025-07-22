@@ -1,0 +1,112 @@
+name: Tag and Push 
+
+on:
+  push:
+    tags:
+    - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number'
+
+# https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#release
+# GITHUB_SHA = Last commit in the tagged release
+# GITHUB_REF = Tag ref of release refs/tags/<tag_name>
+jobs:
+  push-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@main
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        name: kmcp-builder-v0.23.0
+        platforms: linux/amd64,linux/arm64
+        version: v0.23.0
+        use: 'true'
+    - name: 'Build Images'
+      env:
+        DOCKER_BUILDER: "docker buildx"
+        DOCKER_BUILD_ARGS: "--push --platform linux/amd64,linux/arm64"
+      run: |
+        # if workflow_dispatch is used, use the version input
+        if [ -n "${{ github.event.inputs.version }}" ]; then
+          export VERSION=${{ github.event.inputs.version }}
+        else
+          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+        fi
+        echo "Building Docker image with version: ${VERSION}"
+        make docker-build VERSION=${VERSION}
+    - name: 'Build CLI'
+      run: |
+        make build-cli VERSION=${VERSION}
+  push-helm-chart:
+    needs:
+    - push-images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@main
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 'Build and Publish Helm Chart'
+      run: |
+        # if workflow_dispatch is used, use the version input
+        if [ -n "${{ github.event.inputs.version }}" ]; then
+          export VERSION=${{ github.event.inputs.version }}
+        else
+          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+        fi
+        echo "Publishing Helm chart with version: ${VERSION}"
+        make helm-publish VERSION=${VERSION}
+  release:
+    # Only run release after images and helm chart are pushed
+    # In the future we can take the chart from the helm action,
+    # and build the CLI beforehand.
+    needs:
+    - push-helm-chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Build
+      run: |
+        # if workflow_dispatch is used, use the version input
+        if [ -n "${{ github.event.inputs.version }}" ]; then
+          export VERSION=${{ github.event.inputs.version }}
+        else
+          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+        fi
+        echo "Building release artifacts with version: ${VERSION}"
+        make build-cli VERSION=${VERSION}
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          dist/kmcp
