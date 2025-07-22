@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"kagent.dev/kmcp/pkg/frameworks"
 	"kagent.dev/kmcp/pkg/manifest"
 	"kagent.dev/kmcp/pkg/templates"
 )
@@ -157,7 +158,10 @@ func runInit(_ *cobra.Command, args []string) error {
 	}
 
 	// Initialize the project
-	generator := templates.NewGenerator()
+	generator, err := frameworks.GetGenerator(framework)
+	if err != nil {
+		return err
+	}
 	if err := generator.GenerateProject(config); err != nil {
 		return fmt.Errorf("failed to generate project: %w", err)
 	}

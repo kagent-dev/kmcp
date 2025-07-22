@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"kagent.dev/kmcp/pkg/tools"
+	"kagent.dev/kmcp/pkg/frameworks"
+	"kagent.dev/kmcp/pkg/manifest"
 )
 
 var addToolCmd = &cobra.Command{
@@ -63,10 +64,17 @@ func runAddTool(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid tool name: %w", err)
 	}
 
-	// Check if we're in a valid KMCP project
-	if !isKMCPProject() {
-		return fmt.Errorf("not in a KMCP project directory. Run 'kmcp init' first")
+	// Get project root and framework
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return err
 	}
+	manifestManager := manifest.NewManager(projectRoot)
+	projectManifest, err := manifestManager.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load project manifest: %w", err)
+	}
+	framework := projectManifest.Framework
 
 	// Check if tool already exists
 	toolPath := filepath.Join("src", "tools", toolName+".py")
@@ -82,10 +90,10 @@ func runAddTool(_ *cobra.Command, args []string) error {
 	}
 
 	if addToolInteractive {
-		return createToolInteractive(toolName, toolPath)
+		return createToolInteractive(toolName, projectRoot, framework)
 	}
 
-	return createTool(toolName, toolPath)
+	return createTool(toolName, projectRoot, framework)
 }
 
 func validateToolName(name string) error {
@@ -142,7 +150,28 @@ func isValidPythonIdentifier(name string) bool {
 }
 
 func isKMCPProject() bool {
-	return fileExists("kmcp.yaml") || fileExists("kmcp.yml")
+	_, err := findProjectRoot()
+	return err == nil
+}
+
+func findProjectRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "kmcp.yaml")); err == nil {
+			return dir, nil
+		}
+		if _, err := os.Stat(filepath.Join(dir, "kmcp.yml")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("not in a KMCP project directory")
+		}
+		dir = parent
+	}
 }
 
 func fileExists(path string) bool {
@@ -150,7 +179,7 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func createToolInteractive(toolName, toolPath string) error {
+func createToolInteractive(toolName, projectRoot, framework string) error {
 	fmt.Printf("Creating tool '%s' interactively...\n", toolName)
 
 	// Get tool description
@@ -164,39 +193,34 @@ func createToolInteractive(toolName, toolPath string) error {
 		addToolDescription = desc
 	}
 
-	return generateTool(toolName, toolPath)
+	return generateTool(toolName, projectRoot, framework)
 }
 
-func createTool(toolName, toolPath string) error {
+func createTool(toolName, projectRoot, framework string) error {
 	if verbose {
 		fmt.Printf("Creating tool: %s\n", toolName)
 	}
 
-	return generateTool(toolName, toolPath)
+	return generateTool(toolName, projectRoot, framework)
 }
 
-func generateTool(toolName, toolPath string) error {
-	// Generate the tool file
-	generator := tools.NewGenerator()
+func generateTool(toolName, projectRoot, framework string) error {
+	generator, err := frameworks.GetGenerator(framework)
+	if err != nil {
+		return err
+	}
 
 	config := map[string]interface{}{
 		"description": addToolDescription,
 	}
 
-	if err := generator.GenerateToolFile(toolPath, toolName, config); err != nil {
+	if err := generator.GenerateTool(projectRoot, toolName, config); err != nil {
 		return fmt.Errorf("failed to generate tool file: %w", err)
 	}
 
 	fmt.Printf("✅ Successfully created tool: %s\n", toolName)
-	fmt.Printf("📁 Generated file: %s\n", toolPath)
-
-	// Regenerate __init__.py file
-	toolsDir := filepath.Dir(toolPath)
-	if err := generator.RegenerateToolsInit(toolsDir); err != nil {
-		fmt.Printf("⚠️  Warning: Failed to regenerate __init__.py: %v\n", err)
-	} else {
-		fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
-	}
+	fmt.Printf("📁 Generated file: src/tools/%s.py\n", toolName)
+	fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
 
 	fmt.Printf("📝 Edit the file to implement your tool logic\n")
 	fmt.Printf("🚀 The tool will be automatically loaded when the server starts\n")
@@ -206,7 +230,7 @@ func generateTool(toolName, toolPath string) error {
 	}
 
 	fmt.Printf("\nNext steps:\n")
-	fmt.Printf("1. Edit %s to implement your tool logic\n", toolPath)
+	fmt.Printf("1. Edit src/tools/%s.py to implement your tool logic\n", toolName)
 	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
 	fmt.Printf("3. Run 'uv run python src/main.py' to start the server\n")
 	fmt.Printf("4. Run 'uv run pytest tests/' to test your tool\n")
