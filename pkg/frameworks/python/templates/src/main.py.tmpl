@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""{{.ProjectName}} MCP server with dynamic tool loading.
+
+This server automatically discovers and loads tools from the src/tools/ directory.
+Each tool file should contain a function decorated with @mcp.tool().
+"""
+
+import sys
+import logging
+from pathlib import Path
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from core.server import DynamicMCPServer
+
+
+def main() -> None:
+    """Main entry point for the MCP server."""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stderr)
+        ]
+    )
+    
+    try:
+        # Create server with dynamic tool loading
+        server = DynamicMCPServer(
+            name="{{.ProjectName}}",
+            tools_dir="src/tools"
+        )
+        
+        # Load tools and start server
+        server.load_tools()
+        server.run()
+        
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+    except Exception as e:
+        print(f"Server error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main() 

@@ -1,0 +1,124 @@
+"""Dynamic MCP server implementation with automatic tool discovery.
+
+This server automatically discovers and loads tools from the tools directory.
+Each tool file should contain a function decorated with @mcp.tool().
+"""
+
+import os
+import sys
+import logging
+import importlib.util
+from pathlib import Path
+from typing import Dict, Any, List, Callable
+
+import yaml
+from fastmcp import FastMCP
+
+from .utils import load_config, get_shared_config
+
+
+# Global FastMCP instance for tools to import
+mcp = FastMCP(name="Dynamic Server")
+
+
+class DynamicMCPServer:
+    """MCP server with dynamic tool loading capabilities."""
+    
+    def __init__(self, name: str, tools_dir: str = "src/tools"):
+        """Initialize the dynamic MCP server.
+        
+        Args:
+            name: Server name
+            tools_dir: Directory containing tool files
+        """
+        global mcp
+        self.name = name
+        self.tools_dir = Path(tools_dir)
+        self.config = self._load_config()
+        
+        # Update global FastMCP instance
+        mcp = FastMCP(name=self.name)
+        self.mcp = mcp
+        
+        # Track loaded tools
+        self.loaded_tools: List[str] = []
+        
+    def _load_config(self) -> Dict[str, Any]:
+        """Load configuration from kmcp.yaml."""
+        return load_config("kmcp.yaml")
+    
+    def load_tools(self) -> None:
+        """Discover and load all tools from the tools directory."""
+        if not self.tools_dir.exists():
+            print(f"Tools directory {self.tools_dir} does not exist")
+            return
+            
+        # Find all Python files in tools directory
+        tool_files = list(self.tools_dir.glob("*.py"))
+        tool_files = [f for f in tool_files if f.name != "__init__.py"]
+        
+        if not tool_files:
+            logging.warning(f"No tool files found in {self.tools_dir}")
+            return
+            
+        loaded_count = 0
+        
+        for tool_file in tool_files:
+            try:
+                # Simply import the module - tools auto-register via @mcp.tool() decorator
+                tool_name = tool_file.stem
+                if self._import_tool_module(tool_file, tool_name):
+                    self.loaded_tools.append(tool_name)
+                    loaded_count += 1
+                    logging.info(f"Loaded tool module: {tool_name}")
+                else:
+                    logging.warning(f"Failed to load tool module: {tool_name}")
+                    
+            except Exception as e:
+                logging.warning(f"Error loading tool {tool_file.name}: {e}")
+                # Fail fast - if any tool fails to load, stop the server
+                sys.exit(1)
+                
+        logging.info(f"📦 Successfully loaded {loaded_count} tools")
+        
+        if loaded_count == 0:
+            logging.warning("No tools loaded. Server starting without tools.")
+    
+    def _import_tool_module(self, tool_file: Path, tool_name: str) -> bool:
+        """Import a tool module, which auto-registers tools via decorators.
+        
+        Args:
+            tool_file: Path to the tool file
+            tool_name: Name of the tool (same as filename)
+            
+        Returns:
+            True if module was imported successfully
+        """
+        try:
+            # Load the module
+            spec = importlib.util.spec_from_file_location(tool_name, tool_file)
+            if spec is None or spec.loader is None:
+                return False
+                
+            module = importlib.util.module_from_spec(spec)
+            
+            # Add to sys.modules so it can be imported by other modules
+            sys.modules[f"tools.{tool_name}"] = module
+            
+            # Execute the module - this will trigger @mcp.tool() decorators
+            spec.loader.exec_module(module)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error importing {tool_file}: {e}")
+            return False
+    
+
+    
+    def run(self) -> None:
+        """Run the FastMCP server."""
+        if not self.loaded_tools:
+            print("⚠️  No tools loaded. Server starting without tools.")
+        
+        self.mcp.run() 
