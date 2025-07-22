@@ -72,6 +72,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
 	}
 
+	// Create secret volumes and volume mounts
+	secretVolumes, secretVolumeMounts := t.createSecretVolumes(server.Spec.Deployment.SecretRefs)
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
@@ -103,7 +106,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					"-c",
 					"/agentbin/agentgateway -f /config/local.yaml",
 				},
-				VolumeMounts: []corev1.VolumeMount{
+				VolumeMounts: append([]corev1.VolumeMount{
 					{
 						Name:      "config",
 						MountPath: "/config",
@@ -112,10 +115,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						Name:      "binary",
 						MountPath: "/agentbin",
 					},
-				},
+				}, secretVolumeMounts...),
 				SecurityContext: getSecurityContext(),
 			}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -132,7 +135,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
 					},
 				},
-			},
+			}, secretVolumes...),
 		}
 	case v1alpha1.TransportTypeHTTP:
 		// run the gateway as a sidecar when running with HTTP transport
@@ -164,9 +167,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
+					VolumeMounts:    secretVolumeMounts,
 					SecurityContext: getSecurityContext(),
 				}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -177,7 +181,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						},
 					},
 				},
-			},
+			}, secretVolumes...),
 		}
 	}
 
@@ -211,6 +215,38 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	}
 
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
+}
+
+// createSecretVolumes creates volumes and volume mounts from secret references
+func (t *agentGatewayTranslator) createSecretVolumes(secretRefs []corev1.ObjectReference) ([]corev1.Volume, []corev1.VolumeMount) {
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+
+	for _, secretRef := range secretRefs {
+		volumeName := fmt.Sprintf("%s-%s", secretRef.Namespace, secretRef.Name)
+		mountPath := fmt.Sprintf("/secrets/%s", secretRef.Name)
+
+		// Create volume
+		volume := corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretRef.Name,
+				},
+			},
+		}
+		volumes = append(volumes, volume)
+
+		// Create volume mount
+		volumeMount := corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			ReadOnly:  true,
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	return volumes, volumeMounts
 }
 
 // getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
