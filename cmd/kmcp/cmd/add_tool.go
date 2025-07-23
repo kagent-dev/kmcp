@@ -191,13 +191,6 @@ func generateTool(toolName, projectRoot, framework string) error {
 	fmt.Printf("📁 Generated file: src/tools/%s.py\n", toolName)
 	fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
 
-	fmt.Printf("📝 Edit the file to implement your tool logic\n")
-	fmt.Printf("🚀 The tool will be automatically loaded when the server starts\n")
-
-	if addToolDescription != "" {
-		fmt.Printf("📋 Description: %s\n", addToolDescription)
-	}
-
 	fmt.Printf("\nNext steps:\n")
 	fmt.Printf("1. Edit src/tools/%s.py to implement your tool logic\n", toolName)
 	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")

@@ -573,23 +573,98 @@ func applySecretFiles(secretFiles []string) error {
 	}
 
 	for i, secretFile := range secretFiles {
-		// Validate file exists
-		if _, err := os.Stat(secretFile); os.IsNotExist(err) {
-			return fmt.Errorf("secret file does not exist: %s", secretFile)
-		}
-
 		if verbose {
 			fmt.Printf("Applying secret file %d/%d: %s\n", i+1, len(secretFiles), secretFile)
 		}
 
-		// Apply secret using kubectl
-		if err := runKubectl("apply", "-f", secretFile); err != nil {
+		if err := applySecretFile(secretFile); err != nil {
 			return fmt.Errorf("failed to apply secret file %s: %w", secretFile, err)
 		}
 	}
 
-	fmt.Printf("✅ Successfully applied %d secret file(s)\n", len(secretFiles))
+	if deployNamespace != "" {
+		fmt.Printf("✅ Successfully applied %d secret file(s) to namespace %s\n", len(secretFiles), deployNamespace)
+	} else {
+		fmt.Printf("✅ Successfully applied %d secret file(s)\n", len(secretFiles))
+	}
 	return nil
+}
+
+// applySecretFile applies a single secret file to the cluster
+func applySecretFile(secretFile string) error {
+	// Validate file exists
+	if _, err := os.Stat(secretFile); os.IsNotExist(err) {
+		return fmt.Errorf("secret file does not exist: %s", secretFile)
+	}
+
+	if deployNamespace == "" {
+		// Apply without namespace override
+		return runKubectl("apply", "-f", secretFile)
+	}
+
+	// Apply with namespace override
+	return applySecretWithNamespace(secretFile, deployNamespace)
+}
+
+// applySecretWithNamespace applies a secret file with a specific namespace
+func applySecretWithNamespace(secretFile, namespace string) error {
+	// Read and parse the secret file
+	secret, err := readSecretFromFile(secretFile)
+	if err != nil {
+		return fmt.Errorf("failed to read secret file: %w", err)
+	}
+
+	// Update the namespace
+	secret.Namespace = namespace
+
+	// Create temporary file with updated namespace
+	tmpFile, err := createTempSecretFile(secret)
+	if err != nil {
+		return fmt.Errorf("failed to create temp secret file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Apply the updated secret
+	return runKubectl("apply", "-f", tmpFile.Name())
+}
+
+// readSecretFromFile reads and parses a secret YAML file
+func readSecretFromFile(filename string) (*corev1.Secret, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var secret corev1.Secret
+	if err := yaml.Unmarshal(data, &secret); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	return &secret, nil
+}
+
+// createTempSecretFile creates a temporary file with the secret YAML
+func createTempSecretFile(secret *corev1.Secret) (*os.File, error) {
+	// Marshal secret to YAML
+	data, err := yaml.Marshal(secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal secret: %w", err)
+	}
+
+	// Create temporary file
+	tmpFile, err := os.CreateTemp("", "secret-*.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	// Write secret data to temp file
+	if err := os.WriteFile(tmpFile.Name(), data, 0644); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return nil, fmt.Errorf("failed to write temp file: %w", err)
+	}
+
+	return tmpFile, nil
 }
 
 // parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces

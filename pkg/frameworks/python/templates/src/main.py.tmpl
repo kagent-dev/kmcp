@@ -13,8 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from core.server import DynamicMCPServer
-from core.utils import load_secrets_from_mounted_volumes, log_secrets_loaded
-
 
 def main() -> None:
     """Main entry point for the MCP server."""
@@ -28,12 +26,6 @@ def main() -> None:
     )
     
     try:
-        # Load environment variables from mounted volumes
-        loaded_env_vars = load_secrets_from_mounted_volumes()
-        
-        # Log the environment variables that were loaded for debug purposes
-        log_secrets_loaded(loaded_env_vars)
-        
         # Create server with dynamic tool loading
         server = DynamicMCPServer(
             name="{{.ProjectName}}",
