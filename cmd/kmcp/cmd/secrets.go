@@ -47,7 +47,8 @@ func init() {
 	secretsCmd.AddCommand(createK8SecretFromEnvCmd)
 
 	// create-k8s-secret-from-env flags
-	createK8SecretFromEnvCmd.Flags().StringP("name", "n", "", "Kubernetes secret name (default: derived from env file name)")
+	createK8SecretFromEnvCmd.Flags().StringP("name", "n", "",
+		"Kubernetes secret name (default: derived from env file name)")
 	createK8SecretFromEnvCmd.Flags().StringP("namespace", "s", "default", "Kubernetes namespace")
 	createK8SecretFromEnvCmd.Flags().StringP("output-dir", "o", "", "Output directory (default: stdout)")
 }

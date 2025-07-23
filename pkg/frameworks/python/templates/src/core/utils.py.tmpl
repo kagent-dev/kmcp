@@ -1,23 +1,22 @@
 """Shared utilities for {{.ProjectName}} MCP server."""
 
 import os
-from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 import yaml
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """Load configuration from YAML file.
-    
+
     Args:
         config_path: Path to the configuration file
-        
+
     Returns:
         Configuration dictionary
     """
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             return yaml.safe_load(f) or {}
     except FileNotFoundError:
         return {}
@@ -26,9 +25,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
         return {}
 
 
-def get_shared_config() -> Dict[str, Any]:
+def get_shared_config() -> dict[str, Any]:
     """Get shared configuration that tools can access.
-    
+
     Returns:
         Shared configuration dictionary
     """
@@ -36,12 +35,12 @@ def get_shared_config() -> Dict[str, Any]:
     return config.get("tools", {})
 
 
-def get_tool_config(tool_name: str) -> Dict[str, Any]:
+def get_tool_config(tool_name: str) -> dict[str, Any]:
     """Get configuration for a specific tool.
-    
+
     Args:
         tool_name: Name of the tool
-        
+
     Returns:
         Tool-specific configuration
     """
@@ -51,11 +50,11 @@ def get_tool_config(tool_name: str) -> Dict[str, Any]:
 
 def get_env_var(key: str, default: str = "") -> str:
     """Get environment variable with fallback.
-    
+
     Args:
         key: Environment variable key
         default: Default value if not found
-        
+
     Returns:
         Environment variable value or default
     """
