@@ -594,7 +594,7 @@ func applySecretFiles(secretFiles []string) error {
 
 // parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces
 func parseSecretFiles(secretFiles []string) ([]corev1.ObjectReference, error) {
-	var secretRefs []corev1.ObjectReference
+	secretRefs := make([]corev1.ObjectReference, len(secretFiles))
 
 	for _, secretFile := range secretFiles {
 		data, err := os.ReadFile(secretFile)
