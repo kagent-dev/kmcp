@@ -45,16 +45,6 @@ This shows the secret keys (not values) that are configured for the environment.
 	RunE: runListSecrets,
 }
 
-// generateK8sSecretsCmd generates Kubernetes secret manifests
-var generateK8sSecretsCmd = &cobra.Command{
-	Use:   "generate-k8s-secrets [flags]",
-	Short: "Generate Kubernetes secret manifests",
-	Long: `Generate Kubernetes secret manifests for the specified environment.
-
-This creates YAML files that can be applied to a Kubernetes cluster.`,
-	RunE: runGenerateK8sSecrets,
-}
-
 // validateSecretsCmd validates secret configuration
 var validateSecretsCmd = &cobra.Command{
 	Use:   "validate-secrets [flags]",
@@ -88,7 +78,6 @@ func init() {
 	// Add subcommands
 	secretsCmd.AddCommand(addSecretCmd)
 	secretsCmd.AddCommand(listSecretsCmd)
-	secretsCmd.AddCommand(generateK8sSecretsCmd)
 	secretsCmd.AddCommand(validateSecretsCmd)
 	secretsCmd.AddCommand(createSecretFromEnvCmd)
 
@@ -99,10 +88,6 @@ func init() {
 
 	// list-secrets flags
 	listSecretsCmd.Flags().StringP("environment", "e", "local", "Environment to list secrets for")
-
-	// generate-k8s-secrets flags
-	generateK8sSecretsCmd.Flags().StringP("environment", "e", "staging", "Environment to generate secrets for")
-	generateK8sSecretsCmd.Flags().StringP("output", "o", "", "Output file (default: secrets/{env}-secrets.yaml)")
 
 	// validate-secrets flags
 	validateSecretsCmd.Flags().StringP("environment", "e", "local", "Environment to validate")
@@ -223,62 +208,6 @@ func runListSecrets(cmd *cobra.Command, _ []string) error {
 		fmt.Printf("  %s %s\n", status, key)
 	}
 
-	return nil
-}
-
-func runGenerateK8sSecrets(cmd *cobra.Command, _ []string) error {
-	environment, _ := cmd.Flags().GetString("environment")
-	output, _ := cmd.Flags().GetString("output")
-
-	// Load project manifest
-	manifestManager := manifest.NewManager(".")
-	if !manifestManager.Exists() {
-		return fmt.Errorf("kmcp.yaml not found. Run 'kmcp init' first")
-	}
-
-	projectManifest, err := manifestManager.Load()
-	if err != nil {
-		return fmt.Errorf("failed to load project manifest: %w", err)
-	}
-
-	// Get secret configuration for environment
-	secretConfig, err := manifestManager.GetSecretConfig(projectManifest, environment)
-	if err != nil {
-		return fmt.Errorf("failed to get secret config: %w", err)
-	}
-
-	if secretConfig.Provider != manifest.SecretProviderKubernetes {
-		return fmt.Errorf("environment %s is not configured for Kubernetes secrets", environment)
-	}
-
-	// Set default output file
-	if output == "" {
-		if err := os.MkdirAll("secrets", 0755); err != nil {
-			return fmt.Errorf("failed to create secrets directory: %w", err)
-		}
-		output = fmt.Sprintf("secrets/%s-secrets.yaml", environment)
-	}
-
-	// For Kubernetes secrets, we need to create a template
-	// In a real implementation, this would read from a local source
-	secretData := map[string]string{
-		"EXAMPLE_API_KEY": "your-api-key-here",
-		"DATABASE_URL":    "postgresql://user:pass@host:5432/db",
-	}
-
-	// Create Kubernetes secret YAML
-	yamlData, err := createKubernetesSecretYAML(secretData, secretConfig.SecretName, secretConfig.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to create Kubernetes secret: %w", err)
-	}
-
-	// Write to file
-	if err := os.WriteFile(output, yamlData, 0644); err != nil {
-		return fmt.Errorf("failed to write secret file: %w", err)
-	}
-
-	fmt.Printf("✅ Kubernetes secret manifest generated: %s\n", output)
-	fmt.Printf("💡 Edit the file to set actual secret values, then apply with: kubectl apply -f %s\n", output)
 	return nil
 }
 
@@ -403,33 +332,32 @@ func createKubernetesSecretYAML(secretData map[string]string, secretName, namesp
 	return yamlData, nil
 }
 
-// createKubernetesSecretForEnvVars creates a Kubernetes secret with a .env file
-// from the raw file content
-func createKubernetesSecretForEnvVars(envFileContent []byte, secretName, namespace string) ([]byte, error) {
-	// Create Kubernetes secret
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: make(map[string][]byte),
-	}
-
-	// Store the raw .env file content under the ".env" key
-	secret.Data[".env"] = envFileContent
-
-	// Marshal to YAML
-	yamlData, err := yaml.Marshal(secret)
+// loadEnvFile reads environment variables from a file and returns them as a map
+func loadEnvFile(filename string) (map[string]string, error) {
+	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal secret to YAML: %w", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	return yamlData, nil
+	envVars := make(map[string]string)
+	lines := strings.Split(string(data), "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue // Skip empty lines and comments
+		}
+
+		if idx := strings.Index(line, "="); idx != -1 {
+			key := strings.TrimSpace(line[:idx])
+			value := strings.TrimSpace(line[idx+1:])
+			if key != "" {
+				envVars[key] = value
+			}
+		}
+	}
+
+	return envVars, nil
 }
 
 func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
@@ -444,19 +372,14 @@ func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment file not found: %s", envFile)
 	}
 
-	// Read the raw file content
-	fileContent, err := os.ReadFile(envFile)
+	// Parse the .env file into key-value pairs
+	envVars, err := loadEnvFile(envFile)
 	if err != nil {
-		return fmt.Errorf("failed to read environment file: %w", err)
+		return fmt.Errorf("failed to parse environment file: %w", err)
 	}
 
-	if len(fileContent) == 0 {
-		return fmt.Errorf("environment file is empty: %s", envFile)
-	}
-
-	// Generate secret name if not provided
-	if secretName == "" {
-		secretName = generateSecretNameFromFile(envFile)
+	if len(envVars) == 0 {
+		return fmt.Errorf("environment file contains no valid key-value pairs: %s", envFile)
 	}
 
 	// Generate secret name if not provided
@@ -464,8 +387,8 @@ func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 		secretName = generateSecretNameFromFile(envFile)
 	}
 
-	// Create Kubernetes secret YAML with .env file
-	yamlData, err := createKubernetesSecretForEnvVars(fileContent, secretName, namespace)
+	// Create Kubernetes secret YAML with individual key-value pairs
+	yamlData, err := createKubernetesSecretYAML(envVars, secretName, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes secret: %w", err)
 	}
@@ -493,49 +416,6 @@ func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// loadEnvFile reads environment variables from a file
-func loadEnvFile(filename string) (map[string]string, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	envVars := make(map[string]string)
-	lines := strings.Split(string(data), "\n")
-
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-
-		// Skip empty lines and comments
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		// Parse key=value pairs
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid format on line %d: %s", i+1, line)
-		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
-		// Remove quotes if present
-		if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
-			(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
-			value = value[1 : len(value)-1]
-		}
-
-		if key == "" {
-			return nil, fmt.Errorf("empty key on line %d", i+1)
-		}
-
-		envVars[key] = value
-	}
-
-	return envVars, nil
 }
 
 // generateSecretNameFromFile generates a secret name from the environment file name
