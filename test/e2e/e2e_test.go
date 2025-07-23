@@ -219,6 +219,24 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				g.Expect(service.Spec.Ports[0].Port).To(gomega.Equal(int32(3000)))
 			}).Should(gomega.Succeed())
 
+			ginkgo.By("verifying that environment variables are loaded via envFrom")
+			gomega.Eventually(func(g gomega.Gomega) {
+				// Get the pod name
+				cmd := exec.Command("kubectl", "get", "pods", "-l", fmt.Sprintf("app.kubernetes.io/name=%s", mcpServerName), "-n", namespace, "-o", "jsonpath={.items[0].metadata.name}")
+				podName, err := utils.Run(cmd)
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get pod name")
+				g.Expect(podName).NotTo(gomega.BeEmpty(), "Pod name should not be empty")
+
+				// Verify that environment variables are set in the container
+				expectedVars := []string{"DATABASE_URL", "OPENAI_API_KEY", "WEATHER_API_KEY"}
+				for _, envVar := range expectedVars {
+					cmd = exec.Command("kubectl", "exec", strings.TrimSpace(podName), "-n", namespace, "--", "sh", "-c", fmt.Sprintf("echo $%s", envVar))
+					output, err := utils.Run(cmd)
+					g.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("Failed to check environment variable %s", envVar))
+					g.Expect(strings.TrimSpace(output)).NotTo(gomega.BeEmpty(), fmt.Sprintf("Environment variable %s should be set", envVar))
+				}
+			}, 30*time.Second, 1*time.Second).Should(gomega.Succeed())
+
 			ginkgo.By("setting up kubectl port-forward to access the MCP server")
 			portForwardCmd = exec.Command("kubectl", "port-forward",
 				fmt.Sprintf("service/%s", mcpServerName),
@@ -267,18 +285,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			for _, tool := range toolsResponse.Tools {
 				_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
 			}
-
-			ginkgo.By("verifying that environment variables are loaded from mounted secrets")
-			gomega.Eventually(func(g gomega.Gomega) {
-				// Get pod logs to check for successful secret loading
-				output, err := getPodLogs(fmt.Sprintf("app.kubernetes.io/name=%s", mcpServerName), namespace, 50)
-				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get pod logs")
-
-				// Check for the success message and specific environment variables in one verification
-				expectedVars := []string{"DATABASE_URL"}
-				expectedLogPattern := "✅ Successfully loaded.*" + strings.Join(expectedVars, ".*")
-				g.Expect(output).To(gomega.MatchRegexp(expectedLogPattern), "Expected log to contain success message and all environment variables")
-			}, 30*time.Second, 1*time.Second).Should(gomega.Succeed())
 
 			ginkgo.By("cleaning up port-forward")
 			if portForwardCmd != nil && portForwardCmd.Process != nil {

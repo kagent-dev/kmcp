@@ -32,7 +32,6 @@ var initCmd = &cobra.Command{
 
 This command creates a new MCP server project using one of the supported frameworks:
 - FastMCP Python (recommended) - Dynamic tool loading with FastMCP
-- MCP Go - Go framework for building MCP servers
 
 The recommended approach is FastMCP Python which provides:
 - Automatic tool discovery and loading
@@ -56,7 +55,7 @@ var (
 func init() {
 	rootCmd.AddCommand(initCmd)
 
-	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python, mcp-go)")
+	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
@@ -229,8 +228,7 @@ func promptForProjectName() (string, error) {
 func promptForFramework() (string, error) {
 	fmt.Println("\nSelect a framework:")
 	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
-	fmt.Println("2. MCP Go - Go framework for building MCP servers")
-	fmt.Print("Enter choice [1-2]: ")
+	fmt.Print("Enter choice [1]: ")
 
 	var choice string
 	if _, err := fmt.Scanln(&choice); err != nil {
