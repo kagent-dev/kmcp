@@ -622,7 +622,11 @@ func applySecretWithNamespace(secretFile, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp secret file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			fmt.Printf("Warning: failed to remove temp file %s: %v\n", tmpFile.Name(), err)
+		}
+	}()
 
 	// Apply the updated secret
 	return runKubectl("apply", "-f", tmpFile.Name())
@@ -659,8 +663,12 @@ func createTempSecretFile(secret *corev1.Secret) (*os.File, error) {
 
 	// Write secret data to temp file
 	if err := os.WriteFile(tmpFile.Name(), data, 0644); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close temp file: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tmpFile.Name()); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file: %v\n", removeErr)
+		}
 		return nil, fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -669,7 +677,7 @@ func createTempSecretFile(secret *corev1.Secret) (*os.File, error) {
 
 // parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces
 func parseSecretFiles(secretFiles []string) ([]corev1.ObjectReference, error) {
-	var secretRefs []corev1.ObjectReference
+	secretRefs := []corev1.ObjectReference{}
 	for _, secretFile := range secretFiles {
 		data, err := os.ReadFile(secretFile)
 		if err != nil {

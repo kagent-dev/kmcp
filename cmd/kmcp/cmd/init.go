@@ -181,7 +181,7 @@ func runInit(_ *cobra.Command, args []string) error {
 		fmt.Printf("  npx @modelcontextprotocol/inspector\n")
 		fmt.Printf("  open the inspector on localhost:6274 and set transport type to STDIO\n")
 		fmt.Printf("  copy the `MCP_PROXY_AUTH_TOKEN` into the Proxy Session Token input under configuration\n")
-		fmt.Printf("  paste the following command into the insepctor to connect to the server using the inspector\n")
+		fmt.Printf("  paste the following command into the inspector to connect to the server using the inspector\n")
 		fmt.Printf("  %s\n", filepath.Join(absProjectPath, "run_server.sh"))
 		fmt.Printf("\n")
 		fmt.Printf("  alternatively, run the following commands to start the server\n")
