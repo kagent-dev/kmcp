@@ -384,7 +384,7 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	}
 
 	// Parse secret files and extract references
-	secretRefs := make([]corev1.ObjectReference, len(deploySecrets))
+	var secretRefs []corev1.ObjectReference
 	if len(deploySecrets) > 0 {
 		if verbose {
 			fmt.Printf("🔍 Parsing %d secret file(s) for references...\n", len(deploySecrets))
@@ -594,8 +594,7 @@ func applySecretFiles(secretFiles []string) error {
 
 // parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces
 func parseSecretFiles(secretFiles []string) ([]corev1.ObjectReference, error) {
-	secretRefs := make([]corev1.ObjectReference, len(secretFiles))
-
+	var secretRefs []corev1.ObjectReference
 	for _, secretFile := range secretFiles {
 		data, err := os.ReadFile(secretFile)
 		if err != nil {

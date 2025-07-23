@@ -403,6 +403,35 @@ func createKubernetesSecretYAML(secretData map[string]string, secretName, namesp
 	return yamlData, nil
 }
 
+// createKubernetesSecretForEnvVars creates a Kubernetes secret with a .env file
+// from the raw file content
+func createKubernetesSecretForEnvVars(envFileContent []byte, secretName, namespace string) ([]byte, error) {
+	// Create Kubernetes secret
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: make(map[string][]byte),
+	}
+
+	// Store the raw .env file content under the ".env" key
+	secret.Data[".env"] = envFileContent
+
+	// Marshal to YAML
+	yamlData, err := yaml.Marshal(secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal secret to YAML: %w", err)
+	}
+
+	return yamlData, nil
+}
+
 func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 	envFile := args[0]
 
@@ -415,19 +444,14 @@ func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment file not found: %s", envFile)
 	}
 
-	// Load environment variables from file
-	envVars, err := loadEnvFile(envFile)
+	// Read the raw file content
+	fileContent, err := os.ReadFile(envFile)
 	if err != nil {
-		return fmt.Errorf("failed to load environment file: %w", err)
+		return fmt.Errorf("failed to read environment file: %w", err)
 	}
 
-	if len(envVars) == 0 {
-		return fmt.Errorf("no environment variables found in %s", envFile)
-	}
-
-	// Generate secret name if not provided
-	if secretName == "" {
-		secretName = generateSecretNameFromFile(envFile)
+	if len(fileContent) == 0 {
+		return fmt.Errorf("environment file is empty: %s", envFile)
 	}
 
 	// Generate secret name if not provided
@@ -435,8 +459,13 @@ func runCreateSecretFromEnv(cmd *cobra.Command, args []string) error {
 		secretName = generateSecretNameFromFile(envFile)
 	}
 
-	// Create Kubernetes secret YAML
-	yamlData, err := createKubernetesSecretYAML(envVars, secretName, namespace)
+	// Generate secret name if not provided
+	if secretName == "" {
+		secretName = generateSecretNameFromFile(envFile)
+	}
+
+	// Create Kubernetes secret YAML with .env file
+	yamlData, err := createKubernetesSecretForEnvVars(fileContent, secretName, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes secret: %w", err)
 	}
