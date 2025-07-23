@@ -225,7 +225,8 @@ func (t *agentGatewayTranslator) createSecretVolumes(
 	volumeMounts := make([]corev1.VolumeMount, len(secretRefs))
 
 	for _, secretRef := range secretRefs {
-		volumeName := fmt.Sprintf("%s-%s", secretRef.Namespace, secretRef.Name)
+		// Create a valid volume name (lowercase, alphanumeric, hyphens only)
+		volumeName := fmt.Sprintf("secret-%s", secretRef.Name)
 		mountPath := fmt.Sprintf("/secrets/%s", secretRef.Name)
 
 		// Create volume
@@ -271,7 +272,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, 0, len(env))
+	envVars := make([]corev1.EnvVar, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,

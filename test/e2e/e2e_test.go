@@ -177,7 +177,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 	})
 
 	ginkgo.Context("MCPServer CRD", func() {
-		ginkgo.It("deploy a working MCP server", func() {
+		ginkgo.It("deploy a working MCP server with mounted secrets", func() {
 			mcpServerName := "knowledge-assistant"
 			var portForwardCmd *exec.Cmd
 			localPort := 8080
@@ -194,6 +194,12 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
+			ginkgo.By("creating Kubernetes secret from existing .env.local file")
+			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
+			cmd = exec.Command("dist/kmcp", "secrets", "create-secret-from-env", envFilePath, "-o", fmt.Sprintf("%s/secrets/", projectDir))
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
+
 			ginkgo.By("building the Docker image for the knowledge-assistant project")
 			cmd = exec.Command("dist/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
 			_, err = utils.Run(cmd)
@@ -204,8 +210,8 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
 
-			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
-			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
+			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI with secrets")
+			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace, "--secrets", fmt.Sprintf("%s/secrets/.env.yaml", projectDir))
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 
@@ -272,6 +278,18 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			for _, tool := range toolsResponse.Tools {
 				_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
 			}
+
+			ginkgo.By("verifying that environment variables are loaded from mounted secrets")
+			gomega.Eventually(func(g gomega.Gomega) {
+				// Get pod logs to check for successful secret loading
+				output, err := getPodLogs(fmt.Sprintf("app.kubernetes.io/name=%s", mcpServerName), namespace, 50)
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get pod logs")
+
+				// Check for the success message and specific environment variables in one verification
+				expectedVars := []string{"DATABASE_URL"}
+				expectedLogPattern := "✅ Successfully loaded.*" + strings.Join(expectedVars, ".*")
+				g.Expect(output).To(gomega.MatchRegexp(expectedLogPattern), "Expected log to contain success message and all environment variables")
+			}, 30*time.Second, 1*time.Second).Should(gomega.Succeed())
 
 			ginkgo.By("cleaning up port-forward")
 			if portForwardCmd != nil && portForwardCmd.Process != nil {
@@ -391,4 +409,10 @@ func getImageTag(image string) string {
 		return image[idx+1:]
 	}
 	return "latest"
+}
+
+// getPodLogs retrieves logs from the first pod matching the label selector
+func getPodLogs(labelSelector, namespace string, tailLines int) (string, error) {
+	cmd := exec.Command("kubectl", "logs", "-l", labelSelector, "-n", namespace, "--tail", fmt.Sprintf("%d", tailLines))
+	return utils.Run(cmd)
 }
