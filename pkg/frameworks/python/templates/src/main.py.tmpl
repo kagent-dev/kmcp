@@ -5,14 +5,15 @@ This server automatically discovers and loads tools from the src/tools/ director
 Each tool file should contain a function decorated with @mcp.tool().
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.server import DynamicMCPServer
+from core.server import DynamicMCPServer  # noqa: E402
+
 
 def main() -> None:
     """Main entry point for the MCP server."""
@@ -24,18 +25,18 @@ def main() -> None:
             logging.StreamHandler(sys.stderr)
         ]
     )
-    
+
     try:
         # Create server with dynamic tool loading
         server = DynamicMCPServer(
             name="{{.ProjectName}}",
             tools_dir="src/tools"
         )
-        
+
         # Load tools and start server
         server.load_tools()
         server.run()
-        
+
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
@@ -44,4 +45,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()
