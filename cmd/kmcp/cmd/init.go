@@ -165,14 +165,27 @@ func runInit(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate project: %w", err)
 	}
 
+	// Get absolute path for output
+	absProjectPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		absProjectPath = projectPath // Fallback to relative path if absolute fails
+	}
+
 	// Success message
 	fmt.Printf("\n✓ Successfully created MCP server project: %s\n", projectName)
 	fmt.Printf("✓ Generated project manifest: kmcp.yaml\n")
-	fmt.Printf("\nNext steps:\n")
-	fmt.Printf("  cd %s\n", projectName)
+	fmt.Printf("\nNext steps for local development:\n")
 
 	switch framework {
 	case frameworkFastMCPPython:
+		fmt.Printf("  npx @modelcontextprotocol/inspector\n")
+		fmt.Printf("  open the inspector on localhost:6274 and set transport type to STDIO\n")
+		fmt.Printf("  copy the `MCP_PROXY_AUTH_TOKEN` into the Proxy Session Token input under configuration\n")
+		fmt.Printf("  paste the following command into the insepctor to connect to the server using the inspector\n")
+		fmt.Printf("  %s\n", filepath.Join(absProjectPath, "run_server.sh"))
+		fmt.Printf("\n")
+		fmt.Printf("  alternatively, run the following commands to start the server\n")
+		fmt.Printf("  cd %s\n", projectName)
 		fmt.Printf("  uv sync\n")
 		fmt.Printf("  uv run python src/main.py\n")
 	case frameworkMCPGo:
