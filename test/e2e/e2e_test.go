@@ -196,7 +196,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 			ginkgo.By("creating Kubernetes secret from existing .env.local file")
 			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
-			cmd = exec.Command("dist/kmcp", "secrets", "create-secret-from-env", envFilePath, "-o", fmt.Sprintf("%s/secrets/", projectDir))
+			cmd = exec.Command("dist/kmcp", "secrets", "create-k8s-secret-from-env", envFilePath, "-o", fmt.Sprintf("%s/secrets/", projectDir))
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 

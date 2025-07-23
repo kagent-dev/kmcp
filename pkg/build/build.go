@@ -91,8 +91,6 @@ func (b *Builder) fileExists(path string) bool {
 
 // buildPython handles building Python MCP servers
 func (b *Builder) buildPython(opts Options) error {
-	fmt.Println("Building Python MCP server...")
-
 	if opts.Docker {
 		return b.buildDockerImage(opts, "python")
 	}
