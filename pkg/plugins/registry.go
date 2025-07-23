@@ -79,7 +79,7 @@ func (r *DefaultRegistry) ListTools() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	tools := make([]string, 0, len(r.toolFactories))
+	tools := make([]string, len(r.toolFactories))
 	for toolType := range r.toolFactories {
 		tools = append(tools, toolType)
 	}
@@ -92,7 +92,7 @@ func (r *DefaultRegistry) ListResources() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	resources := make([]string, 0, len(r.resourceFactories))
+	resources := make([]string, len(r.resourceFactories))
 	for resourceType := range r.resourceFactories {
 		resources = append(resources, resourceType)
 	}
@@ -221,7 +221,7 @@ func (m *Manager) ListLoadedTools() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	tools := make([]string, 0, len(m.tools))
+	tools := make([]string, len(m.tools))
 	for name := range m.tools {
 		if m.tools[name].IsEnabled() {
 			tools = append(tools, name)
@@ -236,7 +236,7 @@ func (m *Manager) ListLoadedResources() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	resources := make([]string, 0, len(m.resources))
+	resources := make([]string, len(m.resources))
 	for name := range m.resources {
 		if m.resources[name].IsEnabled() {
 			resources = append(resources, name)
