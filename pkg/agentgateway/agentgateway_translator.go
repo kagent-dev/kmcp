@@ -218,9 +218,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 }
 
 // createSecretVolumes creates volumes and volume mounts from secret references
-func (t *agentGatewayTranslator) createSecretVolumes(secretRefs []corev1.ObjectReference) ([]corev1.Volume, []corev1.VolumeMount) {
-	var volumes []corev1.Volume
-	var volumeMounts []corev1.VolumeMount
+func (t *agentGatewayTranslator) createSecretVolumes(
+	secretRefs []corev1.ObjectReference,
+) ([]corev1.Volume, []corev1.VolumeMount) {
+	volumes := make([]corev1.Volume, len(secretRefs))
+	volumeMounts := make([]corev1.VolumeMount, len(secretRefs))
 
 	for _, secretRef := range secretRefs {
 		volumeName := fmt.Sprintf("%s-%s", secretRef.Namespace, secretRef.Name)
