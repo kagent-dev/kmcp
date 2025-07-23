@@ -253,7 +253,6 @@ func (g *Generator) getTemplateData(config templates.ProjectConfig) map[string]i
 		"Author":            config.Author,
 		"Email":             config.Email,
 		"Year":              time.Now().Year(),
-		"UvPath":            g.detectUvPath(),
 	}
 
 	// Set default author if empty
@@ -265,31 +264,6 @@ func (g *Generator) getTemplateData(config templates.ProjectConfig) map[string]i
 	}
 
 	return data
-}
-
-// detectUvPath detects the path to the uv executable
-func (g *Generator) detectUvPath() string {
-	// Try to find uv in PATH first
-	if path, err := exec.LookPath("uv"); err == nil {
-		return path
-	}
-
-	// Common installation paths for uv
-	commonPaths := []string{
-		"/Library/Frameworks/Python.framework/Versions/3.11/bin/uv",
-		"/usr/local/bin/uv",
-		"/opt/homebrew/bin/uv",
-		"/home/linuxbrew/.linuxbrew/bin/uv",
-	}
-
-	for _, path := range commonPaths {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// Fallback to just "uv" and let the shell resolve it
-	return "uv"
 }
 
 // renderTemplate renders a template string with the provided data
