@@ -77,7 +77,7 @@ Examples:
   kmcp secrets create-secret-from-env .env.local
   kmcp secrets create-secret-from-env .env.production --name my-app-secrets --namespace production
   kmcp secrets create-secret-from-env .env.staging --output-dir secrets/
-  kmcp secrets create-secret-from-env /your-mcp-server/env/.env.prod --name prod-secrets --output-dir your-mcp-server/secrets/`,
+  kmcp secrets create-secret-from-env /your-mcp-server/env.local --name secret --output-dir your-mcp-server/secrets/`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCreateSecretFromEnv,
 }
