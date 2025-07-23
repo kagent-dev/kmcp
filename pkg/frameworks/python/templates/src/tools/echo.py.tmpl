@@ -11,16 +11,16 @@ from core.utils import get_tool_config
 @mcp.tool()
 def echo(message: str) -> str:
     """Echo a message back to the client.
-    
+
     Args:
         message: The message to echo
-        
+
     Returns:
         The echoed message with any configured prefix
     """
     # Get tool-specific configuration
     config = get_tool_config("echo")
     prefix = config.get("prefix", "")
-    
+
     # Return the message with optional prefix
-    return f"{prefix}{message}" if prefix else message 
+    return f"{prefix}{message}" if prefix else message
