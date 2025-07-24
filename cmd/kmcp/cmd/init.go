@@ -105,11 +105,7 @@ func runInit(_ *cobra.Command, args []string) error {
 
 	// Get template selection
 	template := "basic" // Default template for all frameworks
-	if !initNonInteractive && framework == "fastmcp-python" {
-		fmt.Println("\nFastMCP Python uses dynamic tool loading - no template selection needed!")
-		fmt.Println("Tools will be automatically discovered from the src/tools/ directory.")
-		fmt.Println("Use 'kmcp add-tool <name>' to add new tools after project creation.")
-	} else if !initNonInteractive {
+	if !initNonInteractive && framework != "fastmcp-python" {
 		selected, err := promptForTemplate(framework)
 		if err != nil {
 			return fmt.Errorf("failed to select template: %w", err)
@@ -178,7 +174,11 @@ func runInit(_ *cobra.Command, args []string) error {
 
 	switch framework {
 	case frameworkFastMCPPython:
-		fmt.Printf("  npx @modelcontextprotocol/inspector\n")
+		fmt.Printf("  Tools will be automatically discovered from the src/tools/ directory.\n")
+		fmt.Printf("  Use 'kmcp add-tool <name>' to add new tools after project creation.\n")
+		fmt.Printf("\n")
+		fmt.Printf("  To connect to the server using the inspector:\n")
+		fmt.Printf("  run npx @modelcontextprotocol/inspector\n")
 		fmt.Printf("  open the inspector on localhost:6274 and set transport type to STDIO\n")
 		fmt.Printf("  copy the `MCP_PROXY_AUTH_TOKEN` into the Proxy Session Token input under configuration\n")
 		fmt.Printf("  paste the following command into the inspector to connect to the server using the inspector\n")
