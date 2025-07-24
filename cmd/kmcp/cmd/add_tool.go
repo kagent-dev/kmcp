@@ -25,18 +25,7 @@ Examples:
   kmcp add-tool weather
   kmcp add-tool database --description "Database operations tool"
   kmcp add-tool weather --force  # Overwrite existing tool
-  
-The generated tool file will include commented examples for common patterns:
-- HTTP API calls
-- Database operations
-- File processing
-- Configuration access
-
-For API tools, configure environment variables in kmcp.yaml:
-  tools:
-    weather:
-      api_key_env: "WEATHER_API_KEY"
-      base_url: "https://api.weather.com"`,
+"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAddTool,
 }
