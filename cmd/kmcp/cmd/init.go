@@ -16,13 +16,6 @@ const (
 	frameworkFastMCPPython = "fastmcp-python"
 	frameworkMCPGo         = "mcp-go"
 	templateBasic          = "basic"
-	templateDatabase       = "database"
-	templateFilesystem     = "filesystem"
-	templateAPIClient      = "api-client"
-	templateMultiTool      = "multi-tool"
-	templateWorkflow       = "workflow"
-	templateData           = "data"
-	templateHTTP           = "http"
 )
 
 var initCmd = &cobra.Command{
@@ -103,16 +96,6 @@ func runInit(_ *cobra.Command, args []string) error {
 		framework = frameworkFastMCPPython // Default framework
 	}
 
-	// Get template selection
-	template := "basic" // Default template for all frameworks
-	if !initNonInteractive && framework != "fastmcp-python" {
-		selected, err := promptForTemplate(framework)
-		if err != nil {
-			return fmt.Errorf("failed to select template: %w", err)
-		}
-		template = selected
-	}
-
 	// Get author information
 	author := initAuthor
 	email := initEmail
@@ -126,7 +109,7 @@ func runInit(_ *cobra.Command, args []string) error {
 	}
 
 	if verbose {
-		fmt.Printf("Creating %s project using %s framework with %s template\n", projectName, framework, template)
+		fmt.Printf("Creating %s project using %s framework\n", projectName, framework)
 		fmt.Printf("Project directory: %s\n", projectPath)
 	}
 
@@ -136,20 +119,25 @@ func runInit(_ *cobra.Command, args []string) error {
 	}
 
 	// Create project manifest
-	if err := createProjectManifest(projectPath, projectName, framework, template, author, email); err != nil {
+	projectManifest, err := createProjectManifest(projectPath, projectName, framework, author, email)
+	if err != nil {
 		return fmt.Errorf("failed to create project manifest: %w", err)
 	}
 
 	// Create project configuration
 	config := templates.ProjectConfig{
-		Name:      projectName,
-		Framework: framework,
-		Template:  template,
-		Author:    author,
-		Email:     email,
-		Directory: projectPath,
-		NoGit:     initNoGit,
-		Verbose:   verbose,
+		Name:         projectName,
+		Framework:    framework,
+		Author:       projectManifest.Author,
+		Email:        projectManifest.Email,
+		Directory:    projectPath,
+		NoGit:        initNoGit,
+		Verbose:      verbose,
+		Version:      projectManifest.Version,
+		Tools:        projectManifest.Tools,
+		Secrets:      projectManifest.Secrets,
+		Build:        projectManifest.Build,
+		Dependencies: projectManifest.Dependencies,
 	}
 
 	// Initialize the project
@@ -245,7 +233,8 @@ func promptForFramework() (string, error) {
 
 	var choice string
 	if _, err := fmt.Scanln(&choice); err != nil {
-		return "", err
+		// Default to FastMCP Python on any scan error (e.g., empty input)
+		return frameworkFastMCPPython, nil
 	}
 
 	switch strings.TrimSpace(choice) {
@@ -258,47 +247,11 @@ func promptForFramework() (string, error) {
 	}
 }
 
-func promptForTemplate(framework string) (string, error) {
-	if framework == frameworkFastMCPPython {
-		// FastMCP Python uses dynamic loading, no template selection needed
-		return templateBasic, nil
-	}
-
-	fmt.Println("\nSelect a template:")
-	fmt.Println("1. Basic - Simple server with example tools")
-	fmt.Println("2. Database - Database integration template")
-	fmt.Println("3. Filesystem - File system access template")
-	fmt.Println("4. API Client - REST/GraphQL API integration")
-	fmt.Println("5. Multi-tool - Comprehensive server with multiple capabilities")
-	fmt.Print("Enter choice [1-5]: ")
-
-	var choice string
-	if _, err := fmt.Scanln(&choice); err != nil {
-		return "", err
-	}
-
-	switch strings.TrimSpace(choice) {
-	case "1", "":
-		return templateBasic, nil
-	case "2":
-		return templateDatabase, nil
-	case "3":
-		return templateFilesystem, nil
-	case "4":
-		return templateAPIClient, nil
-	case "5":
-		return templateMultiTool, nil
-	default:
-		return templateBasic, nil // Default to basic
-	}
-}
-
 func promptForAuthor() (string, error) {
 	fmt.Print("Enter author name (optional): ")
 	var author string
-	_, err := fmt.Scanln(&author)
-	if err != nil {
-		return "", fmt.Errorf("failed to read author: %w", err)
+	if _, err := fmt.Scanln(&author); err != nil {
+		return "", nil // Ignore error, treat as empty
 	}
 	return strings.TrimSpace(author), nil
 }
@@ -306,15 +259,14 @@ func promptForAuthor() (string, error) {
 func promptForEmail() (string, error) {
 	fmt.Print("Enter author email (optional): ")
 	var email string
-	_, err := fmt.Scanln(&email)
-	if err != nil {
-		return "", fmt.Errorf("failed to read email: %w", err)
+	if _, err := fmt.Scanln(&email); err != nil {
+		return "", nil // Ignore error, treat as empty
 	}
 	return strings.TrimSpace(email), nil
 }
 
 // createProjectManifest creates the kmcp.yaml manifest file
-func createProjectManifest(projectPath, projectName, framework, template, author, email string) error {
+func createProjectManifest(projectPath, projectName, framework, author, email string) (*manifest.ProjectManifest, error) {
 	// Set default author if empty
 	if author == "" {
 		author = "KMCP CLI"
@@ -336,7 +288,7 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 		Description: fmt.Sprintf("%s MCP server built with %s", projectName, framework),
 		Author:      author,
 		Email:       email,
-		Tools:       getTemplateTools(template),
+		Tools:       getTemplateTools(templateBasic), // Always use basic template
 		Resources:   make(map[string]manifest.ResourceConfig),
 		Secrets: manifest.SecretsConfig{
 			Local: manifest.SecretProviderConfig{
@@ -361,7 +313,7 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 			},
 		},
 		Dependencies: manifest.DependencyConfig{
-			Runtime: getFrameworkDependencies(framework, template),
+			Runtime: getFrameworkDependencies(framework, templateBasic), // Always use basic template
 			Dev:     getFrameworkDevDependencies(framework),
 		},
 		Build: manifest.BuildConfig{
@@ -376,10 +328,10 @@ func createProjectManifest(projectPath, projectName, framework, template, author
 	// Save manifest
 	manifestManager := manifest.NewManager(projectPath)
 	if err := manifestManager.Save(projectManifest); err != nil {
-		return fmt.Errorf("failed to save manifest: %w", err)
+		return nil, fmt.Errorf("failed to save manifest: %w", err)
 	}
 
-	return nil
+	return projectManifest, nil
 }
 
 // getTemplateTools returns the tools configuration for a given template
@@ -396,57 +348,6 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 				"enabled": true,
 			},
 		}
-		tools["calculator"] = manifest.ToolConfig{
-			Name:        "calculator",
-			Description: "Perform basic arithmetic calculations",
-			Handler:     "tools.calculator",
-			Config: map[string]interface{}{
-				"enabled": true,
-			},
-		}
-	case templateHTTP:
-		tools["http_client"] = manifest.ToolConfig{
-			Name:        "http_client",
-			Description: "Make HTTP requests",
-			Handler:     "tools.http_client",
-			Config: map[string]interface{}{
-				"enabled": true,
-				"timeout": 30,
-			},
-		}
-	case templateData:
-		tools["data_processor"] = manifest.ToolConfig{
-			Name:        "data_processor",
-			Description: "Process and manipulate data",
-			Handler:     "tools.data_processor",
-			Config: map[string]interface{}{
-				"enabled": true,
-			},
-		}
-	case templateWorkflow:
-		tools["workflow_executor"] = manifest.ToolConfig{
-			Name:        "workflow_executor",
-			Description: "Execute multi-step workflows",
-			Handler:     "tools.workflow_executor",
-			Config: map[string]interface{}{
-				"enabled":   true,
-				"max_steps": 10,
-			},
-		}
-	case templateMultiTool:
-		// Combine all tools
-		for k, v := range getTemplateTools(templateBasic) {
-			tools[k] = v
-		}
-		for k, v := range getTemplateTools(templateHTTP) {
-			tools[k] = v
-		}
-		for k, v := range getTemplateTools(templateData) {
-			tools[k] = v
-		}
-		for k, v := range getTemplateTools(templateWorkflow) {
-			tools[k] = v
-		}
 	default:
 		// Default to basic tools
 		return getTemplateTools(templateBasic)
@@ -459,16 +360,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 func getFrameworkDependencies(framework, template string) []string {
 	switch framework {
 	case frameworkFastMCPPython:
-		deps := []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
-		switch template {
-		case templateHTTP:
-			deps = append(deps, "httpx>=0.25.0")
-		case templateData:
-			deps = append(deps, "pandas>=2.0.0", "numpy>=1.21.0")
-		case templateWorkflow:
-			deps = append(deps, "asyncio")
-		}
-		return deps
+		return []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
 	case frameworkMCPGo:
 		return []string{"mcp-go"}
 	default:

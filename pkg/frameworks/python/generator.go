@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -19,25 +18,24 @@ import (
 //go:embed all:templates
 var templateFiles embed.FS
 
-// Generator is the Python-specific generator.
+// Generator for Python projects
 type Generator struct{}
 
-// NewGenerator creates a new Python generator.
+// NewGenerator creates a new Python generator
 func NewGenerator() *Generator {
 	return &Generator{}
 }
 
-// GenerateProject generates a new Python project.
+// GenerateProject generates a new Python project
 func (g *Generator) GenerateProject(config templates.ProjectConfig) error {
-	if config.Verbose {
-		fmt.Printf("Generating project with config: %+v\n", config)
+	if config.Framework == "fastmcp-python" {
+		// Get template data
+		templateData := g.getTemplateData(config)
+
+		// Generate project from embedded templates
+		return g.generateFastMCPPython(config, templateData)
 	}
-
-	// Get template data
-	templateData := g.getTemplateData(config)
-
-	// Generate files
-	return g.generateFastMCPPython(config, templateData)
+	return fmt.Errorf("unsupported python framework: %s", config.Framework)
 }
 
 // GenerateTool generates a new tool for a Python project.
@@ -55,7 +53,6 @@ func (g *Generator) GenerateTool(projectPath string, toolName string, config map
 	return nil
 }
 
-// generateFastMCPPython creates a FastMCP Python project
 func (g *Generator) generateFastMCPPython(config templates.ProjectConfig, data map[string]interface{}) error {
 	if config.Verbose {
 		fmt.Println("Generating FastMCP Python project...")
@@ -70,8 +67,15 @@ func (g *Generator) generateFastMCPPython(config templates.ProjectConfig, data m
 		if err != nil {
 			return err
 		}
+
+		destPath := filepath.Join(config.Directory, strings.TrimSuffix(path, ".tmpl"))
+
 		if d.IsDir() {
-			return os.MkdirAll(filepath.Join(config.Directory, path), 0755)
+			// Create the directory if it doesn't exist
+			if err := os.MkdirAll(destPath, 0755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
+			}
+			return nil
 		}
 
 		// Read template file
@@ -86,10 +90,8 @@ func (g *Generator) generateFastMCPPython(config templates.ProjectConfig, data m
 			return fmt.Errorf("failed to render template for %s: %w", path, err)
 		}
 
-		// Write file
-		// Remove .tmpl extension
-		destPath := strings.TrimSuffix(path, ".tmpl")
-		if err := os.WriteFile(filepath.Join(config.Directory, destPath), []byte(renderedContent), 0644); err != nil {
+		// Create file
+		if err := os.WriteFile(destPath, []byte(renderedContent), 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", destPath, err)
 		}
 		return nil
@@ -240,30 +242,20 @@ Do not edit manually - it will be overwritten when tools are loaded.
 
 // getTemplateData prepares template variables for rendering
 func (g *Generator) getTemplateData(config templates.ProjectConfig) map[string]interface{} {
-	// Convert project name to different formats
-	data := map[string]interface{}{
-		"ProjectName":       config.Name,
-		"ProjectNameUpper":  strings.ToUpper(config.Name),
-		"ProjectNameLower":  strings.ToLower(config.Name),
-		"ProjectNameCamel":  g.toCamelCase(config.Name),
-		"ProjectNamePascal": g.toPascalCase(config.Name),
-		"ProjectNameKebab":  g.toKebabCase(config.Name),
-		"Framework":         config.Framework,
-		"Template":          config.Template,
-		"Author":            config.Author,
-		"Email":             config.Email,
-		"Year":              time.Now().Year(),
+	return map[string]interface{}{
+		"Name":         config.Name,
+		"Framework":    config.Framework,
+		"Author":       config.Author,
+		"Email":        config.Email,
+		"Version":      config.Version,
+		"Directory":    config.Directory,
+		"ProjectName":  config.Name,
+		"Tools":        config.Tools,
+		"Secrets":      config.Secrets,
+		"Build":        config.Build,
+		"Dependencies": config.Dependencies,
+		"NoGit":        config.NoGit,
 	}
-
-	// Set default author if empty
-	if data["Author"] == "" {
-		data["Author"] = "KMCP CLI"
-	}
-	if data["Email"] == "" {
-		data["Email"] = "noreply@kagent.dev"
-	}
-
-	return data
 }
 
 // renderTemplate renders a template string with the provided data

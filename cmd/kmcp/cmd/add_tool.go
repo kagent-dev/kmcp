@@ -15,7 +15,7 @@ var addToolCmd = &cobra.Command{
 	Short: "Add a new MCP tool to your project",
 	Long: `Generate a new MCP tool that will be automatically loaded by the server.
 
-This command creates a new tool file in src/tools/ with the same name as the tool.
+This command creates a new tool file in src/tools/ with a generic template.
 The tool will be automatically discovered and loaded when the server starts.
 
 Each tool is a Python file containing a function decorated with @mcp.tool().
@@ -25,7 +25,7 @@ Examples:
   kmcp add-tool weather
   kmcp add-tool database --description "Database operations tool"
   kmcp add-tool weather --force  # Overwrite existing tool
-"`,
+`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAddTool,
 }
