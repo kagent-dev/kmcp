@@ -12,7 +12,7 @@ import (
 
 var addToolCmd = &cobra.Command{
 	Use:   "add-tool [tool-name]",
-	Short: "Generate a new MCP tool with dynamic loading",
+	Short: "Add a new MCP tool to your project",
 	Long: `Generate a new MCP tool that will be automatically loaded by the server.
 
 This command creates a new tool file in src/tools/ with the same name as the tool.
