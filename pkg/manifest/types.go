@@ -37,7 +37,6 @@ type ToolConfig struct {
 	Handler     string                 `yaml:"handler,omitempty" json:"handler,omitempty"`
 	Enabled     bool                   `yaml:"enabled" json:"enabled"`
 	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`
-	Template    string                 `yaml:"template,omitempty" json:"template,omitempty"`
 	Config      map[string]interface{} `yaml:"config,omitempty" json:"config,omitempty"`
 
 	// Dependencies for this tool
