@@ -1,5 +1,5 @@
 [project]
-name = "{{.ProjectNameKebab}}"
+name = "{{.ProjectName}}"
 version = "0.1.0"
 description = "{{.ProjectName}} MCP server built with FastMCP"
 authors = [
@@ -21,7 +21,7 @@ build-backend = "hatchling.build"
 packages = ["src"]
 
 [project.scripts]
-{{.ProjectNameKebab}}-server = "src.main:main"
+"{{.ProjectName}}-server" = "src.main:main"
 
 [tool.uv]
 dev-dependencies = [
