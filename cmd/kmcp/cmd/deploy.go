@@ -414,7 +414,7 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 				"app.kubernetes.io/part-of":    "kmcp",
 				"app.kubernetes.io/managed-by": "kmcp",
 				"kmcp.dev/framework":           projectManifest.Framework,
-				"kmcp.dev/version":             projectManifest.Version,
+				"kmcp.dev/version":             sanitizeLabelValue(projectManifest.Version),
 			},
 			Annotations: map[string]string{
 				"kmcp.dev/project-name": projectManifest.Name,
@@ -449,6 +449,10 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	}
 
 	return mcpServer, nil
+}
+
+func sanitizeLabelValue(value string) string {
+	return strings.ReplaceAll(value, "+", "_")
 }
 
 func getDefaultCommand(framework string) string {
