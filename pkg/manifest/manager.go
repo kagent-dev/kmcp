@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -71,59 +72,50 @@ func (m *Manager) Save(manifest *ProjectManifest) error {
 	return nil
 }
 
-// Create generates a new manifest with default values
-func (m *Manager) Create(name, framework string) (*ProjectManifest, error) {
-	if name == "" {
-		return nil, fmt.Errorf("project name is required")
-	}
-
-	if !isValidFramework(framework) {
-		return nil, fmt.Errorf("unsupported framework: %s", framework)
-	}
-
-	manifest := &ProjectManifest{
-		Name:        name,
-		Framework:   framework,
-		Version:     "1.0.0",
-		Description: fmt.Sprintf("MCP server built with %s", framework),
-		Tools:       make(map[string]ToolConfig),
-		Resources:   make(map[string]ResourceConfig),
-		Secrets: SecretsConfig{
-			Local: SecretProviderConfig{
-				Provider: SecretProviderEnv,
-				Source:   ".env.local",
-			},
-			Staging: SecretProviderConfig{
-				Provider:   SecretProviderKubernetes,
-				SecretName: fmt.Sprintf("%s-secrets-staging", name),
-				Namespace:  "staging",
-			},
-			Production: SecretProviderConfig{
-				Provider:   SecretProviderKubernetes,
-				SecretName: fmt.Sprintf("%s-secrets", name),
-				Namespace:  "default",
-			},
-		},
-		Dependencies: DependencyConfig{
-			AutoManage: true,
-		},
-		Build: BuildConfig{
-			Docker: DockerConfig{
-				Port: 3000,
-			},
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	return manifest, nil
-}
-
 // Exists checks if a kmcp.yaml file exists in the project root
 func (m *Manager) Exists() bool {
 	manifestPath := filepath.Join(m.projectRoot, ManifestFileName)
 	_, err := os.Stat(manifestPath)
 	return err == nil
+}
+
+// GetDefault returns a new ProjectManifest with default values
+func GetDefault(name, framework, description, author, email string) *ProjectManifest {
+	if description == "" {
+		description = fmt.Sprintf("MCP server built with %s", framework)
+	}
+	return &ProjectManifest{
+		Name:        name,
+		Framework:   framework,
+		Version:     "0.1.0",
+		Description: description,
+		Author:      author,
+		Email:       email,
+		Tools:       make(map[string]ToolConfig),
+		Secrets: SecretsConfig{
+			"staging": {
+				Enabled:    false,
+				Provider:   SecretProviderKubernetes,
+				Namespace:  "default",
+				SecretName: fmt.Sprintf("%s-secrets-staging", strings.ReplaceAll(name, "_", "-")),
+			},
+			"production": {
+				Enabled:    false,
+				Provider:   SecretProviderKubernetes,
+				Namespace:  "production",
+				SecretName: fmt.Sprintf("%s-secrets-production", strings.ReplaceAll(name, "_", "-")),
+			},
+		},
+		Build: BuildConfig{
+			Output: name,
+			Docker: DockerConfig{
+				Image:      fmt.Sprintf("%s:latest", strings.ToLower(strings.ReplaceAll(name, "_", "-"))),
+				Dockerfile: "Dockerfile",
+			},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 }
 
 // Validate checks if the manifest is valid
@@ -148,16 +140,9 @@ func (m *Manager) Validate(manifest *ProjectManifest) error {
 		}
 	}
 
-	// Validate resources
-	for resourceName, resource := range manifest.Resources {
-		if err := m.validateResource(resourceName, resource); err != nil {
-			return fmt.Errorf("invalid resource %s: %w", resourceName, err)
-		}
-	}
-
-	// Validate secrets configuration
+	// Validate secrets
 	if err := m.validateSecrets(manifest.Secrets); err != nil {
-		return fmt.Errorf("invalid secrets configuration: %w", err)
+		return fmt.Errorf("invalid secrets config: %w", err)
 	}
 
 	return nil
@@ -195,52 +180,18 @@ func (m *Manager) RemoveTool(manifest *ProjectManifest, name string) error {
 	return nil
 }
 
-// GetSecretConfig returns the secret configuration for a specific environment
-func (m *Manager) GetSecretConfig(manifest *ProjectManifest, environment string) (*SecretProviderConfig, error) {
-	switch environment {
-	case "local":
-		return &manifest.Secrets.Local, nil
-	case "staging":
-		return &manifest.Secrets.Staging, nil
-	case "production":
-		return &manifest.Secrets.Production, nil
-	default:
-		if config, exists := manifest.Secrets.Environments[environment]; exists {
-			return &config, nil
-		}
-		return nil, fmt.Errorf("environment %s not found", environment)
-	}
-}
-
 // Private validation methods
 
-func (m *Manager) validateTool(_ string, _ ToolConfig) error {
-	// No tool type validation needed in dynamic loading approach
-	// Tools are automatically discovered and loaded from src/tools/ directory
-	return nil
-}
-
-func (m *Manager) validateResource(_ string, _ ResourceConfig) error {
-	// Add resource validation logic as needed
+func (m *Manager) validateTool(_ string, tool ToolConfig) error {
+	if tool.Name == "" {
+		return fmt.Errorf("tool name is required")
+	}
 	return nil
 }
 
 func (m *Manager) validateSecrets(secrets SecretsConfig) error {
 	// Validate each secret provider configuration
-	configs := []SecretProviderConfig{
-		secrets.Local,
-		secrets.Staging,
-		secrets.Production,
-	}
-
-	for _, config := range configs {
-		if config.Provider != "" && !isValidSecretProvider(config.Provider) {
-			return fmt.Errorf("invalid secret provider: %s", config.Provider)
-		}
-	}
-
-	// Validate custom environments
-	for env, config := range secrets.Environments {
+	for env, config := range secrets {
 		if config.Provider != "" && !isValidSecretProvider(config.Provider) {
 			return fmt.Errorf("invalid secret provider for environment %s: %s", env, config.Provider)
 		}

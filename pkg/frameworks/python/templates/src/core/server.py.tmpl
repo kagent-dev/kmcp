@@ -9,6 +9,7 @@ import logging
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastmcp import FastMCP
 
 from .utils import load_config
@@ -32,6 +33,9 @@ class DynamicMCPServer:
         self.tools_dir = Path(tools_dir)
         self.config = self._load_config()
 
+        # Load local environment variables if configured
+        self._load_local_env()
+
         # Update global FastMCP instance
         mcp = FastMCP(name=self.name)
         self.mcp = mcp
@@ -42,6 +46,13 @@ class DynamicMCPServer:
     def _load_config(self) -> dict[str, any]:
         """Load configuration from kmcp.yaml."""
         return load_config("kmcp.yaml")
+
+    def _load_local_env(self) -> None:
+        """Load environment variables from a .env file if it exists."""
+        # load_dotenv will search for a .env file and load it.
+        # It does not fail if the file is not found.
+        if load_dotenv(override=True):
+            logging.info("Loaded environment variables from .env file")
 
     def load_tools(self) -> None:
         """Discover and load all tools from the tools directory."""

@@ -29,11 +29,8 @@ func NewGenerator() *Generator {
 // GenerateProject generates a new Python project
 func (g *Generator) GenerateProject(config templates.ProjectConfig) error {
 	if config.Framework == "fastmcp-python" {
-		// Get template data
-		templateData := g.getTemplateData(config)
-
 		// Generate project from embedded templates
-		return g.generateFastMCPPython(config, templateData)
+		return g.generateFastMCPPython(config)
 	}
 	return fmt.Errorf("unsupported python framework: %s", config.Framework)
 }
@@ -53,7 +50,7 @@ func (g *Generator) GenerateTool(projectPath string, toolName string, config map
 	return nil
 }
 
-func (g *Generator) generateFastMCPPython(config templates.ProjectConfig, data map[string]interface{}) error {
+func (g *Generator) generateFastMCPPython(config templates.ProjectConfig) error {
 	if config.Verbose {
 		fmt.Println("Generating FastMCP Python project...")
 	}
@@ -85,7 +82,7 @@ func (g *Generator) generateFastMCPPython(config templates.ProjectConfig, data m
 		}
 
 		// Render template content
-		renderedContent, err := g.renderTemplate(string(templateContent), data)
+		renderedContent, err := g.renderTemplate(string(templateContent), config)
 		if err != nil {
 			return fmt.Errorf("failed to render template for %s: %w", path, err)
 		}
@@ -240,26 +237,8 @@ Do not edit manually - it will be overwritten when tools are loaded.
 	return content.String()
 }
 
-// getTemplateData prepares template variables for rendering
-func (g *Generator) getTemplateData(config templates.ProjectConfig) map[string]interface{} {
-	return map[string]interface{}{
-		"Name":         config.Name,
-		"Framework":    config.Framework,
-		"Author":       config.Author,
-		"Email":        config.Email,
-		"Version":      config.Version,
-		"Directory":    config.Directory,
-		"ProjectName":  config.Name,
-		"Tools":        config.Tools,
-		"Secrets":      config.Secrets,
-		"Build":        config.Build,
-		"Dependencies": config.Dependencies,
-		"NoGit":        config.NoGit,
-	}
-}
-
 // renderTemplate renders a template string with the provided data
-func (g *Generator) renderTemplate(tmplContent string, data map[string]interface{}) (string, error) {
+func (g *Generator) renderTemplate(tmplContent string, data interface{}) (string, error) {
 	tmpl, err := template.New("template").Parse(tmplContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
