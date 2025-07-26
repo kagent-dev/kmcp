@@ -1,14 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/kagent-dev/kmcp/pkg/manifest"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
 )
 
@@ -16,75 +20,160 @@ import (
 var secretsCmd = &cobra.Command{
 	Use:   "secrets",
 	Short: "Manage project secrets",
-	Long: `Manage secrets for MCP server projects.
-
-This command currently only supports creating Kubernetes secrets from environment files.`,
+	Long:  `Manage secrets for MCP server projects.`,
 }
 
-// createK8SecretFromEnvCmd creates a Kubernetes secret from an environment file
-var createK8SecretFromEnvCmd = &cobra.Command{
-	Use:   "create-k8s-secret-from-env [env-file] [flags]",
-	Short: "Create a Kubernetes secret from an environment file",
-	Long: `Create a Kubernetes secret manifest from an environment file.
+var (
+	secretSourceFile string
+	secretDryRun     bool
+)
 
-This command reads a .env file and generates a Kubernetes Secret YAML manifest.
-The environment file should contain key=value pairs, one per line.
-The output filename will match the input filename with .yaml extension.
+// syncCmd creates or updates a Kubernetes secret from an environment file
+var syncCmd = &cobra.Command{
+	Use:   "sync [environment]",
+	Short: "Sync secrets to a Kubernetes environment from a local .env file",
+	Long: `Sync secrets from a local .env file to a Kubernetes secret.
+
+This command reads a .env file and the project's kmcp.yaml file to determine
+the correct secret name and namespace for the specified environment. It then
+creates or updates the Kubernetes secret directly in the cluster.
+
+The command will look for a ".env" file in the project root by default.
 
 Examples:
-  kmcp secrets create-k8s-secret-from-env .env.local
-  kmcp secrets create-k8s-secret-from-env .env.production --name my-app-secrets --namespace production
-  kmcp secrets create-k8s-secret-from-env .env.staging --output-dir secrets/
-  kmcp secrets create-k8s-secret-from-env /your-mcp-server/.env --name secret --output-dir your-mcp-server/secrets/`,
+  # Sync secrets to the "staging" environment defined in kmcp.yaml
+  kmcp secrets sync staging
+
+  # Sync secrets from a custom .env file
+  kmcp secrets sync staging --from-file .env.staging
+
+  # Perform a dry run to see the generated secret without applying it
+  kmcp secrets sync production --dry-run
+`,
 	Args: cobra.ExactArgs(1),
-	RunE: runCreateK8SecretFromEnv,
+	RunE: runSync,
 }
 
 func init() {
 	rootCmd.AddCommand(secretsCmd)
 
 	// Add subcommands
-	secretsCmd.AddCommand(createK8SecretFromEnvCmd)
+	secretsCmd.AddCommand(syncCmd)
 
 	// create-k8s-secret-from-env flags
-	createK8SecretFromEnvCmd.Flags().StringP("name", "n", "",
-		"Kubernetes secret name (default: derived from env file name)")
-	createK8SecretFromEnvCmd.Flags().StringP("namespace", "s", "default", "Kubernetes namespace")
-	createK8SecretFromEnvCmd.Flags().StringP("output-dir", "o", "", "Output directory (default: stdout)")
+	syncCmd.Flags().StringVar(&secretSourceFile, "from-file", ".env", "Source .env file to sync from")
+	syncCmd.Flags().BoolVar(&secretDryRun, "dry-run", false, "Output the generated secret YAML instead of applying it")
 }
 
-// createKubernetesSecretYAML creates a Kubernetes Secret YAML from secret data
-func createKubernetesSecretYAML(secretData map[string]string, secretName, namespace string) ([]byte, error) {
-	// Create Kubernetes secret
+func runSync(cmd *cobra.Command, args []string) error {
+	environment := args[0]
+
+	// Get project root
+	projectRoot, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// Load manifest
+	manifestManager := manifest.NewManager(projectRoot)
+	if !manifestManager.Exists() {
+		return fmt.Errorf("kmcp.yaml not found in the current directory. Please run 'kmcp init' or navigate to a valid project.")
+	}
+	projectManifest, err := manifestManager.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load project manifest: %w", err)
+	}
+
+	// Get secret config for the environment
+	secretConfig, ok := projectManifest.Secrets[environment]
+	if !ok {
+		return fmt.Errorf("environment '%s' not found in kmcp.yaml secrets configuration", environment)
+	}
+
+	if secretConfig.Provider != manifest.SecretProviderKubernetes {
+		return fmt.Errorf("the 'secrets sync' command only supports the 'kubernetes' provider, but environment '%s' uses '%s'", environment, secretConfig.Provider)
+	}
+
+	// Load .env file
+	envVars, err := loadEnvFile(secretSourceFile)
+	if err != nil {
+		return err
+	}
+	if len(envVars) == 0 {
+		return fmt.Errorf("no variables found in source file '%s'", secretSourceFile)
+	}
+
+	// Create Kubernetes secret object
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
+			Name:      secretConfig.SecretName,
+			Namespace: secretConfig.Namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: make(map[string][]byte),
 	}
 
-	// Convert string data to byte data
-	for key, value := range secretData {
+	for key, value := range envVars {
 		secret.Data[key] = []byte(value)
 	}
 
-	// Marshal to YAML
-	yamlData, err := yaml.Marshal(secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal secret to YAML: %w", err)
+	if secretDryRun {
+		yamlData, err := yaml.Marshal(secret)
+		if err != nil {
+			return fmt.Errorf("failed to marshal secret to YAML: %w", err)
+		}
+		fmt.Print(string(yamlData))
+		return nil
 	}
 
-	return yamlData, nil
+	// Apply to cluster
+	return applySecretToCluster(secret)
+}
+
+func applySecretToCluster(secret *corev1.Secret) error {
+	// Get kubeconfig
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get kubernetes config: %w", err)
+	}
+
+	// Create clientset
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes clientset: %w", err)
+	}
+
+	// Check if secret exists
+	_, err = clientset.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
+	if err != nil {
+		// Create if it doesn't exist
+		_, err = clientset.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create secret: %w", err)
+		}
+		fmt.Printf("✅ Secret '%s' created in namespace '%s'.\n", secret.Name, secret.Namespace)
+	} else {
+		// Update if it exists
+		_, err = clientset.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to update secret: %w", err)
+		}
+		fmt.Printf("✅ Secret '%s' updated in namespace '%s'.\n", secret.Name, secret.Namespace)
+	}
+
+	return nil
 }
 
 // loadEnvFile reads environment variables from a file and returns them as a map
 func loadEnvFile(filename string) (map[string]string, error) {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return nil, fmt.Errorf("source secret file not found: %s", filename)
+	}
+
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -109,89 +198,4 @@ func loadEnvFile(filename string) (map[string]string, error) {
 	}
 
 	return envVars, nil
-}
-
-func runCreateK8SecretFromEnv(cmd *cobra.Command, args []string) error {
-	envFile := args[0]
-
-	secretName, _ := cmd.Flags().GetString("name")
-	namespace, _ := cmd.Flags().GetString("namespace")
-	outputDir, _ := cmd.Flags().GetString("output-dir")
-
-	// Validate env file exists
-	if _, err := os.Stat(envFile); os.IsNotExist(err) {
-		return fmt.Errorf("environment file not found: %s", envFile)
-	}
-
-	// Parse the .env file into key-value pairs
-	envVars, err := loadEnvFile(envFile)
-	if err != nil {
-		return fmt.Errorf("failed to parse environment file: %w", err)
-	}
-
-	if len(envVars) == 0 {
-		return fmt.Errorf("environment file contains no valid key-value pairs: %s", envFile)
-	}
-
-	// Generate secret name if not provided
-	if secretName == "" {
-		secretName = generateSecretNameFromFile(envFile)
-	}
-
-	// Create Kubernetes secret YAML with individual key-value pairs
-	yamlData, err := createKubernetesSecretYAML(envVars, secretName, namespace)
-	if err != nil {
-		return fmt.Errorf("failed to create Kubernetes secret: %w", err)
-	}
-
-	// Handle output
-	if outputDir != "" {
-		// Create output directory if it doesn't exist
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			return fmt.Errorf("failed to create output directory: %w", err)
-		}
-
-		// Generate output filename based on input filename
-		inputFileName := filepath.Base(envFile)
-		outputFileName := strings.TrimSuffix(inputFileName, filepath.Ext(inputFileName)) + ".yaml"
-		outputPath := filepath.Join(outputDir, outputFileName)
-
-		// Write to file
-		if err := os.WriteFile(outputPath, yamlData, 0644); err != nil {
-			return fmt.Errorf("failed to write secret file: %w", err)
-		}
-		fmt.Printf("✅ Kubernetes secret manifest written to: %s\n", outputPath)
-	} else {
-		// Print to stdout
-		fmt.Print(string(yamlData))
-	}
-
-	return nil
-}
-
-// generateSecretNameFromFile generates a secret name from the environment file name
-func generateSecretNameFromFile(filename string) string {
-	// Get the base name without extension
-	baseName := filepath.Base(filename)
-	name := strings.TrimSuffix(baseName, filepath.Ext(baseName))
-
-	// Remove common prefixes/suffixes
-	name = strings.TrimPrefix(name, ".")
-	name = strings.TrimPrefix(name, "env")
-	name = strings.TrimPrefix(name, "-")
-	name = strings.TrimSuffix(name, "-")
-
-	// Convert to kebab-case and add suffix
-	if name == "" {
-		name = "app"
-	}
-
-	// Replace underscores and dots with hyphens
-	name = strings.ReplaceAll(name, "_", "-")
-	name = strings.ReplaceAll(name, ".", "-")
-
-	// Ensure it's a valid Kubernetes name
-	name = strings.ToLower(name)
-
-	return fmt.Sprintf("%s-secrets", name)
 }

@@ -61,48 +61,26 @@ Examples:
   kmcp deploy mcp --transport http         # Use HTTP transport
   kmcp deploy mcp --output deploy.yaml     # Save to file
   kmcp deploy mcp --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
-  kmcp deploy mcp --secrets secret1.yaml,secret2.yaml # Apply secret files to cluster`,
+  kmcp deploy mcp --environment staging    # Target environment for deployment (e.g., staging, production)`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeployMCP,
 }
 
-// deployControllerCmd deploys the KMCP controller to the cluster
-var deployControllerCmd = &cobra.Command{
-	Use:   "controller",
-	Short: "Deploy KMCP controller to cluster",
-	Long: `Deploy the KMCP controller to a Kubernetes cluster using Helm.
-
-This command installs the KMCP controller from the Helm chart repository.
-The controller manages MCPServer custom resources and handles their lifecycle.
-
-Examples:
-  kmcp deploy controller                                    # Deploy with default settings
-  kmcp deploy controller --version 0.0.1                   # Deploy specific version
-  kmcp deploy controller --namespace my-namespace          # Deploy to custom namespace
-  kmcp deploy controller --registry-config ~/.docker/config.json # Use custom registry config`,
-	RunE: runDeployController,
-}
-
 var (
 	// MCP deployment flags
-	deployNamespace  string
-	deployDryRun     bool
-	deployOutput     string
-	deployImage      string
-	deployTransport  string
-	deployPort       int
-	deployTargetPort int
-	deployCommand    string
-	deployArgs       []string
-	deployEnv        []string
-	deployForce      bool
-	deployFile       string
-	deploySecrets    []string
-
-	// Controller deployment flags
-	controllerVersion        string
-	controllerNamespace      string
-	controllerRegistryConfig string
+	deployNamespace   string
+	deployDryRun      bool
+	deployOutput      string
+	deployImage       string
+	deployTransport   string
+	deployPort        int
+	deployTargetPort  int
+	deployCommand     string
+	deployArgs        []string
+	deployEnv         []string
+	deployForce       bool
+	deployFile        string
+	deployEnvironment string
 )
 
 func init() {
@@ -110,7 +88,6 @@ func init() {
 
 	// Add subcommands
 	deployCmd.AddCommand(deployMCPCmd)
-	deployCmd.AddCommand(deployControllerCmd)
 
 	// MCP deployment flags
 	deployMCPCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
@@ -125,32 +102,7 @@ func init() {
 	deployMCPCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployMCPCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployMCPCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
-	deployMCPCmd.Flags().StringSliceVar(
-		&deploySecrets,
-		"secrets",
-		[]string{},
-		"Paths to Kubernetes secret YAML files to apply to cluster",
-	)
-
-	// Controller deployment flags
-	deployControllerCmd.Flags().StringVar(
-		&controllerVersion,
-		"version",
-		"",
-		"Version of the controller to deploy (defaults to kmcp version)",
-	)
-	deployControllerCmd.Flags().StringVar(
-		&controllerNamespace,
-		"namespace",
-		"kmcp-system",
-		"Namespace for the KMCP controller (defaults to kmcp-system)",
-	)
-	deployControllerCmd.Flags().StringVar(
-		&controllerRegistryConfig,
-		"registry-config",
-		"",
-		"Path to docker registry config file",
-	)
+	deployMCPCmd.Flags().StringVar(&deployEnvironment, "environment", "staging", "Target environment for deployment (e.g., staging, production)")
 }
 
 func runDeployMCP(_ *cobra.Command, args []string) error {
@@ -190,7 +142,7 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 	}
 
 	// Generate MCPServer resource
-	mcpServer, err := generateMCPServer(projectManifest, deploymentName)
+	mcpServer, err := generateMCPServer(projectManifest, deploymentName, deployEnvironment)
 	if err != nil {
 		return fmt.Errorf("failed to generate MCPServer: %w", err)
 	}
@@ -229,80 +181,11 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 		// Print to stdout
 		fmt.Print(yamlContent)
 	} else {
-		// Apply secrets first if provided
-		if len(deploySecrets) > 0 {
-			if err := applySecretFiles(deploySecrets); err != nil {
-				return fmt.Errorf("failed to apply secrets: %w", err)
-			}
-		}
-
 		// Apply MCPServer to cluster
 		if err := applyToCluster(yamlContent, deploymentName); err != nil {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
 	}
-
-	return nil
-}
-
-func runDeployController(_ *cobra.Command, _ []string) error {
-	fmt.Printf("🚀 Deploying KMCP controller to cluster...\n")
-
-	// Check if helm is available
-	if err := checkHelmAvailable(); err != nil {
-		return fmt.Errorf("helm is required for controller deployment: %w", err)
-	}
-
-	// Determine controller version
-	version := controllerVersion
-	if version == "" {
-		version = getKMCPVersion()
-	}
-
-	// Validate controller version format
-	if version == "" {
-		return fmt.Errorf("invalid controller version: version cannot be empty")
-	}
-
-	// Determine registry config file
-	registryConfig := controllerRegistryConfig
-	if registryConfig == "" {
-		fmt.Print("Docker registry config must be set use --registry-config\n")
-	}
-	if registryConfig != "" && verbose {
-		fmt.Printf("Using registry config: %s\n", registryConfig)
-	}
-
-	// Build helm install command
-	args := []string{
-		"install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
-		"--version", version,
-		"--namespace", controllerNamespace,
-		"--create-namespace",
-	}
-
-	// Add registry config if found
-	if registryConfig != "" {
-		args = append(args, "--registry-config", registryConfig)
-	}
-
-	// Run helm install
-	if err := runHelm(args...); err != nil {
-		return fmt.Errorf("helm install failed: %w", err)
-	}
-
-	fmt.Printf(
-		"✅ KMCP controller deployed successfully with version %s\n",
-		version,
-	)
-	fmt.Printf(
-		"💡 Check controller status with: kubectl get pods -n %s\n",
-		controllerNamespace,
-	)
-	fmt.Printf(
-		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n",
-		controllerNamespace,
-	)
 
 	return nil
 }
@@ -326,7 +209,7 @@ func getProjectDirFromFile(filePath string) (string, error) {
 	return projectDir, nil
 }
 
-func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName string) (*v1alpha1.MCPServer, error) {
+func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName, environment string) (*v1alpha1.MCPServer, error) {
 	// Determine image name
 	imageName := deployImage
 	if imageName == "" {
@@ -383,20 +266,14 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 		}
 	}
 
-	// Parse secret files and extract references
+	// Get secret reference from manifest for the specified environment
+	secretRef, err := getSecretRefFromManifest(projectManifest, environment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret reference: %w", err)
+	}
 	var secretRefs []corev1.ObjectReference
-	if len(deploySecrets) > 0 {
-		if verbose {
-			fmt.Printf("🔍 Parsing %d secret file(s) for references...\n", len(deploySecrets))
-		}
-		var err error
-		secretRefs, err = parseSecretFiles(deploySecrets)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse secret files: %w", err)
-		}
-		if verbose {
-			fmt.Printf("✅ Found %d secret reference(s) to include in MCPServer\n", len(secretRefs))
-		}
+	if secretRef != nil {
+		secretRefs = append(secretRefs, *secretRef)
 	}
 
 	// Create MCPServer spec
@@ -449,6 +326,36 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	}
 
 	return mcpServer, nil
+}
+
+func getSecretRefFromManifest(projectManifest *manifest.ProjectManifest, environment string) (*corev1.ObjectReference, error) {
+	if environment == "" {
+		return nil, nil // No environment specified
+	}
+
+	secretProvider, ok := projectManifest.Secrets[environment]
+	if !ok {
+		return nil, fmt.Errorf("environment '%s' not found in secrets config", environment)
+	}
+
+	if secretProvider.Provider == manifest.SecretProviderKubernetes && secretProvider.Enabled {
+		secretName := secretProvider.SecretName
+		if secretName == "" {
+			return nil, fmt.Errorf("secretName not found in secret provider config for environment %s", environment)
+		}
+		namespace := secretProvider.Namespace
+		if namespace == "" {
+			return nil, fmt.Errorf("namespace not found in secret provider config for environment %s", environment)
+		}
+
+		return &corev1.ObjectReference{
+			Kind:      wellknown.SecretKind,
+			Name:      secretName,
+			Namespace: namespace,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func sanitizeLabelValue(value string) string {
@@ -531,11 +438,6 @@ func runKubectl(args ...string) error {
 	return cmd.Run()
 }
 
-// getKMCPVersion returns the current kmcp version
-func getKMCPVersion() string {
-	return Version
-}
-
 // checkKubectlAvailable checks if kubectl is available in the system
 func checkKubectlAvailable() error {
 	cmd := exec.Command("kubectl", "version", "--client")
@@ -543,173 +445,4 @@ func checkKubectlAvailable() error {
 		return fmt.Errorf("kubectl not found or not working: %w", err)
 	}
 	return nil
-}
-
-// checkHelmAvailable checks if helm is available in the system
-func checkHelmAvailable() error {
-	cmd := exec.Command("helm", "version")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("helm not found or not working: %w", err)
-	}
-	return nil
-}
-
-// runHelm executes helm commands
-func runHelm(args ...string) error {
-	if verbose {
-		fmt.Printf("Running: helm %s\n", strings.Join(args, " "))
-	}
-
-	cmd := exec.Command("helm", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
-}
-
-// applySecretFiles applies Kubernetes secret YAML files to the cluster
-func applySecretFiles(secretFiles []string) error {
-	fmt.Printf("🔐 Applying %d secret file(s) to cluster...\n", len(secretFiles))
-
-	// Check if kubectl is available
-	if err := checkKubectlAvailable(); err != nil {
-		return fmt.Errorf("kubectl is required for secret deployment: %w", err)
-	}
-
-	for i, secretFile := range secretFiles {
-		if verbose {
-			fmt.Printf("Applying secret file %d/%d: %s\n", i+1, len(secretFiles), secretFile)
-		}
-
-		if err := applySecretFile(secretFile); err != nil {
-			return fmt.Errorf("failed to apply secret file %s: %w", secretFile, err)
-		}
-	}
-
-	if deployNamespace != "" {
-		fmt.Printf("✅ Successfully applied %d secret file(s) to namespace %s\n", len(secretFiles), deployNamespace)
-	} else {
-		fmt.Printf("✅ Successfully applied %d secret file(s)\n", len(secretFiles))
-	}
-	return nil
-}
-
-// applySecretFile applies a single secret file to the cluster
-func applySecretFile(secretFile string) error {
-	// Validate file exists
-	if _, err := os.Stat(secretFile); os.IsNotExist(err) {
-		return fmt.Errorf("secret file does not exist: %s", secretFile)
-	}
-
-	if deployNamespace == "" {
-		// Apply without namespace override
-		return runKubectl("apply", "-f", secretFile)
-	}
-
-	// Apply with namespace override
-	return applySecretWithNamespace(secretFile, deployNamespace)
-}
-
-// applySecretWithNamespace applies a secret file with a specific namespace
-func applySecretWithNamespace(secretFile, namespace string) error {
-	// Read and parse the secret file
-	secret, err := readSecretFromFile(secretFile)
-	if err != nil {
-		return fmt.Errorf("failed to read secret file: %w", err)
-	}
-
-	// Update the namespace
-	secret.Namespace = namespace
-
-	// Create temporary file with updated namespace
-	tmpFile, err := createTempSecretFile(secret)
-	if err != nil {
-		return fmt.Errorf("failed to create temp secret file: %w", err)
-	}
-	defer func() {
-		if err := os.Remove(tmpFile.Name()); err != nil {
-			fmt.Printf("Warning: failed to remove temp file %s: %v\n", tmpFile.Name(), err)
-		}
-	}()
-
-	// Apply the updated secret
-	return runKubectl("apply", "-f", tmpFile.Name())
-}
-
-// readSecretFromFile reads and parses a secret YAML file
-func readSecretFromFile(filename string) (*corev1.Secret, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	var secret corev1.Secret
-	if err := yaml.Unmarshal(data, &secret); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
-	}
-
-	return &secret, nil
-}
-
-// createTempSecretFile creates a temporary file with the secret YAML
-func createTempSecretFile(secret *corev1.Secret) (*os.File, error) {
-	// Marshal secret to YAML
-	data, err := yaml.Marshal(secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal secret: %w", err)
-	}
-
-	// Create temporary file
-	tmpFile, err := os.CreateTemp("", "secret-*.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %w", err)
-	}
-
-	// Write secret data to temp file
-	if err := os.WriteFile(tmpFile.Name(), data, 0644); err != nil {
-		if closeErr := tmpFile.Close(); closeErr != nil {
-			fmt.Printf("Warning: failed to close temp file: %v\n", closeErr)
-		}
-		if removeErr := os.Remove(tmpFile.Name()); removeErr != nil {
-			fmt.Printf("Warning: failed to remove temp file: %v\n", removeErr)
-		}
-		return nil, fmt.Errorf("failed to write temp file: %w", err)
-	}
-
-	return tmpFile, nil
-}
-
-// parseSecretFiles parses Kubernetes secret YAML files and extracts their names and namespaces
-func parseSecretFiles(secretFiles []string) ([]corev1.ObjectReference, error) {
-	secretRefs := []corev1.ObjectReference{}
-	for _, secretFile := range secretFiles {
-		data, err := os.ReadFile(secretFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read secret file %s: %w", secretFile, err)
-		}
-
-		var secret corev1.Secret
-		if err := yaml.Unmarshal(data, &secret); err != nil {
-			return nil, fmt.Errorf("failed to parse secret file %s: %w", secretFile, err)
-		}
-
-		name := secret.GetName()
-		if name == "" {
-			return nil, fmt.Errorf("secret in file %s has no name", secretFile)
-		}
-
-		// always override namespace with deployment namespace to avoid the need for reference grants
-		namespace := deployNamespace
-		secretRefs = append(secretRefs, corev1.ObjectReference{
-			Kind:      wellknown.SecretKind,
-			Name:      name,
-			Namespace: namespace,
-		})
-
-		if verbose {
-			fmt.Printf("📋 Found secret reference: %s.%s\n", namespace, name)
-		}
-	}
-
-	return secretRefs, nil
 }
