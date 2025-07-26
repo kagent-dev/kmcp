@@ -15,12 +15,8 @@ type ProjectManifest struct {
 	Email       string `yaml:"email,omitempty" json:"email,omitempty"`
 
 	// Project configuration
-	Tools     map[string]ToolConfig     `yaml:"tools,omitempty" json:"tools,omitempty"`
-	Resources map[string]ResourceConfig `yaml:"resources,omitempty" json:"resources,omitempty"`
-	Secrets   SecretsConfig             `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-
-	// Dependency management
-	Dependencies DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	Tools   map[string]ToolConfig `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Secrets SecretsConfig         `yaml:"secrets,omitempty" json:"secrets,omitempty"`
 
 	// Build configuration
 	Build BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
@@ -32,46 +28,27 @@ type ProjectManifest struct {
 
 // ToolConfig represents configuration for an MCP tool
 type ToolConfig struct {
-	Name        string                 `yaml:"name,omitempty" json:"name,omitempty"`
+	Name        string                 `yaml:"name" json:"name"`
 	Description string                 `yaml:"description,omitempty" json:"description,omitempty"`
 	Handler     string                 `yaml:"handler,omitempty" json:"handler,omitempty"`
 	Enabled     bool                   `yaml:"enabled" json:"enabled"`
 	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`
 	Config      map[string]interface{} `yaml:"config,omitempty" json:"config,omitempty"`
-
-	// Dependencies for this tool
-	Dependencies []string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 }
 
-// ResourceConfig represents configuration for an MCP resource
-type ResourceConfig struct {
-	Enabled     bool                   `yaml:"enabled" json:"enabled"`
-	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"`
-	Config      map[string]interface{} `yaml:"config,omitempty" json:"config,omitempty"`
-	Description string                 `yaml:"description,omitempty" json:"description,omitempty"`
-}
-
-// SecretsConfig represents secret management configuration
-type SecretsConfig struct {
-	// Environment-specific secret configurations
-	Local      SecretProviderConfig `yaml:"local,omitempty" json:"local,omitempty"`
-	Staging    SecretProviderConfig `yaml:"staging,omitempty" json:"staging,omitempty"`
-	Production SecretProviderConfig `yaml:"production,omitempty" json:"production,omitempty"`
-
-	// Custom environments
-	Environments map[string]SecretProviderConfig `yaml:"environments,omitempty" json:"environments,omitempty"`
-}
+// SecretsConfig defines the secret management configuration
+type SecretsConfig map[string]SecretProviderConfig
 
 // SecretProviderConfig represents configuration for a secret provider
 type SecretProviderConfig struct {
-	Provider string                 `yaml:"provider" json:"provider"` // env, kubernetes
-	Config   map[string]interface{} `yaml:"config,omitempty" json:"config,omitempty"`
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
+	Provider string `yaml:"provider" json:"provider"` // env, kubernetes
 
 	// For environment provider
-	Source string `yaml:"source,omitempty" json:"source,omitempty"` // .env.local
+	File string `yaml:"file,omitempty" json:"file,omitempty"` // .env.local
 
 	// For kubernetes provider
-	SecretName string `yaml:"secret_name,omitempty" json:"secret_name,omitempty"`
+	SecretName string `yaml:"secretName,omitempty" json:"secretName,omitempty"`
 	Namespace  string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
