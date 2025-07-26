@@ -41,7 +41,7 @@ var (
 	initNoGit          bool
 	initAuthor         string
 	initEmail          string
-	initVersion        string
+	initDescription    string
 	initNonInteractive bool
 )
 
@@ -53,7 +53,7 @@ func init() {
 	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
 	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
 	initCmd.Flags().StringVar(&initEmail, "email", "", "Author email for the project")
-	initCmd.Flags().StringVar(&initVersion, "version", "", "MCP server version (defaults to kmcp version)")
+	initCmd.Flags().StringVar(&initDescription, "description", "", "Description for the project")
 	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
 }
 
@@ -95,12 +95,16 @@ func runInit(_ *cobra.Command, args []string) error {
 	// Get author information
 	author := initAuthor
 	email := initEmail
+	description := initDescription
 	if !initNonInteractive {
 		if author == "" {
 			author = promptForAuthor()
 		}
 		if email == "" {
 			email = promptForEmail()
+		}
+		if description == "" {
+			description, _ = promptForDescription()
 		}
 	}
 
@@ -114,35 +118,40 @@ func runInit(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
-	// Create project manifest
-	projectManifest, err := createProjectManifest(projectPath, projectName, framework, author, email)
-	if err != nil {
-		return fmt.Errorf("failed to create project manifest: %w", err)
-	}
+	// Create the project manifest object
+	projectManifest := manifest.GetDefault(projectName, framework, description, author, email)
 
 	// Create project configuration
-	config := templates.ProjectConfig{
-		Name:         projectName,
-		Framework:    framework,
-		Author:       projectManifest.Author,
-		Email:        projectManifest.Email,
-		Directory:    projectPath,
-		NoGit:        initNoGit,
-		Verbose:      verbose,
-		Version:      projectManifest.Version,
-		Tools:        projectManifest.Tools,
-		Secrets:      projectManifest.Secrets,
-		Build:        projectManifest.Build,
-		Dependencies: projectManifest.Dependencies,
+	projectConfig := templates.ProjectConfig{
+		ProjectName: projectManifest.Name,
+		Framework:   projectManifest.Framework,
+		Version:     projectManifest.Version,
+		Description: projectManifest.Description,
+		Author:      projectManifest.Author,
+		Email:       projectManifest.Email,
+		Tools:       projectManifest.Tools,
+		Secrets:     projectManifest.Secrets,
+		Build:       projectManifest.Build,
+		Directory:   projectPath,
+		NoGit:       initNoGit,
+		Verbose:     verbose,
 	}
 
-	// Initialize the project
+	// Use the generator to create the project files
+	fmt.Println("✅ Creating project structure...")
 	generator, err := frameworks.GetGenerator(framework)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get generator: %w", err)
 	}
-	if err := generator.GenerateProject(config); err != nil {
-		return fmt.Errorf("failed to generate project: %w", err)
+
+	if err := generator.GenerateProject(projectConfig); err != nil {
+		return fmt.Errorf("failed to generate project files: %w", err)
+	}
+
+	// Create kmcp.yaml
+	manifestManager := manifest.NewManager(projectPath)
+	if err := manifestManager.Save(projectManifest); err != nil {
+		return fmt.Errorf("failed to save project manifest: %w", err)
 	}
 
 	// Get absolute path for output
@@ -212,7 +221,8 @@ func validateProjectName(name string) error {
 	return nil
 }
 
-// Simple prompts for now - we'll enhance these with better UX later
+// Prompts for user input
+
 func promptForProjectName() (string, error) {
 	fmt.Print("Enter project name: ")
 	var name string
@@ -261,123 +271,11 @@ func promptForEmail() string {
 	return strings.TrimSpace(email)
 }
 
-// createProjectManifest creates the kmcp.yaml manifest file
-func createProjectManifest(
-	projectPath,
-	projectName,
-	framework,
-	author,
-	email string,
-) (*manifest.ProjectManifest, error) {
-	// Set default author if empty
-	if author == "" {
-		author = "KMCP CLI"
+func promptForDescription() (string, error) {
+	fmt.Print("Enter description (optional): ")
+	var description string
+	if _, err := fmt.Scanln(&description); err != nil {
+		return "", nil // Ignore error, treat as empty
 	}
-	if email == "" {
-		email = "noreply@kagent.dev"
-	}
-
-	version := initVersion
-	if version == "" {
-		version = Version
-	}
-
-	// Create manifest with template-specific tools
-	projectManifest := &manifest.ProjectManifest{
-		Name:        projectName,
-		Framework:   framework,
-		Version:     version,
-		Description: fmt.Sprintf("%s MCP server built with %s", projectName, framework),
-		Author:      author,
-		Email:       email,
-		Tools:       getTemplateTools(templateBasic), // Always use basic template
-		Resources:   make(map[string]manifest.ResourceConfig),
-		Secrets: manifest.SecretsConfig{
-			Local: manifest.SecretProviderConfig{
-				Provider: manifest.SecretProviderEnv,
-				Config: map[string]interface{}{
-					"file": ".env.local",
-				},
-			},
-			Staging: manifest.SecretProviderConfig{
-				Provider: manifest.SecretProviderKubernetes,
-				Config: map[string]interface{}{
-					"namespace":  "default",
-					"secretName": fmt.Sprintf("%s-secrets-staging", strings.ReplaceAll(projectName, "_", "-")),
-				},
-			},
-			Production: manifest.SecretProviderConfig{
-				Provider: manifest.SecretProviderKubernetes,
-				Config: map[string]interface{}{
-					"namespace":  "production",
-					"secretName": fmt.Sprintf("%s-secrets-production", strings.ReplaceAll(projectName, "_", "-")),
-				},
-			},
-		},
-		Dependencies: manifest.DependencyConfig{
-			Runtime: getFrameworkDependencies(framework),
-			Dev:     getFrameworkDevDependencies(framework),
-		},
-		Build: manifest.BuildConfig{
-			Output: projectName,
-			Docker: manifest.DockerConfig{
-				Image:      fmt.Sprintf("%s:latest", strings.ReplaceAll(projectName, "_", "-")),
-				Dockerfile: "Dockerfile",
-			},
-		},
-	}
-
-	// Save manifest
-	manifestManager := manifest.NewManager(projectPath)
-	if err := manifestManager.Save(projectManifest); err != nil {
-		return nil, fmt.Errorf("failed to save manifest: %w", err)
-	}
-
-	return projectManifest, nil
-}
-
-// getTemplateTools returns the tools configuration for a given template
-func getTemplateTools(template string) map[string]manifest.ToolConfig {
-	tools := make(map[string]manifest.ToolConfig)
-
-	switch template {
-	case templateBasic:
-		tools["echo"] = manifest.ToolConfig{
-			Name:        "echo",
-			Description: "Echo a message back to the client",
-			Handler:     "tools.echo",
-			Config: map[string]interface{}{
-				"enabled": true,
-			},
-		}
-	default:
-		// Default to basic tools
-		return getTemplateTools(templateBasic)
-	}
-
-	return tools
-}
-
-// getFrameworkDependencies returns runtime dependencies for a framework
-func getFrameworkDependencies(framework string) []string {
-	switch framework {
-	case frameworkFastMCPPython:
-		return []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}
-	case frameworkMCPGo:
-		return []string{"mcp-go"}
-	default:
-		return []string{}
-	}
-}
-
-// getFrameworkDevDependencies returns development dependencies for a framework
-func getFrameworkDevDependencies(framework string) []string {
-	switch framework {
-	case frameworkFastMCPPython:
-		return []string{"pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=22.0.0", "mypy>=1.0.0", "ruff>=0.1.0"}
-	case frameworkMCPGo:
-		return []string{"golangci-lint"}
-	default:
-		return []string{}
-	}
+	return strings.TrimSpace(description), nil
 }
