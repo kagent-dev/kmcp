@@ -49,7 +49,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	_ = utils.UncommentCode("config/default/kustomization.yaml", "#- ../prometheus", "#")
 
 	ginkgo.By("building the manager(Operator) image")
-	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
+	cmd := exec.Command("make", "docker-build", fmt.Sprintf("CONTROLLER_IMG=%s", projectImage))
 	_, err := utils.Run(cmd)
 	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to build the manager(Operator) image")
 

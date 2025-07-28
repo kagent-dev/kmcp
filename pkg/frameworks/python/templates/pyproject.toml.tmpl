@@ -2,9 +2,15 @@
 name = "{{.ProjectName}}"
 version = "0.1.0"
 description = "{{.ProjectName}} MCP server built with FastMCP"
-authors = [
+{{if .Author}}{{if .Email}}authors = [
     {name = "{{.Author}}", email = "{{.Email}}"}
-]
+]{{else}}authors = [
+    {name = "{{.Author}}"}
+]{{end}}{{else}}{{if .Email}}authors = [
+    {email = "{{.Email}}"}
+]{{else}}authors = [
+    {name = "Unknown Author"}
+]{{end}}{{end}}
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

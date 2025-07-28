@@ -65,6 +65,11 @@ func (g *Generator) generateFastMCPPython(config templates.ProjectConfig) error 
 			return err
 		}
 
+		// Skip tool.py.tmpl during project generation - it's for individual tool generation
+		if path == "tool.py.tmpl" {
+			return nil
+		}
+
 		destPath := filepath.Join(config.Directory, strings.TrimSuffix(path, ".tmpl"))
 
 		if d.IsDir() {
