@@ -66,6 +66,10 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+.PHONY: helm-lint
+helm-lint:
+	helm lint helm/kmcp
+
 .PHONY: helm-crd
 helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
 	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
