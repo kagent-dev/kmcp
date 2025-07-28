@@ -4,7 +4,6 @@ DOCKER_REGISTRY ?= ghcr.io
 BASE_IMAGE_REGISTRY ?= cgr.dev
 DOCKER_REPO ?= kagent-dev/kmcp
 HELM_REPO ?= oci://ghcr.io/kagent-dev
-HELM_DIST_FOLDER ?= dist
 
 BUILD_DATE := $(shell date -u '+%Y-%m-%d')
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
@@ -71,6 +70,21 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 helm-lint:
 	helm lint helm/kmcp
 
+.PHONY: helm-crd
+helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
+	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
+	@mkdir -p helm/kmcp/templates/crds
+	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@awk '/^  name: mcpservers.kagent.dev$$/ { \
+		print; \
+		print "  labels:"; \
+		print "    {{- include \"kmcp.labels\" . | nindent 4 }}"; \
+		next; \
+	} \
+	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@echo '{{- end }}' >> helm/kmcp/templates/crds/mcpserver-crd.yaml
+	@echo "Helm CRD template generated at helm/kmcp/templates/crds/mcpserver-crd.yaml"
+
 .PHONY: helm-package
 helm-package:
 	mkdir -p $(DIST_FOLDER)
@@ -79,6 +93,7 @@ helm-package:
 	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
 	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
+	@echo "Helm package created: $(DIST_FOLDER)/kmcp-$(VERSION).tgz"
 
 .PHONY: helm-cleanup
 helm-cleanup: ## Clean up Helm chart packages
@@ -91,7 +106,7 @@ helm-build: helm-lint helm-package ## Build and package the Helm chart
 .PHONY: helm-publish
 helm-publish: helm-package ## Publish Helm chart to OCI registry
 	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
-	@helm push $(HELM_DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
+	@helm push $(DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
 	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
@@ -143,7 +158,7 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 		echo "No Kind cluster is running. Please start a Kind cluster before running the e2e tests."; \
 		exit 1; \
 	}
-	go test ./test/e2e/ -v -ginkgo.v
+	go test ./test/e2e/ -v
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
@@ -162,6 +177,11 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
+
+.PHONY: build-cli
+build-cli: fmt vet ## Build kmcp CLI binary.
+	mkdir -p $(DIST_FOLDER)
+	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

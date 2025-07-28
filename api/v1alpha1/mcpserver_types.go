@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -202,6 +203,11 @@ type MCPServerDeployment struct {
 
 	// Env defines the environment variables to set in the container.
 	Env map[string]string `json:"env,omitempty"`
+
+	// SecretRefs defines the list of Kubernetes secrets to reference.
+	// These secrets will be mounted as volumes to the MCP server container.
+	// +optional
+	SecretRefs []corev1.ObjectReference `json:"secretRefs,omitempty"`
 }
 
 // +kubebuilder:object:root=true

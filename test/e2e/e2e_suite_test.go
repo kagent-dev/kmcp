@@ -21,8 +21,8 @@ import (
 	"os/exec"
 	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 
 	"kagent.dev/kmcp/test/utils"
 )
@@ -39,22 +39,22 @@ var (
 // The default setup requires Kind, builds/loads the Manager Docker image locally, and installs
 // CertManager and Prometheus.
 func TestE2E(t *testing.T) {
-	RegisterFailHandler(Fail)
-	_, _ = fmt.Fprintf(GinkgoWriter, "Starting kmcp integration test suite\n")
-	RunSpecs(t, "e2e suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Starting kmcp integration test suite\n")
+	ginkgo.RunSpecs(t, "e2e suite")
 }
 
-var _ = BeforeSuite(func() {
+var _ = ginkgo.BeforeSuite(func() {
 
-	By("building the manager(Operator) image")
+	ginkgo.By("building the manager(Operator) image")
 	cmd := exec.Command("make", "docker-build", fmt.Sprintf("CONTROLLER_IMG=%s", projectImage))
 	_, err := utils.Run(cmd)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the manager(Operator) image")
+	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to build the manager(Operator) image")
 
 	// TODO(user): If you want to change the e2e test vendor from Kind, ensure the image is
 	// built and available before running the tests. Also, remove the following block.
-	By("loading the manager(Operator) image on Kind")
+	ginkgo.By("loading the manager(Operator) image on Kind")
 	err = utils.LoadImageToKindClusterWithName(projectImage)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
+	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
 
 })

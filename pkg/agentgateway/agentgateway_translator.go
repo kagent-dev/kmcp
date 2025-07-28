@@ -19,7 +19,7 @@ const (
 	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
 )
 
-type AgentGatewayOutputs struct {
+type Outputs struct {
 	// AgentGateway Deployment
 	Deployment *appsv1.Deployment
 	// AgentGateway Service
@@ -28,15 +28,15 @@ type AgentGatewayOutputs struct {
 	ConfigMap *corev1.ConfigMap
 }
 
-type AgentGatewayTranslator interface {
-	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*AgentGatewayOutputs, error)
+type Translator interface {
+	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*Outputs, error)
 }
 
 type agentGatewayTranslator struct {
 	scheme *runtime.Scheme
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
+func NewAgentGatewayTranslator(scheme *runtime.Scheme) Translator {
 	return &agentGatewayTranslator{
 		scheme: scheme,
 	}
@@ -44,7 +44,7 @@ func NewAgentGatewayTranslator(scheme *runtime.Scheme) AgentGatewayTranslator {
 
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	server *v1alpha1.MCPServer,
-) (*AgentGatewayOutputs, error) {
+) (*Outputs, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
@@ -57,7 +57,7 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
 	}
-	return &AgentGatewayOutputs{
+	return &Outputs{
 		Deployment: deployment,
 		Service:    service,
 		ConfigMap:  configMap,
@@ -72,15 +72,19 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
 	}
 
+	// Create environment variables from secrets for envFrom
+	secretEnvFrom := t.createSecretEnvFrom(server.Spec.Deployment.SecretRefs)
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
 			InitContainers: []corev1.Container{{
-				Name:    "copy-binary",
-				Image:   agentGatewayContainerImage,
-				Command: []string{"sh"},
+				Name:            "copy-binary",
+				Image:           agentGatewayContainerImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"sh"},
 				Args: []string{
 					"-c",
 					"cp /usr/bin/agentgateway /agentbin/agentgateway",
@@ -92,8 +96,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
-				Name:  "mcp-server",
-				Image: image,
+				Name:            "mcp-server",
+				Image:           image,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
 					"sh",
 				},
@@ -101,6 +106,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					"-c",
 					"/agentbin/agentgateway -f /config/local.yaml",
 				},
+				EnvFrom: secretEnvFrom,
 				VolumeMounts: []corev1.VolumeMount{
 					{
 						Name:      "config",
@@ -141,9 +147,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		template = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "agent-gateway",
-					Image:   agentGatewayContainerImage,
-					Command: []string{"sh"},
+					Name:            "agent-gateway",
+					Image:           agentGatewayContainerImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"sh"},
 					Args: []string{
 						"-c",
 						"/agentbin/agentgateway -f /config/local.yaml",
@@ -157,9 +164,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				{
 					Name:            "mcp-server",
 					Image:           image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
+					EnvFrom:         secretEnvFrom,
 					SecurityContext: getSecurityContext(),
 				}},
 			Volumes: []corev1.Volume{
@@ -209,6 +218,30 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
 }
 
+// createSecretEnvFrom creates envFrom references from secret references
+func (t *agentGatewayTranslator) createSecretEnvFrom(
+	secretRefs []corev1.ObjectReference,
+) []corev1.EnvFromSource {
+	envFrom := make([]corev1.EnvFromSource, 0, len(secretRefs))
+
+	for _, secretRef := range secretRefs {
+		// Skip empty secret references
+		if secretRef.Name == "" {
+			continue
+		}
+
+		envFrom = append(envFrom, corev1.EnvFromSource{
+			SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretRef.Name,
+				},
+			},
+		})
+	}
+
+	return envFrom
+}
+
 // getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
 func getSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
@@ -229,7 +262,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, 0, len(env))
+	envVars := make([]corev1.EnvVar, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,
