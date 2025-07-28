@@ -18,7 +18,6 @@ package e2e
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"testing"
 
@@ -29,21 +28,10 @@ import (
 )
 
 var (
-	// Optional Environment Variables:
-	// - PROMETHEUS_INSTALL_SKIP=true: Skips Prometheus Operator installation during test setup.
-	// - CERT_MANAGER_INSTALL_SKIP=true: Skips CertManager installation during test setup.
-	// These variables are useful if Prometheus or CertManager is already installed, avoiding
-	// re-installation and conflicts.
-	skipPrometheusInstall  = os.Getenv("PROMETHEUS_INSTALL_SKIP") == "true"
-	skipCertManagerInstall = os.Getenv("CERT_MANAGER_INSTALL_SKIP") == "true"
-	// isPrometheusOperatorAlreadyInstalled will be set true when prometheus CRDs be found on the cluster
-	isPrometheusOperatorAlreadyInstalled = false
-	// isCertManagerAlreadyInstalled will be set true when CertManager CRDs be found on the cluster
-	isCertManagerAlreadyInstalled = false
 
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
-	projectImage = "example.com/kmcp:v0.0.1"
+	projectImage = "ghcr.io/kagent-dev/kmcp/controller:v0.0.1"
 )
 
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
@@ -71,43 +59,4 @@ var _ = ginkgo.BeforeSuite(func() {
 	err = utils.LoadImageToKindClusterWithName(projectImage)
 	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
 
-	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.
-	// To prevent errors when tests run in environments with Prometheus or CertManager already installed,
-	// we check for their presence before execution.
-	// Setup Prometheus and CertManager before the suite if not skipped and if not already installed
-	if !skipPrometheusInstall {
-		ginkgo.By("checking if prometheus is installed already")
-		isPrometheusOperatorAlreadyInstalled = utils.IsPrometheusCRDsInstalled()
-		if !isPrometheusOperatorAlreadyInstalled {
-			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Installing Prometheus Operator...\n")
-			gomega.Expect(utils.InstallPrometheusOperator()).To(gomega.Succeed(), "Failed to install Prometheus Operator")
-		} else {
-			_, _ = fmt.Fprintf(
-				ginkgo.GinkgoWriter,
-				"WARNING: Prometheus Operator is already installed. Skipping installation...\n",
-			)
-		}
-	}
-	if !skipCertManagerInstall {
-		ginkgo.By("checking if cert manager is installed already")
-		isCertManagerAlreadyInstalled = utils.IsCertManagerCRDsInstalled()
-		if !isCertManagerAlreadyInstalled {
-			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Installing CertManager...\n")
-			gomega.Expect(utils.InstallCertManager()).To(gomega.Succeed(), "Failed to install CertManager")
-		} else {
-			_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "WARNING: CertManager is already installed. Skipping installation...\n")
-		}
-	}
-})
-
-var _ = ginkgo.AfterSuite(func() {
-	// Teardown Prometheus and CertManager after the suite if not skipped and if they were not already installed
-	if !skipPrometheusInstall && !isPrometheusOperatorAlreadyInstalled {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Uninstalling Prometheus Operator...\n")
-		utils.UninstallPrometheusOperator()
-	}
-	if !skipCertManagerInstall && !isCertManagerAlreadyInstalled {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Uninstalling CertManager...\n")
-		utils.UninstallCertManager()
-	}
 })

@@ -87,11 +87,7 @@ func runInit(_ *cobra.Command, args []string) error {
 	// Get framework selection
 	framework := initFramework
 	if framework == "" && !initNonInteractive {
-		selected, err := promptForFramework()
-		if err != nil {
-			return fmt.Errorf("failed to select framework: %w", err)
-		}
-		framework = selected
+		framework = promptForFramework()
 	} else if framework == "" {
 		framework = frameworkFastMCPPython // Default framework
 	}
@@ -101,10 +97,10 @@ func runInit(_ *cobra.Command, args []string) error {
 	email := initEmail
 	if !initNonInteractive {
 		if author == "" {
-			author, _ = promptForAuthor()
+			author = promptForAuthor()
 		}
 		if email == "" {
-			email, _ = promptForEmail()
+			email = promptForEmail()
 		}
 	}
 
@@ -226,7 +222,7 @@ func promptForProjectName() (string, error) {
 	return strings.TrimSpace(name), nil
 }
 
-func promptForFramework() (string, error) {
+func promptForFramework() string {
 	fmt.Println("\nSelect a framework:")
 	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
 	fmt.Print("Enter choice [1]: ")
@@ -234,39 +230,45 @@ func promptForFramework() (string, error) {
 	var choice string
 	if _, err := fmt.Scanln(&choice); err != nil {
 		// Default to FastMCP Python on any scan error (e.g., empty input)
-		return frameworkFastMCPPython, nil
+		return frameworkFastMCPPython
 	}
 
 	switch strings.TrimSpace(choice) {
 	case "1", "":
-		return frameworkFastMCPPython, nil
+		return frameworkFastMCPPython
 	case "2":
-		return frameworkMCPGo, nil
+		return frameworkMCPGo
 	default:
-		return frameworkFastMCPPython, nil // Default to recommended
+		return frameworkFastMCPPython // Default to recommended
 	}
 }
 
-func promptForAuthor() (string, error) {
+func promptForAuthor() string {
 	fmt.Print("Enter author name (optional): ")
 	var author string
 	if _, err := fmt.Scanln(&author); err != nil {
-		return "", nil // Ignore error, treat as empty
+		return ""
 	}
-	return strings.TrimSpace(author), nil
+	return strings.TrimSpace(author)
 }
 
-func promptForEmail() (string, error) {
+func promptForEmail() string {
 	fmt.Print("Enter author email (optional): ")
 	var email string
 	if _, err := fmt.Scanln(&email); err != nil {
-		return "", nil // Ignore error, treat as empty
+		return ""
 	}
-	return strings.TrimSpace(email), nil
+	return strings.TrimSpace(email)
 }
 
 // createProjectManifest creates the kmcp.yaml manifest file
-func createProjectManifest(projectPath, projectName, framework, author, email string) (*manifest.ProjectManifest, error) {
+func createProjectManifest(
+	projectPath,
+	projectName,
+	framework,
+	author,
+	email string,
+) (*manifest.ProjectManifest, error) {
 	// Set default author if empty
 	if author == "" {
 		author = "KMCP CLI"
@@ -313,7 +315,7 @@ func createProjectManifest(projectPath, projectName, framework, author, email st
 			},
 		},
 		Dependencies: manifest.DependencyConfig{
-			Runtime: getFrameworkDependencies(framework, templateBasic), // Always use basic template
+			Runtime: getFrameworkDependencies(framework),
 			Dev:     getFrameworkDevDependencies(framework),
 		},
 		Build: manifest.BuildConfig{
@@ -357,7 +359,7 @@ func getTemplateTools(template string) map[string]manifest.ToolConfig {
 }
 
 // getFrameworkDependencies returns runtime dependencies for a framework
-func getFrameworkDependencies(framework, template string) []string {
+func getFrameworkDependencies(framework string) []string {
 	switch framework {
 	case frameworkFastMCPPython:
 		return []string{"mcp>=1.0.0", "fastmcp>=0.1.0"}

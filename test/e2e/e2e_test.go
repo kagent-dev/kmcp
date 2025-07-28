@@ -21,9 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -39,15 +37,6 @@ import (
 
 // namespace where the project is deployed in
 const namespace = "kmcp-system"
-
-// serviceAccountName created for the project
-const serviceAccountName = "kmcp-controller-manager"
-
-// metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "kmcp-controller-manager-metrics-service"
-
-// metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "kmcp-metrics-binding"
 
 var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 	var controllerPodName string
@@ -85,10 +74,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 		ginkgo.By("undeploying the controller-manager using Helm")
 		cmd = exec.Command("helm", "uninstall", "kmcp", "--namespace", namespace)
-		_, _ = utils.Run(cmd)
-
-		ginkgo.By("cleaning up the knowledge-assistant project directory")
-		cmd = exec.Command("rm", "-rf", "knowledge-assistant")
 		_, _ = utils.Run(cmd)
 
 		ginkgo.By("removing manager namespace")
@@ -316,65 +301,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		})
 	})
 })
-
-// serviceAccountToken returns a token for the specified service account in the given namespace.
-// It uses the Kubernetes TokenRequest API to generate a token by directly sending a request
-// and parsing the resulting token from the API response.
-func serviceAccountToken() (string, error) {
-	const tokenRequestRawString = `{
-		"apiVersion": "authentication.k8s.io/v1",
-		"kind": "TokenRequest"
-	}`
-
-	// Temporary file to store the token request
-	secretName := fmt.Sprintf("%s-token-request", serviceAccountName)
-	tokenRequestFile := filepath.Join("/tmp", secretName)
-	err := os.WriteFile(tokenRequestFile, []byte(tokenRequestRawString), os.FileMode(0o644))
-	if err != nil {
-		return "", err
-	}
-
-	var out string
-	verifyTokenCreation := func(g gomega.Gomega) {
-		// Execute kubectl command to create the token
-		cmd := exec.Command("kubectl", "create", "--raw", fmt.Sprintf(
-			"/api/v1/namespaces/%s/serviceaccounts/%s/token",
-			namespace,
-			serviceAccountName,
-		), "-f", tokenRequestFile)
-
-		output, err := cmd.CombinedOutput()
-		g.Expect(err).NotTo(gomega.HaveOccurred())
-
-		// Parse the JSON output to extract the token
-		var token tokenRequest
-		err = json.Unmarshal(output, &token)
-		g.Expect(err).NotTo(gomega.HaveOccurred())
-
-		out = token.Status.Token
-	}
-	gomega.Eventually(verifyTokenCreation).Should(gomega.Succeed())
-
-	return out, err
-}
-
-// getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
-func getMetricsOutput() string {
-	ginkgo.By("getting the curl-metrics logs")
-	cmd := exec.Command("kubectl", "logs", "curl-metrics", "-n", namespace)
-	metricsOutput, err := utils.Run(cmd)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to retrieve logs from curl pod")
-	gomega.Expect(metricsOutput).To(gomega.ContainSubstring("< HTTP/1.1 200 OK"))
-	return metricsOutput
-}
-
-// tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,
-// containing only the token field that we need to extract.
-type tokenRequest struct {
-	Status struct {
-		Token string `json:"token"`
-	} `json:"status"`
-}
 
 // Helper functions for resource verification
 func getDeployment(name, namespace string) *appsv1.Deployment {

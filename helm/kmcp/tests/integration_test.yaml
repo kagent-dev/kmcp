@@ -1,0 +1,80 @@
+suite: Integration tests for KMCP helm chart
+templates:
+  - deployment.yaml
+
+tests:
+  - it: should create deployment with default values
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: true
+      serviceAccount.create: true
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create deployment with minimal configuration
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: false
+      serviceAccount.create: false
+      rbac.create: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should use custom namespace
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: true
+      serviceAccount.create: true
+      rbac.create: true
+      global:
+        namespaceOverride: custom-namespace
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should use custom release name
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: true
+      serviceAccount.create: true
+      rbac.create: true
+      nameOverride: custom-release
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include metrics port in deployment when metrics enabled
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: true
+      controller.metrics.bindAddress: ":8443"
+      serviceAccount.create: true
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create deployment when metrics enabled
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+      controller.metrics.enabled: true
+      serviceAccount.create: true
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {} 
