@@ -175,14 +175,13 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build kmcp CLI")
 
 			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
-			cmd = exec.Command("dist/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--version", "0.0.1", "--force")
+			cmd = exec.Command("dist/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--force")
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
 			ginkgo.By("creating Kubernetes secret from existing .env.local file")
 			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
-			cmd = exec.Command("dist/kmcp", "secrets", "create-k8s-secret-from-env", envFilePath, "-o",
-				fmt.Sprintf("%s/secrets/", projectDir))
+			cmd = exec.Command("dist/kmcp", "secrets", "sync", "staging", "--from-file", envFilePath, "--dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 
@@ -196,9 +195,8 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
 
-			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI with secrets")
-			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace,
-				"--secrets", fmt.Sprintf("%s/secrets/.env.yaml", projectDir))
+			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
+			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 
