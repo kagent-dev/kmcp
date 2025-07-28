@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kagent-dev/kmcp/pkg/manifest"
@@ -26,6 +27,7 @@ var secretsCmd = &cobra.Command{
 var (
 	secretSourceFile string
 	secretDryRun     bool
+	secretDir        string
 )
 
 // syncCmd creates or updates a Kubernetes secret from an environment file
@@ -47,6 +49,9 @@ Examples:
   # Sync secrets from a custom .env file
   kmcp secrets sync staging --from-file .env.staging
 
+  # Sync secrets from a specific project directory
+  kmcp secrets sync staging --dir ./my-project
+
   # Perform a dry run to see the generated secret without applying it
   kmcp secrets sync production --dry-run
 `,
@@ -63,21 +68,35 @@ func init() {
 	// create-k8s-secret-from-env flags
 	syncCmd.Flags().StringVar(&secretSourceFile, "from-file", ".env", "Source .env file to sync from")
 	syncCmd.Flags().BoolVar(&secretDryRun, "dry-run", false, "Output the generated secret YAML instead of applying it")
+	syncCmd.Flags().StringVarP(&secretDir, "dir", "d", "", "Project directory (default: current directory)")
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
 	environment := args[0]
 
-	// Get project root
-	projectRoot, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %w", err)
+	// Determine project root
+	projectRoot := secretDir
+	if projectRoot == "" {
+		var err error
+		projectRoot, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+	} else {
+		// Convert relative path to absolute path
+		if !filepath.IsAbs(projectRoot) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %w", err)
+			}
+			projectRoot = filepath.Join(cwd, projectRoot)
+		}
 	}
 
 	// Load manifest
 	manifestManager := manifest.NewManager(projectRoot)
 	if !manifestManager.Exists() {
-		return fmt.Errorf("kmcp.yaml not found in the current directory. Please run 'kmcp init' or navigate to a valid project.")
+		return fmt.Errorf("kmcp.yaml not found in %s. Please run 'kmcp init' or navigate to a valid project.", projectRoot)
 	}
 	projectManifest, err := manifestManager.Load()
 	if err != nil {

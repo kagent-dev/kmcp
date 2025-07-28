@@ -58,7 +58,7 @@ tests/                  # Generated tests
 
 2. **Run in Container**:
    ```bash
-   docker run -i {{.ProjectNameKebab}}:latest
+   docker run -i {{.ProjectName}}:latest
    ```
 
 3. **Deploy to Kubernetes**:
@@ -171,7 +171,7 @@ uv run mypy .
 kmcp build --docker
 
 # Run container
-docker run -i {{.ProjectNameKebab}}:latest
+docker run -i {{.ProjectName}}:latest
 ```
 
 ### Kubernetes
@@ -181,5 +181,5 @@ docker run -i {{.ProjectNameKebab}}:latest
 kmcp deploy mcp --apply
 
 # Check deployment status
-kubectl get mcpserver {{.ProjectNameKebab}}
+kubectl get mcpserver {{.ProjectName}}
 ```
