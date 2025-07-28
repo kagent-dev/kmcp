@@ -102,7 +102,12 @@ func init() {
 	deployMCPCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployMCPCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployMCPCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
-	deployMCPCmd.Flags().StringVar(&deployEnvironment, "environment", "staging", "Target environment for deployment (e.g., staging, production)")
+	deployMCPCmd.Flags().StringVar(
+		&deployEnvironment,
+		"environment",
+		"staging",
+		"Target environment for deployment (e.g., staging, production)",
+	)
 }
 
 func runDeployMCP(_ *cobra.Command, args []string) error {
@@ -209,7 +214,11 @@ func getProjectDirFromFile(filePath string) (string, error) {
 	return projectDir, nil
 }
 
-func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName, environment string) (*v1alpha1.MCPServer, error) {
+func generateMCPServer(
+	projectManifest *manifest.ProjectManifest,
+	deploymentName,
+	environment string,
+) (*v1alpha1.MCPServer, error) {
 	// Determine image name
 	imageName := deployImage
 	if imageName == "" {
@@ -328,7 +337,10 @@ func generateMCPServer(projectManifest *manifest.ProjectManifest, deploymentName
 	return mcpServer, nil
 }
 
-func getSecretRefFromManifest(projectManifest *manifest.ProjectManifest, environment string) (*corev1.ObjectReference, error) {
+func getSecretRefFromManifest(
+	projectManifest *manifest.ProjectManifest,
+	environment string,
+) (*corev1.ObjectReference, error) {
 	if environment == "" {
 		return nil, nil // No environment specified
 	}

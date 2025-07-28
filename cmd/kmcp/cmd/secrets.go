@@ -96,7 +96,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Load manifest
 	manifestManager := manifest.NewManager(projectRoot)
 	if !manifestManager.Exists() {
-		return fmt.Errorf("kmcp.yaml not found in %s. Please run 'kmcp init' or navigate to a valid project.", projectRoot)
+		return fmt.Errorf("kmcp.yaml not found in %s. Please run 'kmcp init' or navigate to a valid project", projectRoot)
 	}
 	projectManifest, err := manifestManager.Load()
 	if err != nil {
@@ -110,7 +110,11 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	if secretConfig.Provider != manifest.SecretProviderKubernetes {
-		return fmt.Errorf("the 'secrets sync' command only supports the 'kubernetes' provider, but environment '%s' uses '%s'", environment, secretConfig.Provider)
+		return fmt.Errorf(
+			"the 'secrets sync' command only supports the 'kubernetes' provider, but environment '%s' uses '%s'",
+			environment,
+			secretConfig.Provider,
+		)
 	}
 
 	// Load .env file
