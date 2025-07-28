@@ -38,7 +38,7 @@ import (
 // namespace where the project is deployed in
 const namespace = "kmcp-system"
 
-var _ = Describe("Manager", Ordered, func() {
+var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 	var controllerPodName string
 
 	// Before running the tests, set up the environment by creating the namespace,
