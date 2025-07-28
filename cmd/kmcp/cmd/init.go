@@ -104,7 +104,7 @@ func runInit(_ *cobra.Command, args []string) error {
 			email = promptForEmail()
 		}
 		if description == "" {
-			description, _ = promptForDescription()
+			description = promptForDescription()
 		}
 	}
 
@@ -271,11 +271,11 @@ func promptForEmail() string {
 	return strings.TrimSpace(email)
 }
 
-func promptForDescription() (string, error) {
+func promptForDescription() string {
 	fmt.Print("Enter description (optional): ")
 	var description string
 	if _, err := fmt.Scanln(&description); err != nil {
-		return "", nil // Ignore error, treat as empty
+		return "" // Ignore error, treat as empty
 	}
-	return strings.TrimSpace(description), nil
+	return strings.TrimSpace(description)
 }
