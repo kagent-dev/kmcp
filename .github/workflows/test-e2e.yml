@@ -2,7 +2,9 @@ name: E2E Tests
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   test-e2e:
@@ -17,19 +19,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install the latest version of kind
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-
-      - name: Verify kind installation
-        run: kind version
-
-      - name: Create kind cluster
-        run: kind create cluster
-
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1
       - name: Running Test e2e
         run: |
+          kind create cluster
           go mod tidy
           make test-e2e

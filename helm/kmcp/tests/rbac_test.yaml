@@ -1,0 +1,145 @@
+suite: Test RBAC templates
+templates:
+  - rbac/serviceaccount.yaml
+  - rbac/clusterrole.yaml
+  - rbac/clusterrolebinding.yaml
+  - rbac/leader-election-role.yaml
+  - rbac/leader-election-rolebinding.yaml
+  - rbac/metrics-auth-clusterrole.yaml
+  - rbac/metrics-auth-clusterrolebinding.yaml
+  - rbac/metrics-reader-clusterrole.yaml
+
+tests:
+  - it: should create service account when enabled
+    template: rbac/serviceaccount.yaml
+    set:
+      serviceAccount.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should not create service account when disabled
+    template: rbac/serviceaccount.yaml
+    set:
+      serviceAccount.create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should include service account annotations when specified
+    template: rbac/serviceaccount.yaml
+    set:
+      serviceAccount.create: true
+      serviceAccount.annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/kmcp-role
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create cluster role when RBAC enabled
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should not create cluster role when RBAC disabled
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should include mcpservers resource rules
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include mcpservers finalizers rules
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include mcpservers status rules
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create cluster role binding when RBAC enabled
+    template: rbac/clusterrolebinding.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should not create cluster role binding when RBAC disabled
+    template: rbac/clusterrolebinding.yaml
+    set:
+      rbac.create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create leader election role
+    template: rbac/leader-election-role.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create leader election role binding
+    template: rbac/leader-election-rolebinding.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create metrics auth cluster role
+    template: rbac/metrics-auth-clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create metrics auth cluster role binding
+    template: rbac/metrics-auth-clusterrolebinding.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should create metrics reader cluster role
+    template: rbac/metrics-reader-clusterrole.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {} 

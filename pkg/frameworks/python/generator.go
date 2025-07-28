@@ -288,36 +288,3 @@ func (g *Generator) initGitRepo(dir string, verbose bool) error {
 
 	return nil
 }
-
-// String manipulation utilities
-func (g *Generator) toCamelCase(s string) string {
-	if s == "" {
-		return s
-	}
-	words := strings.FieldsFunc(s, func(r rune) bool {
-		return r == '-' || r == '_' || r == ' '
-	})
-	if len(words) == 0 {
-		return s
-	}
-	result := strings.ToLower(words[0])
-	for _, word := range words[1:] {
-		result += cases.Title(language.English).String(strings.ToLower(word))
-	}
-	return result
-}
-
-func (g *Generator) toPascalCase(s string) string {
-	camel := g.toCamelCase(s)
-	if camel == "" {
-		return camel
-	}
-	return strings.ToUpper(camel[:1]) + camel[1:]
-}
-
-func (g *Generator) toKebabCase(s string) string {
-	words := strings.FieldsFunc(s, func(r rune) bool {
-		return r == '-' || r == '_' || r == ' '
-	})
-	return strings.ToLower(strings.Join(words, "-"))
-}

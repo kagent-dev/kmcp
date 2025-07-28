@@ -1,0 +1,156 @@
+suite: Test deployment template
+templates:
+  - deployment.yaml
+
+tests:
+  - it: should create deployment with default values
+    template: deployment.yaml
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set custom replica count
+    template: deployment.yaml
+    set:
+      controller.replicaCount: 3
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include metrics port when metrics enabled
+    template: deployment.yaml
+    set:
+      controller.metrics.enabled: true
+      controller.metrics.bindAddress: ":8443"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include health probe ports when health probe enabled
+    template: deployment.yaml
+    set:
+      controller.healthProbe.bindAddress: ":8081"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set custom resources
+    template: deployment.yaml
+    set:
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 256Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include pod annotations when specified
+    template: deployment.yaml
+    set:
+      podAnnotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8443"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include image pull secrets when specified
+    template: deployment.yaml
+    set:
+      imagePullSecrets:
+        - name: my-registry-secret
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include node selector when specified
+    template: deployment.yaml
+    set:
+      nodeSelector:
+        kubernetes.io/os: linux
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should include tolerations when specified
+    template: deployment.yaml
+    set:
+      tolerations:
+        - key: "key"
+          operator: "Equal"
+          value: "value"
+          effect: "NoSchedule"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set security context
+    template: deployment.yaml
+    set:
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - "ALL"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set pod security context
+    template: deployment.yaml
+    set:
+      podSecurityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {}
+
+  - it: should set termination grace period
+    template: deployment.yaml
+    set:
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchSnapshot: {} 
