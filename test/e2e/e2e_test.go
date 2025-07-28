@@ -179,13 +179,22 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build kmcp CLI")
 
 			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
-			cmd = exec.Command("dist/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--force")
+			cmd = exec.Command("dist/kmcp", "init", projectDir, "--framework", "fastmcp-python", "--force", "--namespace", namespace)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
+			ginkgo.By("updating kmcp.yaml to enable all secrets")
+			cmd = exec.Command("sed", "-i.bak", "s/enabled: false/enabled: true/", fmt.Sprintf("%s/kmcp.yaml", projectDir))
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to update kmcp.yaml to enable local secrets")
+
+			// clean up kmcp yaml backup file
+			cmd = exec.Command("rm", "-f", fmt.Sprintf("%s/kmcp.yaml.bak", projectDir))
+			_, _ = utils.Run(cmd)
+
 			ginkgo.By("creating Kubernetes secret from existing .env.local file")
 			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
-			cmd = exec.Command("dist/kmcp", "secrets", "sync", "staging", "--from-file", envFilePath, "--dir", projectDir)
+			cmd = exec.Command("dist/kmcp", "secrets", "sync", "local", "--from-file", envFilePath, "--dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 
@@ -200,7 +209,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
 
 			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
-			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace)
+			cmd = exec.Command("dist/kmcp", "deploy", "mcp", "-f", fmt.Sprintf("%s/kmcp.yaml", projectDir), "-n", namespace, "--environment", "local")
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
 

@@ -43,6 +43,7 @@ var (
 	initEmail          string
 	initDescription    string
 	initNonInteractive bool
+	initNamespace      string
 )
 
 func init() {
@@ -55,6 +56,7 @@ func init() {
 	initCmd.Flags().StringVar(&initEmail, "email", "", "Author email for the project")
 	initCmd.Flags().StringVar(&initDescription, "description", "", "Description for the project")
 	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
+	initCmd.Flags().StringVar(&initNamespace, "namespace", "default", "Default namespace for project resources")
 }
 
 func runInit(_ *cobra.Command, args []string) error {
@@ -119,7 +121,7 @@ func runInit(_ *cobra.Command, args []string) error {
 	}
 
 	// Create the project manifest object
-	projectManifest := manifest.GetDefault(projectName, framework, description, author, email)
+	projectManifest := manifest.GetDefault(projectName, framework, description, author, email, initNamespace)
 
 	// Create project configuration
 	projectConfig := templates.ProjectConfig{
@@ -199,6 +201,7 @@ func runInit(_ *cobra.Command, args []string) error {
 	fmt.Printf("\nTo manage secrets:\n")
 	fmt.Printf("  kmcp secrets add-secret API_KEY --environment local\n")
 	fmt.Printf("  kmcp secrets generate-k8s-secrets --environment staging\n")
+	fmt.Printf("\nNote: Default namespace for secrets and deployments is '%s'\n", initNamespace)
 
 	return nil
 }
