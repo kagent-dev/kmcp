@@ -2,14 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"kagent.dev/kmcp/pkg/frameworks"
 	"kagent.dev/kmcp/pkg/manifest"
 	"kagent.dev/kmcp/pkg/templates"
+
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -23,20 +23,12 @@ var initCmd = &cobra.Command{
 	Short: "Initialize a new MCP server project",
 	Long: `Initialize a new MCP server project with dynamic tool loading.
 
-This command creates a new MCP server project using one of the supported frameworks:
-- FastMCP Python (recommended) - Dynamic tool loading with FastMCP
-
-The recommended approach is FastMCP Python which provides:
-- Automatic tool discovery and loading
-- One file per tool with clear structure
-- Built-in configuration management
-- Comprehensive testing framework`,
-	Args: cobra.MaximumNArgs(1),
+This command provides subcommands to initialize a new MCP server project
+using one of the supported frameworks.`,
 	RunE: runInit,
 }
 
 var (
-	initFramework      string
 	initForce          bool
 	initNoGit          bool
 	initAuthor         string
@@ -49,84 +41,56 @@ var (
 func init() {
 	rootCmd.AddCommand(initCmd)
 
-	initCmd.Flags().StringVarP(&initFramework, "framework", "f", "", "Framework to use (fastmcp-python)")
-	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
-	initCmd.Flags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
-	initCmd.Flags().StringVar(&initAuthor, "author", "", "Author name for the project")
-	initCmd.Flags().StringVar(&initEmail, "email", "", "Author email for the project")
-	initCmd.Flags().StringVar(&initDescription, "description", "", "Description for the project")
-	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
-	initCmd.Flags().StringVar(&initNamespace, "namespace", "default", "Default namespace for project resources")
+	initCmd.PersistentFlags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
+	initCmd.PersistentFlags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")
+	initCmd.PersistentFlags().StringVar(&initAuthor, "author", "", "Author name for the project")
+	initCmd.PersistentFlags().StringVar(&initEmail, "email", "", "Author email for the project")
+	initCmd.PersistentFlags().StringVar(&initDescription, "description", "", "Description for the project")
+	initCmd.PersistentFlags().BoolVar(&initNonInteractive, "non-interactive", false, "Run in non-interactive mode")
+	initCmd.PersistentFlags().StringVar(&initNamespace, "namespace", "default", "Default namespace for project resources")
 }
 
-func runInit(_ *cobra.Command, args []string) error {
-	var projectName string
-
-	// Get project name from args or prompt
-	if len(args) > 0 {
-		projectName = args[0]
-	} else if !initNonInteractive {
-		name, err := promptForProjectName()
-		if err != nil {
-			return fmt.Errorf("failed to get project name: %w", err)
-		}
-		projectName = name
-	} else {
-		return fmt.Errorf("project name is required in non-interactive mode")
+func runInit(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return cmd.Help()
 	}
+	return nil
+}
+
+func runInitFramework(
+	projectName, framework string,
+	customizeProjectConfig func(*templates.ProjectConfig) error,
+) error {
 
 	// Validate project name
 	if err := validateProjectName(projectName); err != nil {
 		return fmt.Errorf("invalid project name: %w", err)
 	}
 
-	// Check if directory exists
-	projectPath := filepath.Join(".", projectName)
-	if _, err := os.Stat(projectPath); err == nil && !initForce {
-		return fmt.Errorf("directory '%s' already exists. Use --force to overwrite", projectName)
-	}
-
-	// Get framework selection
-	framework := initFramework
-	if framework == "" && !initNonInteractive {
-		framework = promptForFramework()
-	} else if framework == "" {
-		framework = frameworkFastMCPPython // Default framework
-	}
-
-	// Get author information
-	author := initAuthor
-	email := initEmail
-	description := initDescription
 	if !initNonInteractive {
-		if author == "" {
-			author = promptForAuthor()
+		if initDescription == "" {
+			initDescription = promptForDescription()
 		}
-		if email == "" {
-			email = promptForEmail()
+		if initAuthor == "" {
+			initAuthor = promptForAuthor()
 		}
-		if description == "" {
-			description = promptForDescription()
+		if initEmail == "" {
+			initEmail = promptForEmail()
 		}
 	}
 
-	if verbose {
-		fmt.Printf("Creating %s project using %s framework\n", projectName, framework)
-		fmt.Printf("Project directory: %s\n", projectPath)
-	}
+	// Create project manifest
+	projectManifest := manifest.GetDefault(projectName, framework, initDescription, initAuthor, initEmail, initNamespace)
 
-	// Create project directory first
-	if err := os.MkdirAll(projectPath, 0755); err != nil {
-		return fmt.Errorf("failed to create project directory: %w", err)
+	// Check if directory exists
+	projectPath, err := filepath.Abs(projectName)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for project: %w", err)
 	}
-
-	// Create the project manifest object
-	projectManifest := manifest.GetDefault(projectName, framework, description, author, email, initNamespace)
 
 	// Create project configuration
 	projectConfig := templates.ProjectConfig{
 		ProjectName: projectManifest.Name,
-		Framework:   projectManifest.Framework,
 		Version:     projectManifest.Version,
 		Description: projectManifest.Description,
 		Author:      projectManifest.Author,
@@ -139,62 +103,26 @@ func runInit(_ *cobra.Command, args []string) error {
 		Verbose:     verbose,
 	}
 
-	// Use the generator to create the project files
-	fmt.Println("✅ Creating project structure...")
+	// Customize project config for the specific framework
+	if customizeProjectConfig != nil {
+		if err := customizeProjectConfig(&projectConfig); err != nil {
+			return fmt.Errorf("failed to customize project config: %w", err)
+		}
+	}
+
+	// Generate project files
 	generator, err := frameworks.GetGenerator(framework)
 	if err != nil {
-		return fmt.Errorf("failed to get generator: %w", err)
+		return err
 	}
-
 	if err := generator.GenerateProject(projectConfig); err != nil {
-		return fmt.Errorf("failed to generate project files: %w", err)
+		return fmt.Errorf("failed to generate project: %w", err)
 	}
 
-	// Create kmcp.yaml
-	manifestManager := manifest.NewManager(projectPath)
-	if err := manifestManager.Save(projectManifest); err != nil {
-		return fmt.Errorf("failed to save project manifest: %w", err)
-	}
+	fmt.Printf("  To run the server locally:\n")
+	fmt.Printf("  kmcp run local --project-dir %s\n", projectPath)
 
-	// Get absolute path for output
-	absProjectPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		absProjectPath = projectPath // Fallback to relative path if absolute fails
-	}
-
-	// Success message
-	fmt.Printf("\n✓ Successfully created MCP server project: %s\n", projectName)
-	fmt.Printf("✓ Generated project manifest: kmcp.yaml\n")
-	fmt.Printf("\nNext steps for local development:\n")
-
-	switch framework {
-	case frameworkFastMCPPython:
-		fmt.Printf("  Tools will be automatically discovered from the src/tools/ directory.\n")
-		fmt.Printf("  Use 'kmcp add-tool <name>' to add new tools after project creation.\n")
-		fmt.Printf("\n")
-		fmt.Printf("  To run the server locally:\n")
-		fmt.Printf("  kmcp run local --project-dir %s\n", absProjectPath)
-	case frameworkMCPGo:
-		fmt.Printf("  go mod tidy\n")
-		fmt.Printf("  go run main.go\n")
-	}
-
-	fmt.Printf("\nTo build a Docker image:\n")
-	fmt.Printf("  kmcp build --docker\n")
-
-	fmt.Printf("\nTo build a Docker image in a specific directory:\n")
-	fmt.Printf("  kmcp build --docker --dir ./my-project\n")
-
-	fmt.Printf("\nTo develop using Docker only (no local Python/uv required):\n")
-	fmt.Printf("  kmcp build --docker --verbose  # Build and test\n")
-	fmt.Printf("  kmcp deploy mcp --apply       # Deploy MCP server to Kubernetes\n")
-
-	fmt.Printf("\nTo manage secrets:\n")
-	fmt.Printf("  kmcp secrets add-secret API_KEY --environment local\n")
-	fmt.Printf("  kmcp secrets generate-k8s-secrets --environment staging\n")
-	fmt.Printf("\nNote: Default namespace for secrets and deployments is '%s'\n", initNamespace)
-
-	return nil
+	return manifest.NewManager(projectPath).Save(projectManifest)
 }
 
 func validateProjectName(name string) error {
@@ -216,36 +144,6 @@ func validateProjectName(name string) error {
 }
 
 // Prompts for user input
-
-func promptForProjectName() (string, error) {
-	fmt.Print("Enter project name: ")
-	var name string
-	if _, err := fmt.Scanln(&name); err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(name), nil
-}
-
-func promptForFramework() string {
-	fmt.Println("\nSelect a framework:")
-	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
-	fmt.Print("Enter choice [1]: ")
-
-	var choice string
-	if _, err := fmt.Scanln(&choice); err != nil {
-		// Default to FastMCP Python on any scan error (e.g., empty input)
-		return frameworkFastMCPPython
-	}
-
-	switch strings.TrimSpace(choice) {
-	case "1", "":
-		return frameworkFastMCPPython
-	case "2":
-		return frameworkMCPGo
-	default:
-		return frameworkFastMCPPython // Default to recommended
-	}
-}
 
 func promptForAuthor() string {
 	fmt.Print("Enter author name (optional): ")

@@ -2,18 +2,24 @@ package templates
 
 import "kagent.dev/kmcp/pkg/manifest"
 
-// ProjectConfig contains configuration for generating a new project
+// ProjectConfig contains all the information needed to generate a project
 type ProjectConfig struct {
-	ProjectName string
-	Framework   string
-	Author      string
-	Email       string
-	Directory   string
-	NoGit       bool
-	Verbose     bool
-	Version     string
+	ProjectName  string
+	Framework    string
+	Version      string
+	Description  string
+	Author       string
+	Email        string
+	Tools        map[string]manifest.ToolConfig
+	Secrets      manifest.SecretsConfig
+	Build        manifest.BuildConfig
+	Directory    string
+	NoGit        bool
+	Verbose      bool
+	GoModuleName string
+}
+
+type ToolConfig struct {
+	ToolName    string
 	Description string
-	Tools       map[string]manifest.ToolConfig
-	Secrets     manifest.SecretsConfig
-	Build       manifest.BuildConfig
 }

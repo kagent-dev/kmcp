@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
+
+	"kagent.dev/kmcp/pkg/templates"
 
 	"github.com/spf13/cobra"
 	"kagent.dev/kmcp/pkg/frameworks"
@@ -34,6 +37,7 @@ var (
 	addToolDescription string
 	addToolForce       bool
 	addToolInteractive bool
+	addToolDir         string
 )
 
 func init() {
@@ -42,6 +46,7 @@ func init() {
 	addToolCmd.Flags().StringVarP(&addToolDescription, "description", "d", "", "Tool description")
 	addToolCmd.Flags().BoolVarP(&addToolForce, "force", "f", false, "Overwrite existing tool file")
 	addToolCmd.Flags().BoolVarP(&addToolInteractive, "interactive", "i", false, "Interactive tool creation")
+	addToolCmd.Flags().StringVar(&addToolDir, "project-dir", "", "Project directory (default: current directory)")
 }
 
 func runAddTool(_ *cobra.Command, args []string) error {
@@ -52,12 +57,26 @@ func runAddTool(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid tool name: %w", err)
 	}
 
-	// Get project root and framework
-	projectRoot, err := findProjectRoot()
-	if err != nil {
-		return err
+	// Determine project directory
+	projectDirectory := addToolDir
+	if projectDirectory == "" {
+		var err error
+		projectDirectory, err = os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current directory: %w", err)
+		}
+	} else {
+		// Convert relative path to absolute path
+		if !filepath.IsAbs(projectDirectory) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %w", err)
+			}
+			projectDirectory = filepath.Join(cwd, projectDirectory)
+		}
 	}
-	manifestManager := manifest.NewManager(projectRoot)
+
+	manifestManager := manifest.NewManager(projectDirectory)
 	projectManifest, err := manifestManager.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load project manifest: %w", err)
@@ -78,10 +97,10 @@ func runAddTool(_ *cobra.Command, args []string) error {
 	}
 
 	if addToolInteractive {
-		return createToolInteractive(toolName, projectRoot, framework)
+		return createToolInteractive(toolName, projectDirectory, framework)
 	}
 
-	return createTool(toolName, projectRoot, framework)
+	return createTool(toolName, projectDirectory, framework)
 }
 
 func validateToolName(name string) error {
@@ -168,23 +187,14 @@ func generateTool(toolName, projectRoot, framework string) error {
 		return err
 	}
 
-	config := map[string]interface{}{
-		"description": addToolDescription,
+	config := templates.ToolConfig{
+		ToolName:    toolName,
+		Description: addToolDescription,
 	}
 
-	if err := generator.GenerateTool(projectRoot, toolName, config); err != nil {
+	if err := generator.GenerateTool(projectRoot, config); err != nil {
 		return fmt.Errorf("failed to generate tool file: %w", err)
 	}
-
-	fmt.Printf("✅ Successfully created tool: %s\n", toolName)
-	fmt.Printf("📁 Generated file: src/tools/%s.py\n", toolName)
-	fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
-
-	fmt.Printf("\nNext steps:\n")
-	fmt.Printf("1. Edit src/tools/%s.py to implement your tool logic\n", toolName)
-	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
-	fmt.Printf("3. Run 'uv run python src/main.py' to start the server\n")
-	fmt.Printf("4. Run 'uv run pytest tests/' to test your tool\n")
 
 	return nil
 }
