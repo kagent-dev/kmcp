@@ -194,7 +194,10 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
 			ginkgo.By("updating kmcp.yaml to enable staging secrets")
-			cmd = exec.Command("sed", "-i.bak", "/staging:/,/enabled:/ s/enabled: false/enabled: true/", fmt.Sprintf("%s/kmcp.yaml", projectDir))
+			cmd = exec.Command("sed",
+				"-i.bak",
+				"/staging:/,/enabled:/ s/enabled: false/enabled: true/",
+				fmt.Sprintf("%s/kmcp.yaml", projectDir))
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to update kmcp.yaml to enable staging secrets")
 
