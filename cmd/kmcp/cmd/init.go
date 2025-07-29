@@ -119,6 +119,9 @@ func runInitFramework(
 		return fmt.Errorf("failed to generate project: %w", err)
 	}
 
+	fmt.Printf("  To run the server locally:\n")
+	fmt.Printf("  kmcp run local --project-dir %s\n", projectPath)
+
 	return manifest.NewManager(projectPath).Save(projectManifest)
 }
 

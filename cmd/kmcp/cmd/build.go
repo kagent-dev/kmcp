@@ -19,8 +19,8 @@ MCP server package or Docker image.
 
 Examples:
   kmcp build                    # Build from current directory
-  kmcp build --dir /path/to/project  # Build from specific directory
-  kmcp build --docker --dir ./my-project  # Build Docker image from specific directory`,
+  kmcp build --project-dir /path/to/project  # Build from specific directory
+  kmcp build --docker --project-dir ./my-project  # Build Docker image from specific directory`,
 	RunE: runBuild,
 }
 
@@ -39,7 +39,7 @@ func init() {
 	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", "", "Output directory or image name")
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag")
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
-	buildCmd.Flags().StringVarP(&buildDir, "dir", "d", "", "Build directory (default: current directory)")
+	buildCmd.Flags().StringVarP(&buildDir, "project-dir", "d", "", "Build directory (default: current directory)")
 }
 
 func runBuild(_ *cobra.Command, _ []string) error {

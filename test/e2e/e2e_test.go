@@ -205,22 +205,31 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			cmd = exec.Command("rm", "-f", fmt.Sprintf("%s/kmcp.yaml.bak", projectDir))
 			_, _ = utils.Run(cmd)
 
-			ginkgo.By("creating a dummy .env.local file for testing secrets")
-			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
+			ginkgo.By("creating a dummy .env.staging file for testing secrets")
+			envFilePath := fmt.Sprintf("%s/.env.staging", projectDir)
 			envContent := []byte("DATABASE_URL=postgres://user:pass@host:port/db\n" +
 				"OPENAI_API_KEY=dummy-key\n" +
 				"WEATHER_API_KEY=dummy-key\n")
 			err = os.WriteFile(envFilePath, envContent, 0644)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create dummy .env.local file")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create dummy .env.staging file")
 
-			ginkgo.By("creating Kubernetes secret from existing .env.local file")
+			ginkgo.By("creating Kubernetes secret from existing .env.staging file")
 
-			cmd = exec.Command("dist/kmcp", "secrets", "sync", "staging", "--from-file", envFilePath, "--dir", projectDir)
+			cmd = exec.Command(
+				"dist/kmcp",
+				"secrets",
+				"sync",
+				"staging",
+				"--from-file",
+				envFilePath,
+				"--project-dir",
+				projectDir,
+			)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 
 			ginkgo.By("building the Docker image for the knowledge-assistant project")
-			cmd = exec.Command("dist/kmcp", "build", "--docker", "--verbose", "--dir", projectDir)
+			cmd = exec.Command("dist/kmcp", "build", "--docker", "--verbose", "--project-dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build Docker image")
 

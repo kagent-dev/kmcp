@@ -69,23 +69,37 @@ class DynamicMCPServer:
             return
 
         loaded_count = 0
+        has_errors = False
 
         for tool_file in tool_files:
             try:
+                # Get the number of tools before importing
+                tools_before = len(self.mcp._tool_manager._tools)
+                
                 # Simply import the module - tools auto-register via @mcp.tool()
                 # decorator
                 tool_name = tool_file.stem
                 if self._import_tool_module(tool_file, tool_name):
-                    self.loaded_tools.append(tool_name)
-                    loaded_count += 1
-                    logging.info(f"Loaded tool module: {tool_name}")
+                    # Check if any tools were actually registered
+                    tools_after = len(self.mcp._tool_manager._tools)
+                    if tools_after > tools_before:
+                        self.loaded_tools.append(tool_name)
+                        loaded_count += 1
+                        logging.info(f"Loaded tool module: {tool_name}")
+                    else:
+                        logging.error(f"Tool file {tool_name} did not register any tools")
+                        has_errors = True
                 else:
-                    logging.warning(f"Failed to load tool module: {tool_name}")
+                    logging.error(f"Failed to load tool module: {tool_name}")
+                    has_errors = True
 
             except Exception as e:
-                logging.warning(f"Error loading tool {tool_file.name}: {e}")
-                # Fail fast - if any tool fails to load, stop the server
-                sys.exit(1)
+                logging.error(f"Error loading tool {tool_file.name}: {e}")
+                has_errors = True
+
+        # Fail fast - if any tool fails to load, stop the server
+        if has_errors:
+            sys.exit(1)
 
         logging.info(f"📦 Successfully loaded {loaded_count} tools")
 
@@ -121,6 +135,11 @@ class DynamicMCPServer:
         except Exception as e:
             print(f"Error importing {tool_file}: {e}")
             return False
+
+    def get_tools_sync(self):
+        """Get tools synchronously for testing purposes."""
+        # This is a simplified version for testing - in real usage, use get_tools() async
+        return self.mcp._tool_manager._tools
 
     def run(self) -> None:
         """Run the FastMCP server."""

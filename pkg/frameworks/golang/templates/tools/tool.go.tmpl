@@ -10,8 +10,13 @@ func init() {
 		Name:        "{{.ToolName}}",
 		Description: "{{.Description}}",
 		Handler: func(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[{{.ClassName}}Params]) (*mcp.CallToolResultFor[{{.ClassName}}Result], error) {
+			result := run{{.ClassName}}(params.Arguments)
 			return &mcp.CallToolResultFor[{{.ClassName}}Result]{
-				StructuredContent: run{{.ClassName}}(params.Arguments),
+				Content: []mcp.Content{
+					&mcp.TextContent{
+						Text: result.Result,
+					},
+				},
 			}, nil
 		},
 	})
