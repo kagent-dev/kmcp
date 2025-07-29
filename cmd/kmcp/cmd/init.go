@@ -61,17 +61,6 @@ func runInitFramework(
 	projectName, framework string,
 	customizeProjectConfig func(*templates.ProjectConfig) error,
 ) error {
-	// Interactively get module name if not provided
-	if goModuleName == "" && !initNonInteractive {
-		var err error
-		goModuleName, err = promptForInput("Enter Go module name (e.g., github.com/my-org/my-project): ")
-		if err != nil {
-			return fmt.Errorf("failed to read module name: %w", err)
-		}
-	}
-	if goModuleName == "" {
-		return fmt.Errorf("--module-name is required")
-	}
 
 	// Validate project name
 	if err := validateProjectName(projectName); err != nil {
