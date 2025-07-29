@@ -32,7 +32,6 @@ func init() {
 		"",
 		"The Go module name for the project (e.g., github.com/my-org/my-project)",
 	)
-	_ = initGoCmd.MarkFlagRequired("go-module-name")
 }
 
 func runInitGo(_ *cobra.Command, args []string) error {
