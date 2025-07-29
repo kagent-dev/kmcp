@@ -191,18 +191,18 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create knowledge-assistant project")
 
-			ginkgo.By("updating kmcp.yaml to enable all secrets")
-			cmd = exec.Command("sed", "-i.bak", "s/enabled: false/enabled: true/", fmt.Sprintf("%s/kmcp.yaml", projectDir))
+			ginkgo.By("updating kmcp.yaml to enable staging secrets")
+			cmd = exec.Command("sed", "-i.bak", "/staging:/,/enabled:/ s/enabled: false/enabled: true/", fmt.Sprintf("%s/kmcp.yaml", projectDir))
 			_, err = utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to update kmcp.yaml to enable local secrets")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to update kmcp.yaml to enable staging secrets")
 
 			// clean up kmcp yaml backup file
 			cmd = exec.Command("rm", "-f", fmt.Sprintf("%s/kmcp.yaml.bak", projectDir))
 			_, _ = utils.Run(cmd)
 
-			ginkgo.By("creating Kubernetes secret from existing .env.local file")
+			ginkgo.By("creating Kubernetes staging secret from example .env.local file")
 			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
-			cmd = exec.Command("dist/kmcp", "secrets", "sync", "local", "--from-file", envFilePath, "--dir", projectDir)
+			cmd = exec.Command("dist/kmcp", "secrets", "sync", "staging", "--from-file", envFilePath, "--dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 
@@ -226,7 +226,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				"-n",
 				namespace,
 				"--environment",
-				"local",
+				"staging",
 			)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")
