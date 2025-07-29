@@ -66,12 +66,34 @@ func init() {
 	runCmd.AddCommand(localCmd)
 	runCmd.AddCommand(kindCmd)
 
-	localCmd.Flags().StringVarP(&localProjectDir, "project-dir", "d", "", "Project directory to use (default: current directory)")
-	kindCmd.Flags().StringVarP(&localProjectDir, "project-dir", "d", "", "Project directory to use (default: current directory)")
+	localCmd.Flags().StringVarP(
+		&localProjectDir,
+		"project-dir",
+		"d",
+		"",
+		"Project directory to use (default: current directory)",
+	)
+	kindCmd.Flags().StringVarP(
+		&localProjectDir,
+		"project-dir",
+		"d",
+		"",
+		"Project directory to use (default: current directory)",
+	)
 	kindCmd.Flags().StringVarP(&kindNamespace, "namespace", "n", "default", "Namespace to deploy to (default: default)")
-	// TODO: registry-config flag can be removed once the helm chart is in a publiclly accessible registry
-	kindCmd.Flags().StringVar(&kindRegistryConfig, "registry-config", "", "Path to docker registry config file (required for controller deployment)")
-	kindCmd.Flags().StringVar(&kindVersion, "version", "", "Version of the controller to deploy (defaults to kmcp version)")
+	// TODO: registry-config flag can be removed once the helm chart is in a publicly accessible registry
+	kindCmd.Flags().StringVar(
+		&kindRegistryConfig,
+		"registry-config",
+		"",
+		"Path to docker registry config file (required for controller deployment)",
+	)
+	kindCmd.Flags().StringVar(
+		&kindVersion,
+		"version",
+		"",
+		"Version of the controller to deploy (defaults to kmcp version)",
+	)
 }
 
 func executeLocal(_ *cobra.Command, _ []string) error {
@@ -157,7 +179,8 @@ func runMCPInspector(configPath, serverName string, workingDir string) error {
 func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) error {
 	// Check if uv is available
 	if _, err := exec.LookPath("uv"); err != nil {
-		return fmt.Errorf("uv is required for this commandto run fastmcp-python projects locally. Please install uv: https://docs.astral.sh/uv/getting-started/installation/")
+		return fmt.Errorf("uv is required for this command to run fastmcp-python projects locally. " +
+			"Please install uv: https://docs.astral.sh/uv/getting-started/installation/")
 	}
 
 	// Run uv sync first
@@ -270,10 +293,18 @@ func executeKind(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("✅ MCP server successfully deployed to kind cluster\n")
 	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", manifest.Name, kindNamespace)
-	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", manifest.Name, kindNamespace)
-	fmt.Printf("🔌 Port forward the MCP server: kubectl port-forward deployment/%s 3000:3000 -n %s\n", manifest.Name, kindNamespace)
-	fmt.Printf("\nPress Enter to start the MCP inspector...")
-	fmt.Scanln() // Wait for user input
+	fmt.Printf(
+		"💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n",
+		manifest.Name,
+		kindNamespace,
+	)
+	fmt.Printf(
+		"🔌 Port forward the MCP server: kubectl port-forward deployment/%s 3000:3000 -n %s\n",
+		manifest.Name,
+		kindNamespace,
+	)
+	fmt.Printf("\nPress Enter to start the MCP inspector after the MCP server is ready...")
+	_, _ = fmt.Scanln() // Wait for user input
 
 	// Create MCP inspector config and start inspector
 	if err := startInspector(projectDir, manifest.Name); err != nil {
@@ -362,27 +393,20 @@ func deployToKind(projectDir string, manifest *manifest.ProjectManifest, namespa
 	}
 
 	// Run kmcp deploy mcp with namespace
-	deployCmd := exec.Command("kmcp", "deploy", "mcp", manifest.Name, "--file", fmt.Sprintf("%s/kmcp.yaml", projectDir), "--namespace", namespace)
+	deployCmd := exec.Command(
+		"kmcp",
+		"deploy",
+		"mcp",
+		manifest.Name,
+		"--file",
+		fmt.Sprintf("%s/kmcp.yaml", projectDir),
+		"--namespace",
+		namespace,
+	)
 	deployCmd.Stdout = os.Stdout
 	deployCmd.Stderr = os.Stderr
 	if err := deployCmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy to kind cluster: %w", err)
-	}
-
-	return nil
-}
-
-func installCRDs() error {
-	if verbose {
-		fmt.Printf("Installing CRDs...\n")
-	}
-
-	// Apply CRDs from the config directory
-	cmd := exec.Command("kubectl", "apply", "-f", "config/crd/bases/")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to install CRDs: %w", err)
 	}
 
 	return nil
