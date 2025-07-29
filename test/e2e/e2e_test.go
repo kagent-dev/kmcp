@@ -182,8 +182,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			cmd = exec.Command(
 				"dist/kmcp",
 				"init", projectDir,
-				"--framework",
-				"fastmcp-python",
+				"python",
 				"--force",
 				"--namespace",
 				namespace,
