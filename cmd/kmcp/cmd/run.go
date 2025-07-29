@@ -179,8 +179,10 @@ func runMCPInspector(configPath, serverName string, workingDir string) error {
 func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) error {
 	// Check if uv is available
 	if _, err := exec.LookPath("uv"); err != nil {
-		return fmt.Errorf("uv is required for this command to run fastmcp-python projects locally. " +
-			"Please install uv: https://docs.astral.sh/uv/getting-started/installation/")
+		uvInstallURL := "https://docs.astral.sh/uv/getting-started/installation/"
+		return fmt.Errorf(
+			"uv is required for this command to run fastmcp-python projects locally. Please install uv: %s", uvInstallURL,
+		)
 	}
 
 	// Run uv sync first
@@ -317,7 +319,8 @@ func executeKind(_ *cobra.Command, _ []string) error {
 func checkKindAvailable() error {
 	cmd := exec.Command("kind", "version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("kind is required but not found. Please install kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation")
+		kindInstallURL := "https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
+		return fmt.Errorf("kind is required but not found. Please install kind: %s", kindInstallURL)
 	}
 	return nil
 }

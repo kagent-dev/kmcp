@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/yaml"
 )
@@ -71,7 +70,7 @@ func init() {
 	syncCmd.Flags().StringVarP(&secretDir, "project-dir", "d", "", "Project directory (default: current directory)")
 }
 
-func runSync(cmd *cobra.Command, args []string) error {
+func runSync(_ *cobra.Command, args []string) error {
 	environment := args[0]
 
 	// Determine project root
