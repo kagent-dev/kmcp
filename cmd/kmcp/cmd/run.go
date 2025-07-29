@@ -13,14 +13,6 @@ import (
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run MCP server",
-	Long: `Run an MCP server using the Model Context Protocol inspector.
-
-This command provides subcommands for different deployment scenarios.`,
-}
-
-var localCmd = &cobra.Command{
-	Use:   "local",
 	Short: "Run MCP server locally",
 	Long: `Run an MCP server locally using the Model Context Protocol inspector.
 
@@ -30,20 +22,19 @@ This command will:
 3. Run the MCP server using the Model Context Protocol inspector
 
 Examples:
-  kmcp run local --project-dir ./my-project  # Run from specific directory`,
-	RunE: executeLocal,
+  kmcp run --project-dir ./my-project  # Run from specific directory`,
+	RunE: executeRun,
 }
 
 var (
-	localProjectDir string
+	projectDir string
 )
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	runCmd.AddCommand(localCmd)
 
-	localCmd.Flags().StringVarP(
-		&localProjectDir,
+	runCmd.Flags().StringVarP(
+		&projectDir,
 		"project-dir",
 		"d",
 		"",
@@ -51,7 +42,7 @@ func init() {
 	)
 }
 
-func executeLocal(_ *cobra.Command, _ []string) error {
+func executeRun(_ *cobra.Command, _ []string) error {
 	projectDir, err := getProjectDir()
 	if err != nil {
 		return err
@@ -170,30 +161,30 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 
 func getProjectDir() (string, error) {
 	// Determine project directory
-	projectDir := localProjectDir
-	if projectDir == "" {
+	dir := projectDir
+	if dir == "" {
 		// Use current working directory
 		var err error
-		projectDir, err = os.Getwd()
+		dir, err = os.Getwd()
 		if err != nil {
 			return "", fmt.Errorf("failed to get current directory: %w", err)
 		}
 	} else {
 		// Convert relative path to absolute path
-		if !filepath.IsAbs(projectDir) {
+		if !filepath.IsAbs(dir) {
 			cwd, err := os.Getwd()
 			if err != nil {
 				return "", fmt.Errorf("failed to get current directory: %w", err)
 			}
-			projectDir = filepath.Join(cwd, projectDir)
+			dir = filepath.Join(cwd, dir)
 		}
 	}
 
 	if verbose {
-		fmt.Printf("Using project directory: %s\n", projectDir)
+		fmt.Printf("Using project directory: %s\n", dir)
 	}
 
-	return projectDir, nil
+	return dir, nil
 }
 
 func getProjectManifest(projectDir string) (*manifest.ProjectManifest, error) {
