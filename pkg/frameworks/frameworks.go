@@ -11,7 +11,7 @@ import (
 // Generator defines the interface for a framework-specific generator.
 type Generator interface {
 	GenerateProject(config templates.ProjectConfig) error
-	GenerateTool(projectRoot string, toolName string, config map[string]interface{}) error
+	GenerateTool(projectRoot string, config templates.ToolConfig) error
 }
 
 // GetGenerator returns a generator for the specified framework.

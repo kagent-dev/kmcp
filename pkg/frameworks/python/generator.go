@@ -45,8 +45,8 @@ func (g *Generator) GenerateProject(config templates.ProjectConfig) error {
 }
 
 // GenerateTool generates a new tool for a Python project.
-func (g *Generator) GenerateTool(projectroot string, toolName string, config map[string]interface{}) error {
-	if err := g.BaseGenerator.GenerateTool(projectroot, toolName, config); err != nil {
+func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig) error {
+	if err := g.BaseGenerator.GenerateTool(projectroot, config); err != nil {
 		return fmt.Errorf("failed to generate tool: %w", err)
 	}
 

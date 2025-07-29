@@ -18,3 +18,8 @@ type ProjectConfig struct {
 	Verbose      bool
 	GoModuleName string
 }
+
+type ToolConfig struct {
+	ToolName    string
+	Description string
+}

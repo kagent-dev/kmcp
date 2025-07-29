@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"kagent.dev/kmcp/pkg/templates"
 	"path/filepath"
 	"strings"
 
@@ -168,11 +169,12 @@ func generateTool(toolName, projectRoot, framework string) error {
 		return err
 	}
 
-	config := map[string]interface{}{
-		"description": addToolDescription,
+	config := templates.ToolConfig{
+		ToolName:    toolName,
+		Description: addToolDescription,
 	}
 
-	if err := generator.GenerateTool(projectRoot, toolName, config); err != nil {
+	if err := generator.GenerateTool(projectRoot, config); err != nil {
 		return fmt.Errorf("failed to generate tool file: %w", err)
 	}
 

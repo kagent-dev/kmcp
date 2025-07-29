@@ -86,7 +86,7 @@ func (g *BaseGenerator) GenerateProject(config templates.ProjectConfig) error {
 }
 
 // GenerateTool generates a new tool for a project.
-func (g *BaseGenerator) GenerateTool(projectRoot string, toolName string, config map[string]interface{}) error {
+func (g *BaseGenerator) GenerateTool(projectRoot string, config templates.ToolConfig) error {
 
 	templateRoot, err := fs.Sub(g.TemplateFiles, "templates")
 	if err != nil {
@@ -103,7 +103,7 @@ func (g *BaseGenerator) GenerateTool(projectRoot string, toolName string, config
 			return nil
 		}
 
-		toolNameSnakeCase := strcase.SnakeCase(toolName)
+		toolNameSnakeCase := strcase.SnakeCase(config.ToolName)
 
 		destPath := filepath.Join(
 			projectRoot,
@@ -119,25 +119,21 @@ func (g *BaseGenerator) GenerateTool(projectRoot string, toolName string, config
 			return nil
 		}
 
-		return g.generateToolFile(destPath, toolName, config)
+		return g.generateToolFile(destPath, config)
 	})
 }
 
 // GenerateToolFile generates a new tool file from the unified template
-func (g *BaseGenerator) generateToolFile(filePath, toolName string, config map[string]interface{}) error {
+func (g *BaseGenerator) generateToolFile(filePath string, config templates.ToolConfig) error {
 	// Prepare template data
+	toolName := config.ToolName
 	data := map[string]interface{}{
 		"ToolName":      toolName,
 		"ToolNameTitle": cases.Title(language.English).String(toolName),
 		"ToolNameUpper": strings.ToUpper(toolName),
 		"ToolNameLower": strings.ToLower(toolName),
 		"ClassName":     cases.Title(language.English).String(toolName) + "Tool",
-		"Config":        config,
-	}
-
-	// Add config values to template data
-	for key, value := range config {
-		data[key] = value
+		"Description":   config.Description,
 	}
 
 	// Create the directory if it doesn't exist
