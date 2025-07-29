@@ -74,7 +74,6 @@ func runInitFramework(projectName, framework string, customizeProjectConfig func
 	// Create project configuration
 	projectConfig := templates.ProjectConfig{
 		ProjectName: projectManifest.Name,
-		Framework:   projectManifest.Framework,
 		Version:     projectManifest.Version,
 		Description: projectManifest.Description,
 		Author:      projectManifest.Author,
