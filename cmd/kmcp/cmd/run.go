@@ -169,7 +169,7 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 	// Check if go is available
 	if _, err := exec.LookPath("go"); err != nil {
 		goInstallURL := "https://golang.org/doc/install"
-		return fmt.Errorf("go is required for this command to run mcp-go projects locally. Please install Go: %s", goInstallURL)
+		return fmt.Errorf("go is required to run mcp-go projects locally. Please install Go: %s", goInstallURL)
 	}
 
 	// Run go mod tidy first to ensure dependencies are up to date
