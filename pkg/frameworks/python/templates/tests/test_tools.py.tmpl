@@ -49,7 +49,9 @@ class TestToolLoading:
         server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
         server.load_tools()
 
-        for tool_name, tool in server.mcp.tools.items():
+        tools = server.get_tools_sync()
+        for tool_name, tool in tools.items():
+            assert hasattr(tool, 'fn'), f"Tool {tool_name} has no fn attribute"
             assert callable(tool.fn), f"Tool {tool_name} is not callable"
 
 
@@ -65,9 +67,15 @@ class TestEchoTool:
 
     def test_echo_tool_function(self):
         """Test that the echo tool function works."""
-        # Import the echo function directly
-        from tools.echo import echo
-
-        result = echo("Hello, World!")
+        # Get the tool from the server
+        server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
+        server.load_tools()
+        
+        tools = server.get_tools_sync()
+        assert "echo" in tools
+        
+        # Call the tool function
+        echo_tool = tools["echo"]
+        result = echo_tool.fn("Hello, World!")
         assert isinstance(result, str)
         assert "Hello, World!" in result
