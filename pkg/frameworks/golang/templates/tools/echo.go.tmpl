@@ -22,11 +22,15 @@ func Echo() MCPTool[EchoParams, EchoResult] {
 		Name:        "echo",
 		Description: "Echoes a message back to the user.",
 		Handler: func(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[EchoParams]) (*mcp.CallToolResultFor[EchoResult], error) {
-			return &mcp.CallToolResultFor[EchoResult]{
-				StructuredContent: EchoResult{
-					Echo: "Echo: " + params.Arguments.Message,
+			echoMessage := "Echo: " + params.Arguments.Message
+			result := &mcp.CallToolResultFor[EchoResult]{
+				Content: []mcp.Content{
+					&mcp.TextContent{
+						Text: echoMessage,
+					},
 				},
-			}, nil
+			}
+			return result, nil
 		},
 	}
 }

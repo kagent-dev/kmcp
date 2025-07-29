@@ -21,6 +21,10 @@ This command will:
 2. Determine the framework type and create appropriate configuration
 3. Run the MCP server using the Model Context Protocol inspector
 
+Supported frameworks:
+- fastmcp-python: Requires uv to be installed
+- mcp-go: Requires Go to be installed
+
 Examples:
   kmcp run --project-dir ./my-project  # Run from specific directory`,
 	RunE: executeRun,
@@ -62,6 +66,8 @@ func executeRun(_ *cobra.Command, _ []string) error {
 	switch manifest.Framework {
 	case "fastmcp-python":
 		return runFastMCPPython(projectDir, manifest)
+	case "mcp-go":
+		return runMCPGo(projectDir, manifest)
 	default:
 		return fmt.Errorf("unsupported framework: %s", manifest.Framework)
 	}
@@ -147,6 +153,40 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 	serverConfig := map[string]interface{}{
 		"command": "uv",
 		"args":    []string{"run", "python", "src/main.py"},
+	}
+
+	// Create MCP inspector config
+	configPath := filepath.Join(projectDir, "mcp-server-config.json")
+	if err := createMCPInspectorConfig(manifest.Name, serverConfig, configPath); err != nil {
+		return err
+	}
+
+	// Run the inspector
+	return runMCPInspector(configPath, manifest.Name, projectDir)
+}
+
+func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
+	// Check if go is available
+	if _, err := exec.LookPath("go"); err != nil {
+		return fmt.Errorf("go is required for this command to run mcp-go projects locally. Please install Go: https://golang.org/doc/install")
+	}
+
+	// Run go mod tidy first to ensure dependencies are up to date
+	if verbose {
+		fmt.Printf("Running go mod tidy in: %s\n", projectDir)
+	}
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = projectDir
+	tidyCmd.Stdout = os.Stdout
+	tidyCmd.Stderr = os.Stderr
+	if err := tidyCmd.Run(); err != nil {
+		return fmt.Errorf("failed to run go mod tidy: %w", err)
+	}
+
+	// Create server configuration for local execution
+	serverConfig := map[string]interface{}{
+		"command": "go",
+		"args":    []string{"run", "main.go"},
 	}
 
 	// Create MCP inspector config
