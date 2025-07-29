@@ -56,6 +56,7 @@ func Run(cmd *exec.Cmd) (string, error) {
 	if err != nil {
 		return string(output), fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))
 	}
+	_, _ = fmt.Fprintf(GinkgoWriter, "%s\n", output)
 
 	return string(output), nil
 }

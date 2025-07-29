@@ -3,15 +3,12 @@ package python
 import (
 	"embed"
 	"fmt"
-	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/template"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/stoewer/go-strcase"
+	"kagent.dev/kmcp/pkg/frameworks/common"
 	"kagent.dev/kmcp/pkg/templates"
 )
 
@@ -19,156 +16,64 @@ import (
 var templateFiles embed.FS
 
 // Generator for Python projects
-type Generator struct{}
+type Generator struct {
+	common.BaseGenerator
+}
 
 // NewGenerator creates a new Python generator
 func NewGenerator() *Generator {
-	return &Generator{}
+	return &Generator{
+		BaseGenerator: common.BaseGenerator{
+			TemplateFiles:    templateFiles,
+			ToolTemplateName: "src/tools/tool.py.tmpl",
+		},
+	}
 }
 
 // GenerateProject generates a new Python project
 func (g *Generator) GenerateProject(config templates.ProjectConfig) error {
-	if config.Framework == "fastmcp-python" {
-		// Generate project from embedded templates
-		return g.generateFastMCPPython(config)
-	}
-	return fmt.Errorf("unsupported python framework: %s", config.Framework)
-}
-
-// GenerateTool generates a new tool for a Python project.
-func (g *Generator) GenerateTool(projectPath string, toolName string, config map[string]interface{}) error {
-	toolPath := filepath.Join(projectPath, "src", "tools", toolName+".py")
-	if err := g.GenerateToolFile(toolPath, toolName, config); err != nil {
-		return fmt.Errorf("failed to generate tool file: %w", err)
-	}
-
-	// After generating the tool file, regenerate the __init__.py file
-	toolsDir := filepath.Dir(toolPath)
-	if err := g.RegenerateToolsInit(toolsDir); err != nil {
-		return fmt.Errorf("failed to regenerate __init__.py: %w", err)
-	}
-	return nil
-}
-
-func (g *Generator) generateFastMCPPython(config templates.ProjectConfig) error {
 	if config.Verbose {
 		fmt.Println("Generating FastMCP Python project...")
 	}
 
-	templateRoot, err := fs.Sub(templateFiles, "templates")
-	if err != nil {
-		return fmt.Errorf("failed to get templates subdirectory: %w", err)
-	}
-
-	err = fs.WalkDir(templateRoot, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip tool.py.tmpl during project generation - it's for individual tool generation
-		if path == "tool.py.tmpl" {
-			return nil
-		}
-
-		destPath := filepath.Join(config.Directory, strings.TrimSuffix(path, ".tmpl"))
-
-		if d.IsDir() {
-			// Create the directory if it doesn't exist
-			if err := os.MkdirAll(destPath, 0755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
-			}
-			return nil
-		}
-
-		// Read template file
-		templateContent, err := fs.ReadFile(templateRoot, path)
-		if err != nil {
-			return fmt.Errorf("failed to read template file %s: %w", path, err)
-		}
-
-		// Render template content
-		renderedContent, err := g.renderTemplate(string(templateContent), config)
-		if err != nil {
-			return fmt.Errorf("failed to render template for %s: %w", path, err)
-		}
-
-		// Create file
-		if err := os.WriteFile(destPath, []byte(renderedContent), 0644); err != nil {
-			return fmt.Errorf("failed to write file %s: %w", destPath, err)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to walk templates: %w", err)
-	}
-
-	// Initialize git repository
-	if !config.NoGit {
-		if err := g.initGitRepo(config.Directory, config.Verbose); err != nil {
-			// Don't fail the whole operation if git init fails
-			if config.Verbose {
-				fmt.Printf("Warning: failed to initialize git repository: %v\n", err)
-			}
-		}
+	if err := g.BaseGenerator.GenerateProject(config); err != nil {
+		return fmt.Errorf("failed to generate project: %w", err)
 	}
 
 	return nil
 }
 
-// GenerateToolFile generates a new Python tool file from the unified template
-func (g *Generator) GenerateToolFile(filePath, toolName string, config map[string]interface{}) error {
-	// Prepare template data
-	data := map[string]interface{}{
-		"ToolName":      toolName,
-		"ToolNameTitle": cases.Title(language.English).String(toolName),
-		"ToolNameUpper": strings.ToUpper(toolName),
-		"ToolNameLower": strings.ToLower(toolName),
-		"ClassName":     cases.Title(language.English).String(toolName) + "Tool",
-		"Config":        config,
+// GenerateTool generates a new tool for a Python project.
+func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig) error {
+	if err := g.BaseGenerator.GenerateTool(projectroot, config); err != nil {
+		return fmt.Errorf("failed to generate tool: %w", err)
 	}
 
-	// Add config values to template data
-	for key, value := range config {
-		data[key] = value
+	// After generating the tool file, regenerate the __init__.py file
+	toolsDir := filepath.Join(projectroot, "src", "tools")
+	if err := g.regenerateToolsInit(toolsDir); err != nil {
+		return fmt.Errorf("failed to regenerate __init__.py: %w", err)
 	}
 
-	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
+	toolNameSnakeCase := strcase.SnakeCase(config.ToolName)
 
-	// Parse and execute the template
-	templateContent, err := fs.ReadFile(templateFiles, "templates/tool.py.tmpl")
-	if err != nil {
-		return fmt.Errorf("failed to read tool template: %w", err)
-	}
+	fmt.Printf("✅ Successfully created tool: %s\n", config.ToolName)
+	fmt.Printf("📁 Generated file: src/tools/%s.py\n", toolNameSnakeCase)
+	fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
 
-	tmpl, err := template.New("tool").Parse(string(templateContent))
-	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
-	}
+	fmt.Printf("\nNext steps:\n")
+	fmt.Printf("1. Edit src/tools/%s.py to implement your tool logic\n", toolNameSnakeCase)
+	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
+	fmt.Printf("3. Run 'uv run python src/main.py' to start the server\n")
+	fmt.Printf("4. Run 'uv run pytest tests/' to test your tool\n")
 
-	// Create the output file
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-
-	// Execute the template
-	err = tmpl.Execute(file, data)
-
-	// Close the file and check for errors
-	if closeErr := file.Close(); err == nil {
-		err = closeErr
-	}
-	return err
+	return nil
 }
 
-// RegenerateToolsInit regenerates the __init__.py file in the tools directory
-func (g *Generator) RegenerateToolsInit(toolsDir string) error {
+// regenerateToolsInit regenerates the __init__.py file in the tools directory
+func (g *Generator) regenerateToolsInit(toolsDir string) error {
 	// Scan the tools directory for Python files
-	tools, err := g.ScanToolsDirectory(toolsDir)
+	tools, err := g.scanToolsDirectory(toolsDir)
 	if err != nil {
 		return fmt.Errorf("failed to scan tools directory: %w", err)
 	}
@@ -181,8 +86,8 @@ func (g *Generator) RegenerateToolsInit(toolsDir string) error {
 	return os.WriteFile(initPath, []byte(content), 0644)
 }
 
-// ScanToolsDirectory scans the tools directory and returns a list of tool names
-func (g *Generator) ScanToolsDirectory(toolsDir string) ([]string, error) {
+// scanToolsDirectory scans the tools directory and returns a list of tool names
+func (g *Generator) scanToolsDirectory(toolsDir string) ([]string, error) {
 	var tools []string
 
 	// Read the directory
@@ -240,35 +145,4 @@ Do not edit manually - it will be overwritten when tools are loaded.
 	content.WriteString("]\n")
 
 	return content.String()
-}
-
-// renderTemplate renders a template string with the provided data
-func (g *Generator) renderTemplate(tmplContent string, data interface{}) (string, error) {
-	tmpl, err := template.New("template").Parse(tmplContent)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse template: %w", err)
-	}
-
-	var result strings.Builder
-	if err := tmpl.Execute(&result, data); err != nil {
-		return "", fmt.Errorf("failed to execute template: %w", err)
-	}
-
-	return result.String(), nil
-}
-
-// initGitRepo initializes a git repository in the specified directory
-func (g *Generator) initGitRepo(dir string, verbose bool) error {
-	cmd := exec.Command("git", "init")
-	cmd.Dir = dir
-
-	if verbose {
-		fmt.Printf("  Initializing git repository...\n")
-	}
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run git init: %w", err)
-	}
-
-	return nil
 }

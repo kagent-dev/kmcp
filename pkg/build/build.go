@@ -119,16 +119,43 @@ func (b *Builder) buildNode(opts Options) error {
 
 // buildGo handles building Go MCP servers
 func (b *Builder) buildGo(opts Options) error {
-	fmt.Println("Building Go MCP server...")
-
 	if opts.Docker {
 		return b.buildDockerImage(opts, "go")
 	}
 
-	// For now, just validate that we can build
-	fmt.Println("✓ Go project validation passed")
-	fmt.Println("Note: Native Go builds will be implemented in future iterations")
+	fmt.Println("Building Go MCP server...")
 
+	// Get output path
+	outputPath := opts.Output
+	if outputPath == "" {
+		outputPath = filepath.Join(opts.ProjectDir, "server")
+	}
+
+	// Prepare build command
+	args := []string{"build", "-o", outputPath, "."}
+
+	if opts.Verbose {
+		fmt.Printf("Running: go %s\n", strings.Join(args, " "))
+	}
+
+	// Create go build command
+	cmd := exec.Command("go", args...)
+	cmd.Dir = opts.ProjectDir
+
+	// Set environment variables for cross-compilation if needed
+	if opts.Platform != "" {
+		parts := strings.Split(opts.Platform, "/")
+		if len(parts) == 2 {
+			cmd.Env = append(os.Environ(), "GOOS="+parts[0], "GOARCH="+parts[1])
+		}
+	}
+
+	// Run the command
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("go build failed: %w\n%s", err, string(output))
+	}
+
+	fmt.Printf("✓ Successfully built Go binary: %s\n", outputPath)
 	return nil
 }
 
