@@ -94,10 +94,9 @@ func GetDefault(name, framework, description, author, email, namespace string) *
 		Tools:       make(map[string]ToolConfig),
 		Secrets: SecretsConfig{
 			"local": {
-				Enabled:    false,
-				Provider:   SecretProviderKubernetes,
-				Namespace:  namespace,
-				SecretName: fmt.Sprintf("%s-secrets-local", strings.ReplaceAll(name, "_", "-")),
+				Enabled:  false,
+				Provider: SecretProviderEnv,
+				File:     ".env.local",
 			},
 			"staging": {
 				Enabled:    false,

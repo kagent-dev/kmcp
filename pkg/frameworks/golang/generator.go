@@ -3,6 +3,7 @@ package golang
 import (
 	"embed"
 	"fmt"
+	"github.com/stoewer/go-strcase"
 	"kagent.dev/kmcp/pkg/frameworks/common"
 	"kagent.dev/kmcp/pkg/templates"
 	"os/exec"
@@ -21,7 +22,7 @@ func NewGenerator() *Generator {
 	return &Generator{
 		BaseGenerator: common.BaseGenerator{
 			TemplateFiles:    templateFiles,
-			ToolTemplateName: "tool.go.tmpl",
+			ToolTemplateName: "tools/tool.go.tmpl",
 		},
 	}
 }
@@ -41,6 +42,25 @@ func (g *Generator) GenerateProject(config templates.ProjectConfig) error {
 	if err := g.tidyGoMod(config.Directory, config.Verbose); err != nil {
 		return fmt.Errorf("failed to finalize Go project: %w", err)
 	}
+
+	return nil
+}
+
+// GenerateTool generates a new tool for a Python project.
+func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig) error {
+	if err := g.BaseGenerator.GenerateTool(projectroot, config); err != nil {
+		return fmt.Errorf("failed to generate tool: %w", err)
+	}
+
+	toolNameSnakeCase := strcase.SnakeCase(config.ToolName)
+
+	fmt.Printf("✅ Successfully created tool: %s\n", config.ToolName)
+	fmt.Printf("📁 Generated file: tools/%s.go\n", toolNameSnakeCase)
+
+	fmt.Printf("\nNext steps:\n")
+	fmt.Printf("1. Edit tools/%s.go to implement your tool logic\n", toolNameSnakeCase)
+	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
+	fmt.Printf("3. Run 'go run main.go' to start the server\n")
 
 	return nil
 }

@@ -3,6 +3,7 @@ package python
 import (
 	"embed"
 	"fmt"
+	"github.com/stoewer/go-strcase"
 	"kagent.dev/kmcp/pkg/frameworks/common"
 	"os"
 	"os/exec"
@@ -26,7 +27,7 @@ func NewGenerator() *Generator {
 	return &Generator{
 		BaseGenerator: common.BaseGenerator{
 			TemplateFiles:    templateFiles,
-			ToolTemplateName: "tool.py.tmpl",
+			ToolTemplateName: "src/tools/tool.py.tmpl",
 		},
 	}
 }
@@ -55,6 +56,19 @@ func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig
 	if err := g.regenerateToolsInit(toolsDir); err != nil {
 		return fmt.Errorf("failed to regenerate __init__.py: %w", err)
 	}
+
+	toolNameSnakeCase := strcase.SnakeCase(config.ToolName)
+
+	fmt.Printf("✅ Successfully created tool: %s\n", config.ToolName)
+	fmt.Printf("📁 Generated file: src/tools/%s.py\n", toolNameSnakeCase)
+	fmt.Printf("🔄 Updated tools/__init__.py with new tool import\n")
+
+	fmt.Printf("\nNext steps:\n")
+	fmt.Printf("1. Edit src/tools/%s.py to implement your tool logic\n", toolNameSnakeCase)
+	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
+	fmt.Printf("3. Run 'uv run python src/main.py' to start the server\n")
+	fmt.Printf("4. Run 'uv run pytest tests/' to test your tool\n")
+
 	return nil
 }
 
