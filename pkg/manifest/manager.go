@@ -211,6 +211,7 @@ func (m *Manager) validateSecrets(secrets SecretsConfig) error {
 func isValidFramework(framework string) bool {
 	validFrameworks := []string{
 		FrameworkFastMCPPython,
+		FrameworkMCPGo,
 	}
 
 	for _, valid := range validFrameworks {

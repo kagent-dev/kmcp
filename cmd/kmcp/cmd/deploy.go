@@ -376,6 +376,8 @@ func sanitizeLabelValue(value string) string {
 
 func getDefaultCommand(framework string) string {
 	switch framework {
+	case manifest.FrameworkMCPGo:
+		return "./server"
 	default:
 		return "python"
 	}
@@ -385,6 +387,8 @@ func getDefaultArgs(framework string) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
 		return []string{"src/main.py"}
+	case manifest.FrameworkMCPGo:
+		return []string{}
 	default:
 		return []string{"src/main.py"}
 	}

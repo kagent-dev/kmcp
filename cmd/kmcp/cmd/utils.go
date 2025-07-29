@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // findProjectRoot finds the root of the KMCP project by looking for kmcp.yaml.
@@ -31,4 +32,16 @@ func findProjectRoot() (string, error) {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func promptForInput(promptText string) (string, error) {
+	fmt.Print(promptText)
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		if err.Error() == "unexpected newline" {
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(input), nil
 }

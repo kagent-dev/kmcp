@@ -1,0 +1,28 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"{{.GoModuleName}}/tools"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	// Create the MCP server
+	server := mcp.NewServer(&mcp.Implementation{Name: "{{.ProjectName}}", Version: "{{.Version}}"}, nil)
+
+	// Register tools
+	tools.AddToolsToServer(server)
+
+	// Run the server over stdin/stdout, until the client disconnects
+	return server.Run(context.Background(), mcp.NewStdioTransport())
+}
