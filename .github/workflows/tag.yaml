@@ -47,7 +47,7 @@ jobs:
         if [ -n "${{ github.event.inputs.version }}" ]; then
           export VERSION=${{ github.event.inputs.version }}
         else
-          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+          export VERSION=$(echo "$GITHUB_REF" | cut -c11-)
         fi
         echo "Building Docker image with version: ${VERSION}"
         make docker-build VERSION=${VERSION}
@@ -75,7 +75,7 @@ jobs:
         if [ -n "${{ github.event.inputs.version }}" ]; then
           export VERSION=${{ github.event.inputs.version }}
         else
-          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+          export VERSION=$(echo "$GITHUB_REF" | cut -c11-)
         fi
         echo "Publishing Helm chart with version: ${VERSION}"
         make helm-publish VERSION=${VERSION}
@@ -97,7 +97,7 @@ jobs:
         if [ -n "${{ github.event.inputs.version }}" ]; then
           export VERSION=${{ github.event.inputs.version }}
         else
-          export VERSION=$(echo "$GITHUB_REF" | cut -c12-)
+          export VERSION=$(echo "$GITHUB_REF" | cut -c11-)
         fi
         echo "Building release artifacts with version: ${VERSION}"
         make build-cli VERSION=${VERSION}
