@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -184,6 +185,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				"init",
 				"python",
 				projectDir,
+				"--non-interactive",
 				"--force",
 				"--namespace",
 				namespace,
@@ -200,8 +202,16 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			cmd = exec.Command("rm", "-f", fmt.Sprintf("%s/kmcp.yaml.bak", projectDir))
 			_, _ = utils.Run(cmd)
 
-			ginkgo.By("creating Kubernetes staging secret from example .env.local file")
+			ginkgo.By("creating a dummy .env.local file for testing secrets")
 			envFilePath := fmt.Sprintf("%s/.env.local", projectDir)
+			envContent := []byte("DATABASE_URL=postgres://user:pass@host:port/db\n" +
+				"OPENAI_API_KEY=dummy-key\n" +
+				"WEATHER_API_KEY=dummy-key\n")
+			err = os.WriteFile(envFilePath, envContent, 0644)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create dummy .env.local file")
+
+			ginkgo.By("creating Kubernetes secret from existing .env.local file")
+
 			cmd = exec.Command("dist/kmcp", "secrets", "sync", "staging", "--from-file", envFilePath, "--dir", projectDir)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
@@ -220,7 +230,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			cmd = exec.Command(
 				"dist/kmcp",
 				"deploy",
-				"mcp",
 				"-f",
 				fmt.Sprintf("%s/kmcp.yaml", projectDir),
 				"-n",
