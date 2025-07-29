@@ -11,7 +11,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server .
 
 # Final stage
-FROM gcr.io/distroless/static-debian11
+FROM alpine
 
 WORKDIR /app
 

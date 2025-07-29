@@ -102,7 +102,7 @@ func runInitFramework(projectName, framework string, customizeProjectConfig func
 		return fmt.Errorf("failed to generate project: %w", err)
 	}
 
-	return nil
+	return manifest.NewManager(projectPath).Save(projectManifest)
 }
 
 func validateProjectName(name string) error {

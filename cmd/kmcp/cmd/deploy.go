@@ -23,16 +23,6 @@ const (
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Deploy to Kubernetes",
-	Long: `Deploy components to Kubernetes clusters.
-
-This command provides functionality to deploy MCP servers and the KMCP controller
-to Kubernetes clusters.`,
-}
-
-// deployMCPCmd deploys an MCP server to Kubernetes
-var deployMCPCmd = &cobra.Command{
-	Use:   "mcp [name]",
 	Short: "Deploy MCP server to Kubernetes",
 	Long: `Deploy an MCP server to Kubernetes by generating MCPServer CRDs.
 
@@ -53,15 +43,15 @@ Secret namespace will be overridden with the deployment namespace to avoid the n
 to enable cross-namespace references.
 
 Examples:
-  kmcp deploy mcp                          # Deploy with project name to cluster
-  kmcp deploy mcp my-server                # Deploy with custom name
-  kmcp deploy mcp --namespace staging      # Deploy to staging namespace
-  kmcp deploy mcp --dry-run                # Generate manifest without applying to cluster
-  kmcp deploy mcp --image custom:tag       # Use custom image
-  kmcp deploy mcp --transport http         # Use HTTP transport
-  kmcp deploy mcp --output deploy.yaml     # Save to file
-  kmcp deploy mcp --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
-  kmcp deploy mcp --environment staging    # Target environment for deployment (e.g., staging, production)`,
+  kmcp deploy                          # Deploy with project name to cluster
+  kmcp deploy my-server                # Deploy with custom name
+  kmcp deploy --namespace staging      # Deploy to staging namespace
+  kmcp deploy --dry-run                # Generate manifest without applying to cluster
+  kmcp deploy --image custom:tag       # Use custom image
+  kmcp deploy --transport http         # Use HTTP transport
+  kmcp deploy --output deploy.yaml     # Save to file
+  kmcp deploy --file /path/to/kmcp.yaml # Use custom kmcp.yaml file
+  kmcp deploy --environment staging    # Target environment for deployment (e.g., staging, production)`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDeployMCP,
 }
@@ -86,23 +76,20 @@ var (
 func init() {
 	rootCmd.AddCommand(deployCmd)
 
-	// Add subcommands
-	deployCmd.AddCommand(deployMCPCmd)
-
 	// MCP deployment flags
-	deployMCPCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
-	deployMCPCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
-	deployMCPCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
-	deployMCPCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
-	deployMCPCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
-	deployMCPCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: from project config)")
-	deployMCPCmd.Flags().IntVar(&deployTargetPort, "target-port", 0, "Target port for HTTP transport")
-	deployMCPCmd.Flags().StringVar(&deployCommand, "command", "", "Command to run (overrides project config)")
-	deployMCPCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
-	deployMCPCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
-	deployMCPCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
-	deployMCPCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
-	deployMCPCmd.Flags().StringVar(
+	deployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
+	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
+	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
+	deployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
+	deployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
+	deployCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: from project config)")
+	deployCmd.Flags().IntVar(&deployTargetPort, "target-port", 0, "Target port for HTTP transport")
+	deployCmd.Flags().StringVar(&deployCommand, "command", "", "Command to run (overrides project config)")
+	deployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
+	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
+	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
+	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
+	deployCmd.Flags().StringVar(
 		&deployEnvironment,
 		"environment",
 		"staging",
@@ -167,7 +154,7 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 
 	// Add YAML document separator and standard header
 	yamlContent := fmt.Sprintf(
-		"---\n# MCPServer deployment generated by kmcp deploy mcp\n# Project: %s\n# Framework: %s\n%s",
+		"---\n# MCPServer deployment generated by kmcp deploy\n# Project: %s\n# Framework: %s\n%s",
 		projectManifest.Name,
 		projectManifest.Framework,
 		string(yamlData),
