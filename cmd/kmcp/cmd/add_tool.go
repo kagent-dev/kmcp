@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"kagent.dev/kmcp/pkg/templates"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"kagent.dev/kmcp/pkg/templates"
 
 	"github.com/spf13/cobra"
 	"kagent.dev/kmcp/pkg/frameworks"

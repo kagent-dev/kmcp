@@ -2,13 +2,14 @@ package common
 
 import (
 	"fmt"
-	"github.com/stoewer/go-strcase"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/stoewer/go-strcase"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

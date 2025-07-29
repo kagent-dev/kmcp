@@ -3,10 +3,11 @@ package golang
 import (
 	"embed"
 	"fmt"
+	"os/exec"
+
 	"github.com/stoewer/go-strcase"
 	"kagent.dev/kmcp/pkg/frameworks/common"
 	"kagent.dev/kmcp/pkg/templates"
-	"os/exec"
 )
 
 //go:embed all:templates
@@ -61,22 +62,6 @@ func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig
 	fmt.Printf("1. Edit tools/%s.go to implement your tool logic\n", toolNameSnakeCase)
 	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
 	fmt.Printf("3. Run 'go run main.go' to start the server\n")
-
-	return nil
-}
-
-// initGitRepo initializes a git repository in the specified directory
-func (g *Generator) initGitRepo(dir string, verbose bool) error {
-	cmd := exec.Command("git", "init")
-	cmd.Dir = dir
-
-	if verbose {
-		fmt.Printf("  Initializing git repository...\n")
-	}
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run git init: %w", err)
-	}
 
 	return nil
 }

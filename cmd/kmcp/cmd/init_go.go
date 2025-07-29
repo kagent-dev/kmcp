@@ -26,8 +26,13 @@ You must provide a valid Go module name for the project.`,
 
 func init() {
 	initCmd.AddCommand(initGoCmd)
-	initGoCmd.Flags().StringVar(&goModuleName, "go-module-name", "", "The Go module name for the project (e.g., github.com/my-org/my-project)")
-	initGoCmd.MarkFlagRequired("go-module-name")
+	initGoCmd.Flags().StringVar(
+		&goModuleName,
+		"go-module-name",
+		"",
+		"The Go module name for the project (e.g., github.com/my-org/my-project)",
+	)
+	_ = initGoCmd.MarkFlagRequired("go-module-name")
 }
 
 func runInitGo(_ *cobra.Command, args []string) error {

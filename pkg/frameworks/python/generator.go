@@ -3,14 +3,12 @@ package python
 import (
 	"embed"
 	"fmt"
-	"github.com/stoewer/go-strcase"
-	"kagent.dev/kmcp/pkg/frameworks/common"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/template"
 
+	"github.com/stoewer/go-strcase"
+	"kagent.dev/kmcp/pkg/frameworks/common"
 	"kagent.dev/kmcp/pkg/templates"
 )
 
@@ -147,35 +145,4 @@ Do not edit manually - it will be overwritten when tools are loaded.
 	content.WriteString("]\n")
 
 	return content.String()
-}
-
-// renderTemplate renders a template string with the provided data
-func renderTemplate(tmplContent string, data interface{}) (string, error) {
-	tmpl, err := template.New("template").Parse(tmplContent)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse template: %w", err)
-	}
-
-	var result strings.Builder
-	if err := tmpl.Execute(&result, data); err != nil {
-		return "", fmt.Errorf("failed to execute template: %w", err)
-	}
-
-	return result.String(), nil
-}
-
-// initGitRepo initializes a git repository in the specified directory
-func (g *Generator) initGitRepo(dir string, verbose bool) error {
-	cmd := exec.Command("git", "init")
-	cmd.Dir = dir
-
-	if verbose {
-		fmt.Printf("  Initializing git repository...\n")
-	}
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run git init: %w", err)
-	}
-
-	return nil
 }

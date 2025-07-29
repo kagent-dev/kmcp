@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	"kagent.dev/kmcp/pkg/frameworks"
 	"kagent.dev/kmcp/pkg/manifest"
 	"kagent.dev/kmcp/pkg/templates"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -56,10 +57,37 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runInitFramework(projectName, framework string, customizeProjectConfig func(*templates.ProjectConfig) error) error {
+func runInitFramework(
+	projectName, framework string,
+	customizeProjectConfig func(*templates.ProjectConfig) error,
+) error {
+	// Interactively get module name if not provided
+	if goModuleName == "" && !initNonInteractive {
+		var err error
+		goModuleName, err = promptForInput("Enter Go module name (e.g., github.com/my-org/my-project): ")
+		if err != nil {
+			return fmt.Errorf("failed to read module name: %w", err)
+		}
+	}
+	if goModuleName == "" {
+		return fmt.Errorf("--module-name is required")
+	}
+
 	// Validate project name
 	if err := validateProjectName(projectName); err != nil {
 		return fmt.Errorf("invalid project name: %w", err)
+	}
+
+	if !initNonInteractive {
+		if initDescription == "" {
+			initDescription = promptForDescription()
+		}
+		if initAuthor == "" {
+			initAuthor = promptForAuthor()
+		}
+		if initEmail == "" {
+			initEmail = promptForEmail()
+		}
 	}
 
 	// Create project manifest
@@ -124,37 +152,6 @@ func validateProjectName(name string) error {
 }
 
 // Prompts for user input
-
-func promptForProjectName() (string, error) {
-	fmt.Print("Enter project name: ")
-	var name string
-	if _, err := fmt.Scanln(&name); err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(name), nil
-}
-
-func promptForFramework() string {
-	fmt.Println("\nSelect a framework:")
-	fmt.Println("1. FastMCP Python (recommended) - Dynamic tool loading with FastMCP")
-	fmt.Println("2. MCP Go - Statically compiled server with mcp-go")
-	fmt.Print("Enter choice [1]: ")
-
-	var choice string
-	if _, err := fmt.Scanln(&choice); err != nil {
-		// Default to FastMCP Python on any scan error (e.g., empty input)
-		return frameworkFastMCPPython
-	}
-
-	switch strings.TrimSpace(choice) {
-	case "1", "":
-		return frameworkFastMCPPython
-	case "2":
-		return frameworkMCPGo
-	default:
-		return frameworkFastMCPPython // Default to recommended
-	}
-}
 
 func promptForAuthor() string {
 	fmt.Print("Enter author name (optional): ")
