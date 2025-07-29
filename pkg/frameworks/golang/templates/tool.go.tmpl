@@ -1,0 +1,31 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+func {{.ToolName | Title}}() server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool(
+			"{{.ToolName}}",
+			mcp.WithDescription("A new tool named {{.ToolName}}."),
+			mcp.WithInputSchema(
+				mcp.NewObject().
+					WithProperty("message", mcp.NewString().WithDescription("A message."), true),
+			),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			message, ok := req.Arguments["message"].(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid message argument")
+			}
+			return mcp.NewToolResult(map[string]interface{}{
+				"response": "Hello, " + message,
+			}), nil
+		},
+	}
+} 
