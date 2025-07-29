@@ -91,7 +91,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Build
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    - name: Build for multiple platforms
       run: |
         # if workflow_dispatch is used, use the version input
         if [ -n "${{ github.event.inputs.version }}" ]; then
@@ -100,10 +104,28 @@ jobs:
           export VERSION=$(echo "$GITHUB_REF" | cut -c11-)
         fi
         echo "Building release artifacts with version: ${VERSION}"
-        make build-cli VERSION=${VERSION}
+        
+        # Build for Linux amd64
+        GOOS=linux GOARCH=amd64 make build-cli VERSION=${VERSION}
+        mv dist/kmcp dist/kmcp-linux-amd64
+        
+        # Build for Linux arm64
+        GOOS=linux GOARCH=arm64 make build-cli VERSION=${VERSION}
+        mv dist/kmcp dist/kmcp-linux-arm64
+        
+        # Build for macOS amd64
+        GOOS=darwin GOARCH=amd64 make build-cli VERSION=${VERSION}
+        mv dist/kmcp dist/kmcp-darwin-amd64
+        
+        # Build for macOS arm64
+        GOOS=darwin GOARCH=arm64 make build-cli VERSION=${VERSION}
+        mv dist/kmcp dist/kmcp-darwin-arm64
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          dist/kmcp
+          dist/kmcp-linux-amd64
+          dist/kmcp-linux-arm64
+          dist/kmcp-darwin-amd64
+          dist/kmcp-darwin-arm64
