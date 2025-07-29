@@ -50,7 +50,7 @@ Examples:
   kmcp secrets sync staging --from-file .env.staging
 
   # Sync secrets from a specific project directory
-  kmcp secrets sync staging --dir ./my-project
+  kmcp secrets sync staging --project-dir ./my-project
 
   # Perform a dry run to see the generated secret without applying it
   kmcp secrets sync production --dry-run
@@ -68,7 +68,7 @@ func init() {
 	// create-k8s-secret-from-env flags
 	syncCmd.Flags().StringVar(&secretSourceFile, "from-file", ".env", "Source .env file to sync from")
 	syncCmd.Flags().BoolVar(&secretDryRun, "dry-run", false, "Output the generated secret YAML instead of applying it")
-	syncCmd.Flags().StringVarP(&secretDir, "dir", "d", "", "Project directory (default: current directory)")
+	syncCmd.Flags().StringVarP(&secretDir, "project-dir", "d", "", "Project directory (default: current directory)")
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
