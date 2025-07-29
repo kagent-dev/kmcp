@@ -181,8 +181,9 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			ginkgo.By("creating a knowledge-assistant project using kmcp CLI")
 			cmd = exec.Command(
 				"dist/kmcp",
-				"init", projectDir,
+				"init",
 				"python",
+				projectDir,
 				"--force",
 				"--namespace",
 				namespace,
