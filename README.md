@@ -193,7 +193,7 @@ kmcp secrets [subcommand] [flags]
 ```
 
 **Subcommands:**
-- `sync [environment]` - Sync secrets to a Kubernetes environment from a local .env file
+- `sync [environment]` - Sync secrets to a Kubernetes environment from a local .env file. The environment is defined in the kmcp.yaml file. 
 
 **Sync Flags:**
 - `--from-file` - Source .env file to sync from (default: ".env")
