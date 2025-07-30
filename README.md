@@ -43,11 +43,14 @@ Get started with KMCP in under 5 minutes:
 go install github.com/kagent-dev/kmcp/cmd/kmcp@latest
 
 # Create a new MCP server project
-kmcp init my-mcp-server
+kmcp init python my-mcp-server
 
 # Build and test your server
 cd my-mcp-server
 kmcp build --docker --tag my-mcp-server:latest
+
+# Run locally for testing
+kmcp run
 
 # Your MCP server is ready to use!
 ```
@@ -77,23 +80,30 @@ Download the latest binary from the [releases page](https://github.com/kagent-de
 
 ### `kmcp init` - Initialize New MCP Server Project
 
-Create a new MCP server project with interactive prompts:
+Initialize a new MCP server project with subcommands for different frameworks:
 
 ```bash
-kmcp init [project-name] [flags]
+kmcp init [subcommand] [project-name] [flags]
 ```
 
-**Flags:**
-- `--framework, -f` - Choose framework (fastmcp-python)
+**Subcommands:**
+- `python [project-name]` - Initialize a Python MCP server project using fastmcp-python
+- `go [project-name]` - Initialize a Go MCP server project using mcp-go
+
+**Global Flags:**
 - `--force` - Overwrite existing directory
 - `--no-git` - Skip git initialization
 - `--author` - Set project author
 - `--email` - Set author email
-- `--version` - MCP server version (defaults to kmcp version)
+- `--description` - Set project description
 - `--non-interactive` - Use defaults without prompts
+- `--namespace` - Default namespace for project resources (default: "default")
 - `--verbose, -v` - Show detailed output
 
-#### `kmcp build` - Build MCP Servers
+**Go-specific Flags:**
+- `--go-module-name` - The Go module name for the project (e.g., github.com/my-org/my-project)
+
+### `kmcp build` - Build MCP Servers
 
 Build your MCP server with Docker support:
 
@@ -106,27 +116,27 @@ kmcp build [flags]
 - `--output, -o` - Output directory or image name
 - `--tag, -t` - Docker image tag
 - `--platform` - Target platform (e.g., linux/amd64, linux/arm64)
-- `--dir, -d` - Build directory (default: current directory)
+- `--project-dir, -d` - Build directory (default: current directory)
 - `--verbose, -v` - Show detailed build output
 
-### `kmcp deploy` - Deploy to Kubernetes
+### `kmcp run` - Run MCP Server Locally
 
-Deploy components to Kubernetes clusters:
+Run an MCP server locally using the Model Context Protocol inspector:
 
 ```bash
-kmcp deploy [command] [flags]
+kmcp run [flags]
 ```
 
-**Subcommands:**
-- `mcp [name]` - Deploy MCP server to Kubernetes
-- `controller` - Deploy KMCP controller to cluster
+**Flags:**
+- `--project-dir, -d` - Project directory to use (default: current directory)
+- `--verbose, -v` - Show detailed output
 
-#### `kmcp deploy mcp` - Deploy MCP Server
+### `kmcp deploy` - Deploy to Kubernetes
 
 Deploy an MCP server to Kubernetes by generating MCPServer CRDs:
 
 ```bash
-kmcp deploy mcp [name] [flags]
+kmcp deploy [name] [flags]
 ```
 
 **Flags:**
@@ -142,14 +152,15 @@ kmcp deploy mcp [name] [flags]
 - `--env` - Environment variables (KEY=VALUE)
 - `--force` - Force deployment even if validation fails
 - `--file, -f` - Path to kmcp.yaml file (default: current directory)
+- `--environment` - Target environment for deployment (e.g., staging, production) (default: "staging")
 - `--verbose, -v` - Show detailed output
 
-#### `kmcp deploy controller` - Deploy KMCP Controller
+### `kmcp install` - Install KMCP Controller
 
-Deploy the KMCP controller to a Kubernetes cluster using Helm:
+Install the KMCP controller and its required Custom Resource Definitions (CRDs) on a Kubernetes cluster:
 
 ```bash
-kmcp deploy controller [flags]
+kmcp install [flags]
 ```
 
 **Flags:**
@@ -158,6 +169,125 @@ kmcp deploy controller [flags]
 - `--registry-config` - Path to Docker registry config file
 - `--verbose, -v` - Show detailed output
 
+### `kmcp add-tool` - Add MCP Tool
+
+Generate a new MCP tool that will be automatically loaded by the server:
+
+```bash
+kmcp add-tool [tool-name] [flags]
+```
+
+**Flags:**
+- `--description, -d` - Tool description
+- `--force, -f` - Overwrite existing tool file
+- `--interactive, -i` - Interactive tool creation
+- `--project-dir` - Project directory (default: current directory)
+- `--verbose, -v` - Show detailed output
+
+### `kmcp secrets` - Manage Project Secrets
+
+Manage secrets for MCP server projects and apply them to the kubernetes environment:
+
+```bash
+kmcp secrets [subcommand] [flags]
+```
+
+**Subcommands:**
+- `sync [environment]` - Sync secrets to a Kubernetes environment from a local .env file
+
+**Sync Flags:**
+- `--from-file` - Source .env file to sync from (default: ".env")
+- `--dry-run` - Output the generated secret YAML instead of applying it
+- `--project-dir, -d` - Project directory (default: current directory)
+- `--verbose, -v` - Show detailed output
+
+## Project Configuration (kmcp.yaml)
+
+The `kmcp.yaml` file is the central configuration for your MCP server project. It defines project metadata, build settings, tool configurations, and secret management for different environments.
+
+### Basic Configuration
+
+```yaml
+name: my-mcp-server
+framework: fastmcp-python
+version: 0.1.0
+description: My MCP server for API integration
+author: John Doe
+email: john@example.com
+
+# Build configuration
+build:
+  output: my-mcp-server
+  docker:
+    image: my-mcp-server:latest
+    dockerfile: Dockerfile
+    port: 3000
+    environment:
+      LOG_LEVEL: info
+```
+
+### Secret Management
+
+KMCP supports environment-specific secret management with multiple providers. Configure secrets in your `kmcp.yaml` to enable secure deployment. Secrets are disabled by default.
+
+```yaml
+secrets:
+  # Local development environment
+  local:
+    enabled: false
+    provider: env
+    file: .env.local
+  
+  # Staging environment
+  staging:
+    enabled: true
+    provider: kubernetes
+    secretName: my-mcp-server-secrets-staging
+    namespace: default
+  
+  # Production environment
+  production:
+    enabled: true
+    provider: kubernetes
+    secretName: my-mcp-server-secrets-production
+    namespace: production
+```
+
+### Secret Providers
+
+- **`env`**: Load secrets from local `.env` files for development
+- **`kubernetes`**: Mounts secrets as environment variables in the MCP server container
+
+### Using Secrets in Deployment
+
+1. **Configure your environment** in `kmcp.yaml`:
+   ```yaml
+   secrets:
+     staging:
+       enabled: true
+       provider: kubernetes
+       secretName: my-app-secrets-staging
+       namespace: default
+   ```
+
+2. **Create your `.env` file** with your secrets:
+   ```bash
+   # .env.staging
+   API_KEY=your-api-key-here
+   DATABASE_URL=postgresql://user:pass@host:5432/db
+   ```
+
+3. **Sync secrets to Kubernetes**:
+   ```bash
+   kmcp secrets sync staging --from-file .env.staging
+   ```
+
+4. **Deploy with secrets**:
+   ```bash
+   kmcp deploy --environment staging
+   ```
+
+The secrets will be automatically mounted as environment variables in your MCP server container during deployment.
 
 ### Examples
 
@@ -165,15 +295,51 @@ kmcp deploy controller [flags]
 
 ```bash
 # Interactive creation
-kmcp init my-python-server
+kmcp init python my-python-server
 
 # Non-interactive with specific options
-kmcp init my-python-server \
-  --framework fastmcp-python \
-  --template database \
+kmcp init python my-python-server \
+  --author "John Doe" \
+  --email "john@example.com" \
+  --description "My Python MCP server" \
+  --non-interactive
+```
+
+#### Create a Go MCP Project
+
+```bash
+# Interactive creation
+kmcp init go my-go-server
+
+# Non-interactive with specific options
+kmcp init go my-go-server \
+  --go-module-name "github.com/my-org/my-go-server" \
   --author "John Doe" \
   --email "john@example.com" \
   --non-interactive
+```
+
+#### Build and Deploy
+
+```bash
+# Build the project
+kmcp build --docker --tag my-server:latest
+
+# Deploy to Kubernetes
+kmcp deploy my-server --namespace production --environment production
+
+# Run locally for testing
+kmcp run --project-dir ./my-python-server
+```
+
+#### Manage Secrets
+
+```bash
+# Sync secrets from .env file to Kubernetes
+kmcp secrets sync staging --from-file .env.staging
+
+# Add a new tool to your project
+kmcp add-tool weather --description "Get weather information"
 ```
 
 ## Kubernetes Controller
@@ -213,7 +379,7 @@ spec:
     image: "my-mcp-server:latest"
     port: 3000
     cmd: "python"
-    args: ["-m", "my_mcp_server"]
+    args: ["src/main.py"]
   transportType: "stdio"
 ```
 
@@ -243,6 +409,31 @@ my-mcp-server/
 ├── .env.example        # Environment variables
 └── README.md           # Project documentation
 ```
+
+### MCP Go
+- **Best for**: High-performance Go applications and microservices
+- **Features**: Native Go SDK, type-safe tool definitions, excellent performance
+- **Use cases**: High-throughput services, system-level integrations, performance-critical applications
+- **Requirements**: Go 1.23 or later
+
+Generated Go projects follow MCP best practices:
+
+```
+my-go-server/
+├── main.go              # Server entry point
+├── go.mod               # Go module definition
+├── go.sum               # Dependency checksums
+├── tools/               # Tool implementations
+│   ├── all_tools.go     # Tool registration
+│   ├── echo.go          # Example tool
+│   └── tool.go          # Tool template
+├── Dockerfile           # Container definition
+├── .gitignore           # Git ignore rules
+├── kmcp.yaml            # Project configuration
+└── README.md            # Project documentation
+```
+
+
 
 ## Development
 
