@@ -1,6 +1,32 @@
-# KMCP - Model Context Protocol Development & Deployment Platform
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/kagent-dev/kmcp/main/img/kmcp-logo-dark.svg" alt="kmcp" width="400">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/kagent-dev/kmcp/main/img/kmcp-logo-light.svg" alt="kmcp" width="400">
+    <img alt="kmcp" src="https://raw.githubusercontent.com/kagent-dev/kmcp/main/img/kmcp-logo-light.svg">
+  </picture>
+  <div>
+    <a href="https://github.com/kagent-dev/kmcp/releases">
+      <img src="https://img.shields.io/github/v/release/kagent-dev/kmcp?style=flat&label=Latest%20version" alt="Release">
+    </a>
+    <a href="https://github.com/kagent-dev/kmcp/actions/workflows/tag.yaml">
+      <img src="https://github.com/kagent-dev/kmcp/actions/workflows/tag.yaml/badge.svg" alt="Build Status" height="20">
+    </a>
+      <a href="https://opensource.org/licenses/Apache-2.0">
+      <img src="https://img.shields.io/badge/License-Apache2.0-brightgreen.svg?style=flat" alt="License: Apache 2.0">
+    </a>
+    <a href="https://github.com/kagent-dev/kmcp">
+      <img src="https://img.shields.io/github/stars/kagent-dev/kmcp.svg?style=flat&logo=github&label=Stars" alt="Stars">
+    </a>
+     <a href="https://discord.gg/Fu3k65f2k3">
+      <img src="https://img.shields.io/discord/1346225185166065826?style=flat&label=Join%20Discord&color=6D28D9" alt="Discord">
+    </a>
+  </div>
+</div>
 
-KMCP is a comprehensive platform for developing and deploying Model Context Protocol (MCP) servers. It provides both a powerful CLI tool for local development and a Kubernetes controller for cloud-native deployment.
+
+# kmcp - Model Context Protocol Development & Deployment Platform
+
+kmcp is a comprehensive platform for developing and deploying Model Context Protocol (MCP) servers. It provides both a powerful CLI tool for local development and a Kubernetes controller for cloud-native deployment.
 
 ## Table of Contents
 
@@ -36,7 +62,7 @@ The Model Context Protocol (MCP) is an open standard developed by Anthropic that
 
 ## Quick Start
 
-Get started with KMCP in under 5 minutes:
+Get started with kmcp in under 5 minutes:
 
 ```bash
 # Install the CLI
@@ -57,7 +83,7 @@ kmcp run
 
 ## CLI Tool
 
-The KMCP CLI provides a complete development experience for MCP servers with project scaffolding, build automation, and deployment tools.
+The kmcp CLI provides a complete development experience for MCP servers with project scaffolding, build automation, and deployment tools.
 
 ### Installation
 
@@ -155,9 +181,9 @@ kmcp deploy [name] [flags]
 - `--environment` - Target environment for deployment (e.g., staging, production) (default: "staging")
 - `--verbose, -v` - Show detailed output
 
-### `kmcp install` - Install KMCP Controller
+### `kmcp install` - Install kmcp Controller
 
-Install the KMCP controller and its required Custom Resource Definitions (CRDs) on a Kubernetes cluster:
+Install the kmcp controller and its required Custom Resource Definitions (CRDs) on a Kubernetes cluster:
 
 ```bash
 kmcp install [flags]
@@ -228,7 +254,7 @@ build:
 
 ### Secret Management
 
-KMCP supports environment-specific secret management with multiple providers. Configure secrets in your `kmcp.yaml` file to enable secure deployment. Secrets are disabled by default.
+kmcp supports environment-specific secret management with multiple providers. Configure secrets in your `kmcp.yaml` file to enable secure deployment. Secrets are disabled by default.
 
 ```yaml
 secrets:
@@ -344,7 +370,7 @@ kmcp add-tool weather --description "Get weather information"
 
 ## Kubernetes Controller
 
-KMCP also includes a Kubernetes controller for cloud-native MCP server deployment.
+kmcp also includes a Kubernetes controller for cloud-native MCP server deployment.
 
 ### Controller Features
 
@@ -385,7 +411,7 @@ spec:
 
 ## Supported Frameworks
 
-KMCP supports the most popular MCP frameworks:
+kmcp supports the most popular MCP frameworks:
 
 ### FastMCP Python ⭐ (Recommended)
 - **Best for**: Production Python applications
@@ -433,8 +459,6 @@ my-go-server/
 └── README.md            # Project documentation
 ```
 
-
-
 ## Development
 
 ### Building from Source
@@ -465,7 +489,7 @@ make build-cli
 
 ## TODO - Initial Phase Completion
 
-The following tasks remain to complete the initial phase of KMCP:
+The following tasks remain to complete the initial phase of kmcp:
 
 ### CLI Tool Enhancements
 - [ ] **Add `dev` command** - Local development server with hot reload
@@ -530,6 +554,22 @@ The following tasks remain to complete the initial phase of KMCP:
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+Thanks to all contributors!
+
+<a href="https://github.com/kagent-dev/kmcp/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=kagent-dev/kmcp" />
+</a>
+
+## Star History
+
+<a href="https://www.star-history.com/#kagent-dev/kmcp&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date" />
+   <img alt="Star history of kagent-dev/kmcp over time" src="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date" />
+ </picture>
+</a>
 
 ### Development Setup
 
