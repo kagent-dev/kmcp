@@ -28,11 +28,12 @@ Examples:
 }
 
 var (
-	buildTag      string
-	buildPush     bool
-	buildKindLoad bool
-	buildDir      string
-	buildPlatform string
+	buildTag             string
+	buildPush            bool
+	buildKindLoad        bool
+	buildDir             string
+	buildPlatform        string
+	buildKindLoadCluster string
 )
 
 func init() {
@@ -41,6 +42,7 @@ func init() {
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
 	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")
 	buildCmd.Flags().BoolVar(&buildKindLoad, "kind-load", false, "Load image into kind cluster (requires kind)")
+	buildCmd.Flags().StringVar(&buildKindLoadCluster, "kind-load-cluster", "", "Name of the kind cluster to load image into")
 	buildCmd.Flags().StringVarP(&buildDir, "project-dir", "d", "", "Build directory (default: current directory)")
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
 }
@@ -96,12 +98,27 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("✅ Docker image pushed successfully\n")
 	}
-	if buildKindLoad {
+	if buildKindLoad || buildKindLoadCluster != "" {
 		fmt.Printf("Loading Docker image %s into kind cluster...\n", imageName)
-		if err := runKind("load", "docker-image", imageName); err != nil {
-			return fmt.Errorf("docker load failed: %w", err)
+		kindArgs := []string{"load", "docker-image", imageName}
+		clusterName := buildKindLoadCluster
+		if clusterName == "" {
+			var err error
+			clusterName, err = getCurrentKindClusterName()
+			if err != nil {
+				if verbose {
+					fmt.Printf("could not detect kind cluster name: %v, using default\n", err)
+				}
+				clusterName = "kind" // default to kind cluster
+			}
 		}
-		fmt.Printf("✅ Docker image loaded into kind cluster\n")
+
+		kindArgs = append(kindArgs, "--name", clusterName)
+
+		if err := runKind(kindArgs...); err != nil {
+			return fmt.Errorf("kind load failed: %w", err)
+		}
+		fmt.Printf("✅ Docker image loaded into kind cluster %s\n", clusterName)
 	}
 
 	return nil

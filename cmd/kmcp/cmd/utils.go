@@ -63,3 +63,26 @@ func getLatestReleaseTag(repo string) (string, error) {
 	}
 	return release.TagName, nil
 }
+
+func getCurrentKindClusterName() (string, error) {
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{},
+	)
+	rawConfig, err := config.RawConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get raw kubeconfig: %w", err)
+	}
+
+	currentContext, ok := rawConfig.Contexts[rawConfig.CurrentContext]
+	if !ok {
+		return "", fmt.Errorf("current context %q not found in kubeconfig", rawConfig.CurrentContext)
+	}
+
+	const kindPrefix = "kind-"
+	if strings.HasPrefix(currentContext.Cluster, kindPrefix) {
+		return strings.TrimPrefix(currentContext.Cluster, kindPrefix), nil
+	}
+
+	return "", fmt.Errorf("current cluster %q is not a kind cluster", currentContext.Cluster)
+}
