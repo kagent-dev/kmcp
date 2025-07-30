@@ -120,8 +120,3 @@ func checkHelmAvailable() error {
 	}
 	return nil
 }
-
-// getKMCPVersion returns the current kmcp version
-func getKMCPVersion() string {
-	return Version
-}

@@ -75,6 +75,7 @@ var (
 	deployForce       bool
 	deployFile        string
 	deployEnvironment string
+	deployNoInspector bool
 )
 
 func init() {
@@ -100,6 +101,7 @@ func init() {
 	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	deployCmd.Flags().BoolVar(&deployForce, "force", false, "Force deployment even if validation fails")
 	deployCmd.Flags().StringVarP(&deployFile, "file", "f", "", "Path to kmcp.yaml file (default: current directory)")
+	deployCmd.Flags().BoolVar(&deployNoInspector, "no-inspector", false, "Do not start the MCP inspector after deployment")
 	deployCmd.Flags().StringVar(
 		&deployEnvironment,
 		"environment",
@@ -185,7 +187,7 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 		fmt.Print(yamlContent)
 	} else {
 		// Apply MCPServer to cluster
-		if err := applyToCluster(yamlContent, mcpServer); err != nil {
+		if err := applyToCluster(projectDir, yamlContent, mcpServer); err != nil {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
 	}
@@ -390,7 +392,7 @@ func parseEnvVars(envVars []string) map[string]string {
 	return result
 }
 
-func applyToCluster(yamlContent string, mcpServer *v1alpha1.MCPServer) error {
+func applyToCluster(projectDir, yamlContent string, mcpServer *v1alpha1.MCPServer) error {
 	fmt.Printf("🚀 Applying MCPServer to cluster...\n")
 
 	// Check if kubectl is available
@@ -434,13 +436,76 @@ func applyToCluster(yamlContent string, mcpServer *v1alpha1.MCPServer) error {
 	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", mcpServer.Name, mcpServer.Namespace)
 	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", mcpServer.Name, mcpServer.Namespace)
 	if mcpServer.Spec.Deployment.Port != 0 {
-		fmt.Printf("💡 Port-forward to the service with: kubectl port-forward service/%s %d:%d -n %s\n", mcpServer.Name, mcpServer.Spec.Deployment.Port, mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
+		fmt.Printf("💡 Port-forward to the service with: "+
+			"kubectl port-forward service/%s %d:%d -n %s\n",
+			mcpServer.Name, mcpServer.Spec.Deployment.Port,
+			mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
+	}
+
+	if !deployNoInspector {
+		if err := runInspector(mcpServer, projectDir); err != nil {
+			return fmt.Errorf("failed to run inspector: %w", err)
+		}
 	}
 
 	if err := os.Remove(tmpFile.Name()); err != nil {
 		fmt.Printf("failed to remove temp file: %v\n", err)
 	}
 	return nil
+}
+
+func runInspector(mcpServer *v1alpha1.MCPServer, projectDir string) error {
+	// Check if npx is installed
+	if err := checkNpxInstalled(); err != nil {
+		return err
+	}
+
+	// Start port forwarding in the background
+	portForwardCmd, err := runPortForward(mcpServer)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if portForwardCmd != nil && portForwardCmd.Process != nil {
+			if err := portForwardCmd.Process.Kill(); err != nil {
+				fmt.Printf("failed to kill port-forward process: %v\n", err)
+			}
+		}
+	}()
+
+	// Create inspector config
+	serverConfig := map[string]interface{}{
+		"type": "streamable-http",
+		"url":  "http://localhost:3000/mcp",
+	}
+	configPath := filepath.Join(projectDir, "mcp-server-config.json")
+	if err := createMCPInspectorConfig(mcpServer.Name, serverConfig, configPath); err != nil {
+		return err
+	}
+
+	// Run the inspector
+	return runMCPInspector(configPath, mcpServer.Name, "")
+}
+
+func runPortForward(mcpServer *v1alpha1.MCPServer) (*exec.Cmd, error) {
+	port := mcpServer.Spec.Deployment.Port
+	if port == 0 {
+		port = 3000 // Default port
+	}
+	portMapping := fmt.Sprintf("%d:%d", port, port)
+	args := []string{
+		"port-forward",
+		"service/" + mcpServer.Name,
+		portMapping,
+		"-n", mcpServer.Namespace,
+	}
+	cmd := exec.Command("kubectl", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start port-forward: %w", err)
+	}
+	return cmd, nil
 }
 
 func waitForDeployment(name, namespace string, timeout time.Duration) error {
