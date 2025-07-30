@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/kagent-dev/kmcp/pkg/manifest"
-	"github.com/stoewer/go-strcase"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/stoewer/go-strcase"
 
 	"github.com/kagent-dev/kmcp/pkg/build"
 	"github.com/spf13/cobra"

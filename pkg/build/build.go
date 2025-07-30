@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // Options contains configuration for building MCP servers
@@ -104,17 +103,6 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 
 	// Generate image name if not provided
 	imageName := opts.Tag
-	if imageName == "" {
-		dirName := filepath.Base(opts.ProjectDir)
-		imageName = strings.ToLower(dirName)
-	}
-
-	// Add tag if provided
-	if opts.Tag != "" {
-		imageName = imageName + ":" + opts.Tag
-	} else {
-		imageName = imageName + ":latest"
-	}
 
 	// Prepare docker build command
 	args := []string{"build", "-t", imageName}
@@ -135,12 +123,8 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 	cmd := exec.Command("docker", args...)
 	cmd.Dir = opts.ProjectDir
 
-	if opts.Verbose {
-		// Show real-time output for verbose mode
-		return b.runCommandWithOutput(cmd, imageName)
-	}
-	// Capture output and show progress for non-verbose mode
-	return b.runCommandWithProgress(cmd, imageName)
+	// Show real-time output from docker build
+	return b.runCommandWithOutput(cmd, imageName)
 }
 
 // checkDockerAvailable verifies that Docker is available and running
@@ -176,46 +160,6 @@ func (b *Builder) runCommandWithOutput(cmd *exec.Cmd, imageName string) error {
 
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("docker build failed: %w", err)
-	}
-
-	fmt.Printf("✓ Successfully built Docker image: %s\n", imageName)
-	return nil
-}
-
-// runCommandWithProgress runs a command and shows progress without streaming all output
-func (b *Builder) runCommandWithProgress(cmd *exec.Cmd, imageName string) error {
-	// Start the command
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start docker build: %w", err)
-	}
-
-	// Show progress indicator
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
-
-		chars := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-		i := 0
-
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				fmt.Printf("\r%s Building Docker image...", chars[i%len(chars)])
-				i++
-			}
-		}
-	}()
-
-	// Wait for command to complete
-	err := cmd.Wait()
-	done <- true
-	fmt.Print("\r")
-
-	if err != nil {
 		return fmt.Errorf("docker build failed: %w", err)
 	}
 

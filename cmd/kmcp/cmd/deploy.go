@@ -457,7 +457,7 @@ func runKubectl(args ...string) error {
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf(stderr.String())
+		return fmt.Errorf("%s", stderr.String())
 	}
 
 	return nil
