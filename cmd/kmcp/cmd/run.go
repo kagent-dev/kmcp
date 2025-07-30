@@ -15,22 +15,27 @@ var runCmd = &cobra.Command{
 	Short: "Run MCP server locally",
 	Long: `Run an MCP server locally using the Model Context Protocol inspector.
 
-This command will:
+By default, this command will:
 1. Load the kmcp.yaml configuration from the project directory
-2. Determine the framework type and create appropriate configuration
-3. Run the MCP server using the Model Context Protocol inspector
+2. Determine the framework type and create the appropriate mcp inspector configuration
+3. Launch the MCP inspector, which will start the server when you click "Connect"
+
+If you want to run the server directly without the inspector, use the --no-inspector flag.
+This will execute the server directly using the appropriate framework command.
 
 Supported frameworks:
 - fastmcp-python: Requires uv to be installed
 - mcp-go: Requires Go to be installed
 
 Examples:
-  kmcp run --project-dir ./my-project  # Run from specific directory`,
+  kmcp run --project-dir ./my-project     # Run with inspector (default)
+  kmcp run --no-inspector                 # Run server directly without inspector`,
 	RunE: executeRun,
 }
 
 var (
-	projectDir string
+	projectDir  string
+	noInspector bool
 )
 
 func init() {
@@ -42,6 +47,12 @@ func init() {
 		"d",
 		"",
 		"Project directory to use (default: current directory)",
+	)
+	runCmd.Flags().BoolVar(
+		&noInspector,
+		"no-inspector",
+		false,
+		"Run the server directly without launching the MCP inspector",
 	)
 }
 
@@ -56,9 +67,11 @@ func executeRun(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Check if npx is installed
-	if err := checkNpxInstalled(); err != nil {
-		return err
+	// Check if npx is installed (only needed when using inspector)
+	if !noInspector {
+		if err := checkNpxInstalled(); err != nil {
+			return err
+		}
 	}
 
 	// Determine framework and create configuration
@@ -93,7 +106,21 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 		return fmt.Errorf("failed to run uv sync: %w", err)
 	}
 
-	// Create server configuration for local execution
+	if noInspector {
+		// Run the server directly
+		fmt.Printf("Running server directly: uv run python src/main.py\n")
+		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
+		fmt.Printf("Press Ctrl+C to stop the server\n")
+
+		serverCmd := exec.Command("uv", "run", "python", "src/main.py")
+		serverCmd.Dir = projectDir
+		serverCmd.Stdout = os.Stdout
+		serverCmd.Stderr = os.Stderr
+		serverCmd.Stdin = os.Stdin
+		return serverCmd.Run()
+	}
+
+	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
 		"command": "uv",
 		"args":    []string{"run", "python", "src/main.py"},
@@ -128,7 +155,21 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 		return fmt.Errorf("failed to run go mod tidy: %w", err)
 	}
 
-	// Create server configuration for local execution
+	if noInspector {
+		// Run the server directly
+		fmt.Printf("Running server directly: go run main.go\n")
+		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
+		fmt.Printf("Press Ctrl+C to stop the server\n")
+
+		serverCmd := exec.Command("go", "run", "main.go")
+		serverCmd.Dir = projectDir
+		serverCmd.Stdout = os.Stdout
+		serverCmd.Stderr = os.Stderr
+		serverCmd.Stdin = os.Stdin
+		return serverCmd.Run()
+	}
+
+	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
 		"command": "go",
 		"args":    []string{"run", "main.go"},
