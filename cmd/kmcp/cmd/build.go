@@ -64,7 +64,10 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		// Load project manifest
 		manifestManager := manifest.NewManager(buildDirectory)
 		if !manifestManager.Exists() {
-			return fmt.Errorf("kmcp.yaml not found in %s. Run 'kmcp init' first or specify a valid path with --project-dir", buildDirectory)
+			return fmt.Errorf(
+				"kmcp.yaml not found in %s. Run 'kmcp init' first or specify a valid path with --project-dir",
+				buildDirectory,
+			)
 		}
 
 		projectManifest, err := manifestManager.Load()
