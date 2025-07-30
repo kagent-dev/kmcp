@@ -90,7 +90,7 @@ kmcp init [subcommand] [project-name] [flags]
 - `python [project-name]` - Initialize a Python MCP server project using fastmcp-python
 - `go [project-name]` - Initialize a Go MCP server project using mcp-go
 
-**Global Flags:**
+**Flags:**
 - `--force` - Overwrite existing directory
 - `--no-git` - Skip git initialization
 - `--author` - Set project author
