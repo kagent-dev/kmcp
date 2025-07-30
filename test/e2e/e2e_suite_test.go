@@ -24,7 +24,7 @@ import (
 	ginkgo "github.com/onsi/ginkgo/v2"
 	gomega "github.com/onsi/gomega"
 
-	"kagent.dev/kmcp/test/utils"
+	"github.com/kagent-dev/kmcp/test/utils"
 )
 
 var (

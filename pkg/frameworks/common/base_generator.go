@@ -11,9 +11,9 @@ import (
 
 	"github.com/stoewer/go-strcase"
 
+	"github.com/kagent-dev/kmcp/pkg/templates"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"kagent.dev/kmcp/pkg/templates"
 )
 
 // Base Generator for MCP projects

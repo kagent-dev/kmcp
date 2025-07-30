@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kagent-dev/kmcp/api/v1alpha1"
+	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/wellknown"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"kagent.dev/kmcp/api/v1alpha1"
-	"kagent.dev/kmcp/pkg/manifest"
-	"kagent.dev/kmcp/pkg/wellknown"
 	"sigs.k8s.io/yaml"
 )
 

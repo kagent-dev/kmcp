@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"kagent.dev/kmcp/cmd/kmcp/cmd"
+	"github.com/kagent-dev/kmcp/cmd/kmcp/cmd"
 )
 
 func main() {

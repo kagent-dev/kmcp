@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"kagent.dev/kmcp/pkg/frameworks"
-	"kagent.dev/kmcp/pkg/manifest"
-	"kagent.dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/frameworks"
+	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/templates"
 
 	"github.com/spf13/cobra"
 )

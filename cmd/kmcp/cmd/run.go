@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/kagent-dev/kmcp/pkg/manifest"
 	"github.com/spf13/cobra"
-	"kagent.dev/kmcp/pkg/manifest"
 )
 
 var runCmd = &cobra.Command{

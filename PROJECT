@@ -6,7 +6,7 @@ domain: kagent.dev
 layout:
 - go.kubebuilder.io/v4
 projectName: kmcp
-repo: kagent.dev/kmcp
+repo: github.com/kagent-dev/kmcp
 resources:
 - api:
     crdVersion: v1
@@ -14,6 +14,6 @@ resources:
   controller: true
   domain: kagent.dev
   kind: MCPServer
-  path: kagent.dev/kmcp/api/v1alpha1
+  path: github.com/kagent-dev/kmcp/api/v1alpha1
   version: v1alpha1
 version: "3"

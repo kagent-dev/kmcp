@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"kagent.dev/kmcp/pkg/agentgateway"
+	"github.com/kagent-dev/kmcp/pkg/agentgateway"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kagentdevv1alpha1 "kagent.dev/kmcp/api/v1alpha1"
 )
 
 // MCPServerReconciler reconciles a MCPServer object

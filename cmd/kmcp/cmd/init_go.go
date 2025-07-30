@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/kagent-dev/kmcp/pkg/templates"
 	"github.com/spf13/cobra"
-	"kagent.dev/kmcp/pkg/templates"
 )
 
 var (
