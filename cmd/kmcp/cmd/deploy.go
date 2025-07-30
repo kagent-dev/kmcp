@@ -76,8 +76,15 @@ var (
 func init() {
 	rootCmd.AddCommand(deployCmd)
 
+	// Get current namespace from kubeconfig
+	currentNamespace, err := getCurrentNamespaceFromKubeconfig()
+	if err != nil {
+		// Fallback to default if unable to get current namespace
+		currentNamespace = "default"
+	}
+
 	// MCP deployment flags
-	deployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "default", "Kubernetes namespace")
+	deployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", currentNamespace, "Kubernetes namespace")
 	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
 	deployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")

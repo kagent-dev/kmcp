@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // fileExists checks if a file exists at the given path.
@@ -22,4 +24,18 @@ func promptForInput(promptText string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(input), nil
+}
+
+// getCurrentNamespaceFromKubeconfig returns the current namespace from the kubeconfig
+func getCurrentNamespaceFromKubeconfig() (string, error) {
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{},
+	)
+
+	namespace, _, err := config.Namespace()
+	if err != nil {
+		return "", err
+	}
+	return namespace, nil
 }
