@@ -171,7 +171,7 @@ kmcp install [flags]
 
 ### `kmcp add-tool` - Add MCP Tool
 
-Generate a new MCP tool that will be automatically loaded by the server:
+Generate a boilerplate for a new MCP tool that is automatically loaded by the MCP server:
 
 ```bash
 kmcp add-tool [tool-name] [flags]
