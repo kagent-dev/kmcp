@@ -14,8 +14,6 @@ import (
 // Options contains configuration for building MCP servers
 type Options struct {
 	ProjectDir string
-	Docker     bool
-	Output     string
 	Tag        string
 	Platform   string
 	Verbose    bool
@@ -50,11 +48,11 @@ func (b *Builder) Build(opts Options) error {
 	// Build based on project type
 	switch projectType {
 	case "python":
-		return b.buildPython(opts)
+		return b.buildDockerImage(opts, "python")
 	case "node":
-		return b.buildNode(opts)
+		return b.buildDockerImage(opts, "node")
 	case "go":
-		return b.buildGo(opts)
+		return b.buildDockerImage(opts, "go")
 	default:
 		return fmt.Errorf("unsupported project type: %s", projectType)
 	}
@@ -89,76 +87,6 @@ func (b *Builder) fileExists(path string) bool {
 	return err == nil
 }
 
-// buildPython handles building Python MCP servers
-func (b *Builder) buildPython(opts Options) error {
-	if opts.Docker {
-		return b.buildDockerImage(opts, "python")
-	}
-
-	// For now, just validate that we can build
-	fmt.Println("✓ Python project validation passed")
-	fmt.Println("Note: Native Python builds will be implemented in future iterations")
-
-	return nil
-}
-
-// buildNode handles building Node.js MCP servers
-func (b *Builder) buildNode(opts Options) error {
-	fmt.Println("Building Node.js MCP server...")
-
-	if opts.Docker {
-		return b.buildDockerImage(opts, "node")
-	}
-
-	// For now, just validate that we can build
-	fmt.Println("✓ Node.js project validation passed")
-	fmt.Println("Note: Native Node.js builds will be implemented in future iterations")
-
-	return nil
-}
-
-// buildGo handles building Go MCP servers
-func (b *Builder) buildGo(opts Options) error {
-	if opts.Docker {
-		return b.buildDockerImage(opts, "go")
-	}
-
-	fmt.Println("Building Go MCP server...")
-
-	// Get output path
-	outputPath := opts.Output
-	if outputPath == "" {
-		outputPath = filepath.Join(opts.ProjectDir, "server")
-	}
-
-	// Prepare build command
-	args := []string{"build", "-o", outputPath, "."}
-
-	if opts.Verbose {
-		fmt.Printf("Running: go %s\n", strings.Join(args, " "))
-	}
-
-	// Create go build command
-	cmd := exec.Command("go", args...)
-	cmd.Dir = opts.ProjectDir
-
-	// Set environment variables for cross-compilation if needed
-	if opts.Platform != "" {
-		parts := strings.Split(opts.Platform, "/")
-		if len(parts) == 2 {
-			cmd.Env = append(os.Environ(), "GOOS="+parts[0], "GOARCH="+parts[1])
-		}
-	}
-
-	// Run the command
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("go build failed: %w\n%s", err, string(output))
-	}
-
-	fmt.Printf("✓ Successfully built Go binary: %s\n", outputPath)
-	return nil
-}
-
 // buildDockerImage builds a Docker image for the MCP server
 func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 	fmt.Printf("Building Docker image for %s project...\n", projectType)
@@ -175,7 +103,7 @@ func (b *Builder) buildDockerImage(opts Options, projectType string) error {
 	}
 
 	// Generate image name if not provided
-	imageName := opts.Output
+	imageName := opts.Tag
 	if imageName == "" {
 		dirName := filepath.Base(opts.ProjectDir)
 		imageName = strings.ToLower(dirName)
