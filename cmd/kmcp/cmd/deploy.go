@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -181,7 +183,7 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 		fmt.Print(yamlContent)
 	} else {
 		// Apply MCPServer to cluster
-		if err := applyToCluster(yamlContent, deploymentName); err != nil {
+		if err := applyToCluster(yamlContent, mcpServer); err != nil {
 			return fmt.Errorf("failed to apply to cluster: %w", err)
 		}
 	}
@@ -399,7 +401,7 @@ func parseEnvVars(envVars []string) map[string]string {
 	return result
 }
 
-func applyToCluster(yamlContent, deploymentName string) error {
+func applyToCluster(yamlContent string, mcpServer *v1alpha1.MCPServer) error {
 	fmt.Printf("🚀 Applying MCPServer to cluster...\n")
 
 	// Check if kubectl is available
@@ -422,13 +424,21 @@ func applyToCluster(yamlContent, deploymentName string) error {
 	}
 
 	// Apply using kubectl
-	if err := runKubectl("apply", "-f", tmpFile.Name()); err != nil {
+	err = runKubectl("apply", "-f", tmpFile.Name())
+	if err != nil {
+		// Check for CRD not found error
+		if strings.Contains(err.Error(), "no matches for kind") {
+			return fmt.Errorf("MCPServer CRD not found. Please run 'kmcp install' first")
+		}
 		return fmt.Errorf("kubectl apply failed: %w", err)
 	}
 
-	fmt.Printf("✅ MCPServer '%s' applied successfully\n", deploymentName)
-	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", deploymentName, deployNamespace)
-	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", deploymentName, deployNamespace)
+	fmt.Printf("✅ MCPServer '%s' applied successfully\n", mcpServer.Name)
+	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", mcpServer.Name, mcpServer.Namespace)
+	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", mcpServer.Name, mcpServer.Namespace)
+	if mcpServer.Spec.Deployment.Port != 0 {
+		fmt.Printf("💡 Port-forward to the service with: kubectl port-forward service/%s %d:%d -n %s\n", mcpServer.Name, mcpServer.Spec.Deployment.Port, mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
+	}
 
 	if err := os.Remove(tmpFile.Name()); err != nil {
 		fmt.Printf("failed to remove temp file: %v\n", err)
@@ -442,10 +452,15 @@ func runKubectl(args ...string) error {
 	}
 
 	cmd := exec.Command("kubectl", args...)
+	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf(stderr.String())
+	}
+
+	return nil
 }
 
 // checkKubectlAvailable checks if kubectl is available in the system

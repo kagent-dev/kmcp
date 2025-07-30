@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -38,4 +40,25 @@ func getCurrentNamespaceFromKubeconfig() (string, error) {
 		return "", err
 	}
 	return namespace, nil
+}
+
+func getLatestReleaseTag(repo string) (string, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch latest release: %s", resp.Status)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", err
+	}
+	return release.TagName, nil
 }

@@ -15,7 +15,6 @@ import (
 const (
 	frameworkFastMCPPython = "fastmcp-python"
 	frameworkMCPGo         = "mcp-go"
-	templateBasic          = "basic"
 )
 
 var initCmd = &cobra.Command{
