@@ -228,7 +228,7 @@ build:
 
 ### Secret Management
 
-KMCP supports environment-specific secret management with multiple providers. Configure secrets in your `kmcp.yaml` to enable secure deployment. Secrets are disabled by default.
+KMCP supports environment-specific secret management with multiple providers. Configure secrets in your `kmcp.yaml` file to enable secure deployment. Secrets are disabled by default.
 
 ```yaml
 secrets:
