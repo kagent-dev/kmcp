@@ -186,7 +186,7 @@ kmcp add-tool [tool-name] [flags]
 
 ### `kmcp secrets` - Manage Project Secrets
 
-Manage secrets for MCP server projects and apply them to the kubernetes environment:
+Manage secrets for MCP server projects and apply them to the Kubernetes environment:
 
 ```bash
 kmcp secrets [subcommand] [flags]
