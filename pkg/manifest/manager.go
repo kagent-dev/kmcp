@@ -111,13 +111,6 @@ func GetDefault(name, framework, description, author, email, namespace string) *
 				SecretName: fmt.Sprintf("%s-secrets-production", strings.ReplaceAll(name, "_", "-")),
 			},
 		},
-		Build: BuildConfig{
-			Output: name,
-			Docker: DockerConfig{
-				Image:      fmt.Sprintf("%s:latest", strings.ToLower(strings.ReplaceAll(name, "_", "-"))),
-				Dockerfile: "Dockerfile",
-			},
-		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

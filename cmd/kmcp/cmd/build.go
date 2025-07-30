@@ -3,7 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
+	"strings"
+
+	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/stoewer/go-strcase"
 
 	"github.com/kagent-dev/kmcp/pkg/build"
 	"github.com/spf13/cobra"
@@ -11,38 +15,40 @@ import (
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build MCP server",
+	Short: "Build MCP server as a Docker image",
 	Long: `Build an MCP server from the current project.
 	
 This command will detect the project type and build the appropriate
-MCP server package or Docker image.
+MCP server Docker image.
 
 Examples:
-  kmcp build                    # Build from current directory
-  kmcp build --project-dir /path/to/project  # Build from specific directory
-  kmcp build --docker --project-dir ./my-project  # Build Docker image from specific directory`,
+  kmcp build                    # Build Docker image from current directory
+  kmcp build --project-dir ./my-project  # Build Docker image from specific directory`,
 	RunE: runBuild,
 }
 
 var (
-	buildDocker   bool
-	buildOutput   string
-	buildTag      string
-	buildPlatform string
-	buildDir      string
+	buildTag             string
+	buildPush            bool
+	buildKindLoad        bool
+	buildDir             string
+	buildPlatform        string
+	buildKindLoadCluster string
 )
 
 func init() {
 	rootCmd.AddCommand(buildCmd)
 
-	buildCmd.Flags().BoolVar(&buildDocker, "docker", false, "Build Docker image")
-	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", "", "Output directory or image name")
-	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag")
-	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
+	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
+	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")
+	buildCmd.Flags().BoolVar(&buildKindLoad, "kind-load", false, "Load image into kind cluster (requires kind)")
+	buildCmd.Flags().StringVar(&buildKindLoadCluster, "kind-load-cluster", "",
+		"Name of the kind cluster to load image into (default: current cluster)")
 	buildCmd.Flags().StringVarP(&buildDir, "project-dir", "d", "", "Build directory (default: current directory)")
+	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
 }
 
-func runBuild(_ *cobra.Command, _ []string) error {
+func runBuild(cmd *cobra.Command, args []string) error {
 	// Determine build directory
 	buildDirectory := buildDir
 	if buildDirectory == "" {
@@ -51,59 +57,93 @@ func runBuild(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get current directory: %w", err)
 		}
-	} else {
-		// Convert relative path to absolute path
-		if !filepath.IsAbs(buildDirectory) {
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get current directory: %w", err)
-			}
-			buildDirectory = filepath.Join(cwd, buildDirectory)
+	}
+
+	imageName := buildTag
+	if imageName == "" {
+		// Load project manifest
+		manifestManager := manifest.NewManager(buildDirectory)
+		if !manifestManager.Exists() {
+			return fmt.Errorf(
+				"kmcp.yaml not found in %s. Run 'kmcp init' first or specify a valid path with --project-dir",
+				buildDirectory,
+			)
 		}
-	}
 
-	if verbose {
-		fmt.Printf("Building MCP server in: %s\n", buildDirectory)
-	}
+		projectManifest, err := manifestManager.Load()
+		if err != nil {
+			return fmt.Errorf("failed to load project manifest: %w", err)
+		}
 
-	// Check if this is a valid MCP project
-	if err := validateMCPProject(buildDirectory); err != nil {
-		return fmt.Errorf("invalid MCP project: %w", err)
-	}
-
-	// Create build options
-	opts := build.Options{
-		ProjectDir: buildDirectory,
-		Docker:     buildDocker,
-		Output:     buildOutput,
-		Tag:        buildTag,
-		Platform:   buildPlatform,
-		Verbose:    verbose,
+		version := projectManifest.Version
+		if version == "" {
+			version = "latest"
+		}
+		imageName = fmt.Sprintf("%s:%s", strcase.KebabCase(projectManifest.Name), version)
 	}
 
 	// Execute build
 	builder := build.New()
-	return builder.Build(opts)
+	opts := build.Options{
+		ProjectDir: buildDirectory,
+		Tag:        imageName,
+		Platform:   buildPlatform,
+		Verbose:    verbose,
+	}
+
+	if err := builder.Build(opts); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	if buildPush {
+		fmt.Printf("Pushing Docker image %s...\n", imageName)
+		if err := runDocker("push", imageName); err != nil {
+			return fmt.Errorf("docker push failed: %w", err)
+		}
+		fmt.Printf("✅ Docker image pushed successfully\n")
+	}
+	if buildKindLoad || buildKindLoadCluster != "" {
+		fmt.Printf("Loading Docker image %s into kind cluster...\n", imageName)
+		kindArgs := []string{"load", "docker-image", imageName}
+		clusterName := buildKindLoadCluster
+		if clusterName == "" {
+			var err error
+			clusterName, err = getCurrentKindClusterName()
+			if err != nil {
+				if verbose {
+					fmt.Printf("could not detect kind cluster name: %v, using default\n", err)
+				}
+				clusterName = "kind" // default to kind cluster
+			}
+		}
+
+		kindArgs = append(kindArgs, "--name", clusterName)
+
+		if err := runKind(kindArgs...); err != nil {
+			return fmt.Errorf("kind load failed: %w", err)
+		}
+		fmt.Printf("✅ Docker image loaded into kind cluster %s\n", clusterName)
+	}
+
+	return nil
 }
 
-// validateMCPProject checks if the current directory contains a valid MCP project
-func validateMCPProject(dir string) error {
-	// Check for common MCP project indicators
-	indicators := []string{
-		"pyproject.toml",   // Python projects
-		"package.json",     // Node.js projects
-		"go.mod",           // Go projects
-		".mcpbuilder.yaml", // Our project config
+func runDocker(args ...string) error {
+	if verbose {
+		fmt.Printf("Running: docker %s\n", strings.Join(args, " "))
 	}
+	cmd := exec.Command("docker", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
 
-	for _, indicator := range indicators {
-		if _, err := os.Stat(filepath.Join(dir, indicator)); err == nil {
-			if verbose {
-				fmt.Printf("Detected project file: %s\n", indicator)
-			}
-			return nil
-		}
+func runKind(args ...string) error {
+	if verbose {
+		fmt.Printf("Running: kind %s\n", strings.Join(args, " "))
 	}
-
-	return fmt.Errorf("no MCP project detected. Expected one of: %v", indicators)
+	cmd := exec.Command("kind", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

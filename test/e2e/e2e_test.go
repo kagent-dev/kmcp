@@ -172,7 +172,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			var portForwardCmd *exec.Cmd
 			localPort := 8080
 			projectDir := "knowledge-assistant"
-			imageName := "knowledge-assistant:latest"
 
 			ginkgo.By("building the kmcp CLI")
 			cmd := exec.Command("make", "build-cli")
@@ -229,14 +228,16 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create secret from .env.local file")
 
 			ginkgo.By("building the Docker image for the knowledge-assistant project")
-			cmd = exec.Command("dist/kmcp", "build", "--docker", "--verbose", "--project-dir", projectDir)
+			cmd = exec.Command("dist/kmcp",
+				"build",
+				"--verbose",
+				"--project-dir",
+				projectDir,
+				"--kind-load-cluster",
+				"kind",
+			)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to build Docker image")
-
-			ginkgo.By("loading the Docker image into the Kind cluster")
-			cmd = exec.Command("kind", "load", "docker-image", imageName)
-			_, err = utils.Run(cmd)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to load Docker image into Kind cluster")
 
 			ginkgo.By("deploying the knowledge-assistant MCP server using kmcp CLI")
 			cmd = exec.Command(
@@ -248,6 +249,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				namespace,
 				"--environment",
 				"staging",
+				"--no-inspector",
 			)
 			_, err = utils.Run(cmd)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy knowledge-assistant MCP server")

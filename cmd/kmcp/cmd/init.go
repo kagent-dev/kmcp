@@ -18,7 +18,6 @@ import (
 const (
 	frameworkFastMCPPython = "fastmcp-python"
 	frameworkMCPGo         = "mcp-go"
-	templateBasic          = "basic"
 )
 
 var initCmd = &cobra.Command{
@@ -100,7 +99,6 @@ func runInitFramework(
 		Email:       projectManifest.Email,
 		Tools:       projectManifest.Tools,
 		Secrets:     projectManifest.Secrets,
-		Build:       projectManifest.Build,
 		Directory:   projectPath,
 		NoGit:       initNoGit,
 		Verbose:     verbose,

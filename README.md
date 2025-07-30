@@ -73,7 +73,7 @@ kmcp init python my-mcp-server
 
 # Build and test your server
 cd my-mcp-server
-kmcp build --docker --tag my-mcp-server:latest
+kmcp build
 
 # Run locally for testing
 kmcp run
@@ -349,7 +349,7 @@ kmcp init go my-go-server \
 
 ```bash
 # Build a Docker container image for your MCP server project
-kmcp build --docker --tag my-server:latest
+kmcp build --tag my-server:latest
 
 # Deploy to Kubernetes
 kmcp deploy my-server --namespace production --environment production

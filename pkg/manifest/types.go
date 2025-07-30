@@ -18,9 +18,6 @@ type ProjectManifest struct {
 	Tools   map[string]ToolConfig `yaml:"tools,omitempty" json:"tools,omitempty"`
 	Secrets SecretsConfig         `yaml:"secrets,omitempty" json:"secrets,omitempty"`
 
-	// Build configuration
-	Build BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
-
 	// Metadata
 	CreatedAt time.Time `yaml:"created_at,omitempty" json:"created_at,omitempty"`
 	UpdatedAt time.Time `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`

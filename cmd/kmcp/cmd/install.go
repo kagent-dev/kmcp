@@ -11,9 +11,8 @@ import (
 
 var (
 	// Controller deployment flags
-	controllerVersion        string
-	controllerNamespace      string
-	controllerRegistryConfig string
+	controllerVersion   string
+	controllerNamespace string
 )
 
 // installCmd represents the install command
@@ -41,19 +40,13 @@ func init() {
 		&controllerVersion,
 		"version",
 		"",
-		"Version of the controller to deploy (defaults to kmcp version)",
+		"Version of the controller to deploy (defaults to latest)",
 	)
 	installCmd.Flags().StringVar(
 		&controllerNamespace,
 		"namespace",
 		"kmcp-system",
 		"Namespace for the KMCP controller (defaults to kmcp-system)",
-	)
-	installCmd.Flags().StringVar(
-		&controllerRegistryConfig,
-		"registry-config",
-		"",
-		"Path to docker registry config file",
 	)
 }
 
@@ -68,45 +61,32 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	// Determine controller version
 	version := controllerVersion
 	if version == "" {
-		version = getKMCPVersion()
+		var err error
+		version, err = getLatestReleaseTag("kagent-dev/kmcp")
+		if err != nil {
+			return fmt.Errorf("failed to get latest version: %w", err)
+		}
+		fmt.Printf("No version specified, using latest: %s\n", version)
 	}
 
-	// Validate controller version format
 	if version == "" {
-		return fmt.Errorf("invalid controller version: version cannot be empty")
+		return fmt.Errorf("version cannot be empty")
 	}
 
-	// Determine registry config file
-	registryConfig := controllerRegistryConfig
-	if registryConfig == "" {
-		fmt.Print("Docker registry config must be set use --registry-config\n")
-	}
-	if registryConfig != "" && verbose {
-		fmt.Printf("Using registry config: %s\n", registryConfig)
-	}
-
-	// Build helm install command
-	args := []string{
-		"install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
+	// Install controller using Helm
+	helmArgs := []string{
+		"upgrade",
+		"--install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
 		"--version", version,
 		"--namespace", controllerNamespace,
 		"--create-namespace",
 	}
 
-	// Add registry config if found
-	if registryConfig != "" {
-		args = append(args, "--registry-config", registryConfig)
-	}
-
-	// Run helm install
-	if err := runHelm(args...); err != nil {
+	if err := runHelm(helmArgs...); err != nil {
 		return fmt.Errorf("helm install failed: %w", err)
 	}
 
-	fmt.Printf(
-		"✅ KMCP controller deployed successfully with version %s\n",
-		version,
-	)
+	fmt.Printf("✅ KMCP controller deployed successfully\n")
 	fmt.Printf(
 		"💡 Check controller status with: kubectl get pods -n %s\n",
 		controllerNamespace,
@@ -139,9 +119,4 @@ func checkHelmAvailable() error {
 		return fmt.Errorf("helm not found or not working: %w", err)
 	}
 	return nil
-}
-
-// getKMCPVersion returns the current kmcp version
-func getKMCPVersion() string {
-	return Version
 }
