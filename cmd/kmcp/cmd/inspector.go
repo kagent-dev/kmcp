@@ -34,6 +34,17 @@ func createMCPInspectorConfig(serverName string, serverConfig map[string]interfa
 
 	if verbose {
 		fmt.Printf("Created mcp-server-config.json: %s\n", configPath)
+		fmt.Printf("Config content:\n%s\n", string(configData))
+	}
+
+	// Check if this is a streamable-http configuration and notify user
+	if serverConfig["type"] == "streamable-http" {
+		fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, you will need to")
+		fmt.Println("manually configure the connection in the UI:")
+		fmt.Println("1. Set Transport Type to 'Streamable HTTP'")
+		fmt.Println("2. Set URL to 'http://localhost:3000/mcp'")
+		fmt.Println("3. Click 'Connect'")
+		fmt.Printf("\n🚀 Starting MCP Inspector...\n")
 	}
 
 	return nil

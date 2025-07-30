@@ -442,19 +442,33 @@ func applyToCluster(projectDir, yamlContent string, mcpServer *v1alpha1.MCPServe
 			mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
 	}
 
+	var configPath string
 	if !deployNoInspector {
-		if err := runInspector(mcpServer, projectDir); err != nil {
+		// Create inspector config
+		port := uint16(3000) // default port
+		if mcpServer.Spec.Deployment.Port != 0 {
+			port = mcpServer.Spec.Deployment.Port
+		}
+		serverConfig := map[string]interface{}{
+			"type": "streamable-http",
+			"url":  fmt.Sprintf("http://localhost:%d/mcp", port),
+		}
+		configPath = filepath.Join(projectDir, "mcp-server-config.json")
+		if err := createMCPInspectorConfig(mcpServer.Name, serverConfig, configPath); err != nil {
+			return fmt.Errorf("failed to create inspector config: %w", err)
+		}
+
+		if err := runInspector(mcpServer, configPath, projectDir); err != nil {
 			return fmt.Errorf("failed to run inspector: %w", err)
 		}
 	}
-
 	if err := os.Remove(tmpFile.Name()); err != nil {
 		fmt.Printf("failed to remove temp file: %v\n", err)
 	}
 	return nil
 }
 
-func runInspector(mcpServer *v1alpha1.MCPServer, projectDir string) error {
+func runInspector(mcpServer *v1alpha1.MCPServer, configPath string, projectDir string) error {
 	// Check if npx is installed
 	if err := checkNpxInstalled(); err != nil {
 		return err
@@ -472,23 +486,6 @@ func runInspector(mcpServer *v1alpha1.MCPServer, projectDir string) error {
 			}
 		}
 	}()
-
-	// Create inspector config
-	serverConfig := map[string]interface{}{
-		"type": "streamable-http",
-		"url":  "http://localhost:3000/mcp",
-	}
-	configPath := filepath.Join(projectDir, "mcp-server-config.json")
-	if err := createMCPInspectorConfig(mcpServer.Name, serverConfig, configPath); err != nil {
-		return err
-	}
-
-	fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, " +
-		"you will need to manually configure the connection in the UI:")
-	fmt.Println("1. Set Transport Type to 'Streamable HTTP'")
-	fmt.Println("2. Set URL to 'http://localhost:3000/mcp'")
-	fmt.Println("3. Click 'Connect'")
-	fmt.Printf("\n🚀 Starting MCP Inspector...\n")
 
 	// Run the inspector
 	return runMCPInspector(configPath, mcpServer.Name, projectDir)
