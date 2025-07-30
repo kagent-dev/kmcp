@@ -30,6 +30,7 @@ Examples:
 var (
 	buildTag      string
 	buildPush     bool
+	buildKindLoad bool
 	buildDir      string
 	buildPlatform string
 )
@@ -39,6 +40,7 @@ func init() {
 
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
 	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")
+	buildCmd.Flags().BoolVar(&buildKindLoad, "kind-load", false, "Load image into kind cluster (requires kind)")
 	buildCmd.Flags().StringVarP(&buildDir, "project-dir", "d", "", "Build directory (default: current directory)")
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
 }
@@ -94,6 +96,13 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("✅ Docker image pushed successfully\n")
 	}
+	if buildKindLoad {
+		fmt.Printf("Loading Docker image %s into kind cluster...\n", imageName)
+		if err := runKind("load", "docker-image", imageName); err != nil {
+			return fmt.Errorf("docker load failed: %w", err)
+		}
+		fmt.Printf("✅ Docker image loaded into kind cluster\n")
+	}
 
 	return nil
 }
@@ -103,6 +112,16 @@ func runDocker(args ...string) error {
 		fmt.Printf("Running: docker %s\n", strings.Join(args, " "))
 	}
 	cmd := exec.Command("docker", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func runKind(args ...string) error {
+	if verbose {
+		fmt.Printf("Running: kind %s\n", strings.Join(args, " "))
+	}
+	cmd := exec.Command("kind", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
