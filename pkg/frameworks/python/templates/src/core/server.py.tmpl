@@ -75,7 +75,7 @@ class DynamicMCPServer:
             try:
                 # Get the number of tools before importing
                 tools_before = len(self.mcp._tool_manager._tools)
-                
+
                 # Simply import the module - tools auto-register via @mcp.tool()
                 # decorator
                 tool_name = tool_file.stem
@@ -87,7 +87,9 @@ class DynamicMCPServer:
                         loaded_count += 1
                         logging.info(f"Loaded tool module: {tool_name}")
                     else:
-                        logging.error(f"Tool file {tool_name} did not register any tools")
+                        logging.error(
+                            f"Tool file {tool_name} did not register any tools"
+                        )
                         has_errors = True
                 else:
                     logging.error(f"Failed to load tool module: {tool_name}")
@@ -138,7 +140,8 @@ class DynamicMCPServer:
 
     def get_tools_sync(self):
         """Get tools synchronously for testing purposes."""
-        # This is a simplified version for testing - in real usage, use get_tools() async
+        # This is a simplified version for testing - in real usage, use get_tools()
+        # async
         return self.mcp._tool_manager._tools
 
     def run(self) -> None:

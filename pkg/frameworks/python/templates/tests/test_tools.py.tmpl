@@ -70,10 +70,10 @@ class TestEchoTool:
         # Get the tool from the server
         server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
         server.load_tools()
-        
+
         tools = server.get_tools_sync()
         assert "echo" in tools
-        
+
         # Call the tool function
         echo_tool = tools["echo"]
         result = echo_tool.fn("Hello, World!")
