@@ -28,7 +28,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kagentdevv1alpha1 "kagent.dev/kmcp/api/v1alpha1"
+	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 )
 
 var _ = ginkgo.Describe("MCPServer Controller", func() {

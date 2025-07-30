@@ -1,17 +1,15 @@
-module kagent.dev/kmcp
+module github.com/kagent-dev/kmcp
 
 go 1.24.0
 
 toolchain go1.24.3
 
-godebug default=go1.23
-
 require (
-	github.com/kagent-dev/kmcp v0.0.0-00010101000000-000000000000
 	github.com/mark3labs/mcp-go v0.33.0
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/spf13/cobra v1.8.1
+	github.com/stoewer/go-strcase v1.3.0
 	golang.org/x/text v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.32.0
@@ -66,7 +64,6 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
@@ -104,5 +101,3 @@ require (
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )
-
-replace github.com/kagent-dev/kmcp => ./

@@ -32,7 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kagentdevv1alpha1 "kagent.dev/kmcp/api/v1alpha1"
+	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 

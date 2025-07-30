@@ -134,6 +134,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
+	goimports -local "github.com/kgateway-dev/kmcp" -w .
 
 .PHONY: vet
 vet: ## Run go vet against code.
@@ -181,7 +182,7 @@ build: manifests generate fmt vet ## Build manager binary.
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
 	mkdir -p $(DIST_FOLDER)
-	go build -ldflags="-X 'kagent.dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
+	go build -ldflags="-X 'github.com/kagent-dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kagent-dev/kmcp/pkg/build"
 	"github.com/spf13/cobra"
-	"kagent.dev/kmcp/pkg/build"
 )
 
 var buildCmd = &cobra.Command{
