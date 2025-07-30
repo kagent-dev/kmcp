@@ -105,4 +105,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )
 
-replace github.com/kagent-dev/kmcp => ./
