@@ -322,7 +322,7 @@ kmcp init go my-go-server \
 #### Build and Deploy
 
 ```bash
-# Build the project
+# Build a Docker container image for your MCP server project
 kmcp build --docker --tag my-server:latest
 
 # Deploy to Kubernetes
