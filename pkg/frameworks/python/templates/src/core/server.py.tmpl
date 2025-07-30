@@ -8,6 +8,7 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from fastmcp import FastMCP
@@ -15,7 +16,7 @@ from fastmcp import FastMCP
 from .utils import load_config
 
 # Global FastMCP instance for tools to import
-mcp = FastMCP(name="Dynamic Server")
+mcp: FastMCP = FastMCP(name="Dynamic Server")
 
 
 class DynamicMCPServer:
@@ -43,7 +44,7 @@ class DynamicMCPServer:
         # Track loaded tools
         self.loaded_tools: list[str] = []
 
-    def _load_config(self) -> dict[str, any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load configuration from kmcp.yaml."""
         return load_config("kmcp.yaml")
 
@@ -138,7 +139,7 @@ class DynamicMCPServer:
             print(f"Error importing {tool_file}: {e}")
             return False
 
-    def get_tools_sync(self):
+    def get_tools_sync(self) -> dict[str, Any]:
         """Get tools synchronously for testing purposes."""
         # This is a simplified version for testing - in real usage, use get_tools()
         # async

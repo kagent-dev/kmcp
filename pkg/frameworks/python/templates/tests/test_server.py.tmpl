@@ -14,13 +14,13 @@ from core.utils import get_tool_config, load_config  # noqa: E402
 class TestDynamicMCPServer:
     """Test the dynamic MCP server functionality."""
 
-    def test_server_initialization(self):
+    def test_server_initialization(self) -> None:
         """Test server initialization."""
         server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
         assert server.name == "Test Server"
         assert server.tools_dir == Path("src/tools")
 
-    def test_server_with_nonexistent_tools_dir(self):
+    def test_server_with_nonexistent_tools_dir(self) -> None:
         """Test server behavior with non-existent tools directory."""
         server = DynamicMCPServer(name="Test Server", tools_dir="nonexistent")
 
@@ -28,7 +28,7 @@ class TestDynamicMCPServer:
         server.load_tools()
         assert len(server.loaded_tools) == 0
 
-    def test_load_config(self):
+    def test_load_config(self) -> None:
         """Test configuration loading."""
         config_data = """
         server:
@@ -43,7 +43,7 @@ class TestDynamicMCPServer:
             assert config["server"]["name"] == "Test Server"
             assert config["tools"]["echo"]["prefix"] == "[TEST] "
 
-    def test_get_tool_config(self):
+    def test_get_tool_config(self) -> None:
         """Test tool-specific configuration retrieval."""
         with patch("core.utils.load_config") as mock_load:
             mock_load.return_value = {
@@ -67,7 +67,7 @@ class TestDynamicMCPServer:
 class TestToolLoading:
     """Test the tool loading mechanism."""
 
-    def test_tool_function_detection(self):
+    def test_tool_function_detection(self) -> None:
         """Test that tool functions are properly detected."""
         server = DynamicMCPServer(name="Test Server", tools_dir="src/tools")
 
