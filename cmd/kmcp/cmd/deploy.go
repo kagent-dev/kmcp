@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/kagent-dev/kmcp/api/v1alpha1"
 	"github.com/kagent-dev/kmcp/pkg/manifest"
@@ -218,13 +220,11 @@ func generateMCPServer(
 	// Determine image name
 	imageName := deployImage
 	if imageName == "" {
-		// Use image from build config or generate default
-		if projectManifest.Build.Docker.Image != "" {
-			imageName = projectManifest.Build.Docker.Image
-		} else {
-			// Generate default image name
-			imageName = fmt.Sprintf("%s:latest", strings.ToLower(strings.ReplaceAll(projectManifest.Name, "_", "-")))
-		}
+		// Generate default image name
+		imageName = fmt.Sprintf("%s:%s",
+			strings.ToLower(strings.ReplaceAll(projectManifest.Name, "_", "-")),
+			projectManifest.Version,
+		)
 	}
 
 	// Determine transport type
@@ -243,11 +243,7 @@ func generateMCPServer(
 	// Determine port
 	port := deployPort
 	if port == 0 {
-		if projectManifest.Build.Docker.Port != 0 {
-			port = projectManifest.Build.Docker.Port
-		} else {
-			port = 3000 // Default port
-		}
+		port = 3000 // Default port
 	}
 
 	// Determine command and args
@@ -263,13 +259,6 @@ func generateMCPServer(
 
 	// Parse environment variables
 	envVars := parseEnvVars(deployEnv)
-
-	// Add framework-specific environment variables
-	for k, v := range projectManifest.Build.Docker.Environment {
-		if envVars[k] == "" { // Don't override user-provided values
-			envVars[k] = v
-		}
-	}
 
 	// Get secret reference from manifest for the specified environment
 	secretRef, err := getSecretRefFromManifest(projectManifest, environment)
@@ -434,6 +423,14 @@ func applyToCluster(yamlContent string, mcpServer *v1alpha1.MCPServer) error {
 	}
 
 	fmt.Printf("✅ MCPServer '%s' applied successfully\n", mcpServer.Name)
+
+	// Wait for the deployment to be ready
+	fmt.Printf("⌛ Waiting for deployment '%s' to be ready...\n", mcpServer.Name)
+	if err := waitForDeployment(mcpServer.Name, mcpServer.Namespace, 2*time.Minute); err != nil {
+		return fmt.Errorf("deployment not ready: %w", err)
+	}
+
+	fmt.Printf("✅ Deployment '%s' is ready.\n", mcpServer.Name)
 	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", mcpServer.Name, mcpServer.Namespace)
 	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", mcpServer.Name, mcpServer.Namespace)
 	if mcpServer.Spec.Deployment.Port != 0 {
@@ -442,6 +439,36 @@ func applyToCluster(yamlContent string, mcpServer *v1alpha1.MCPServer) error {
 
 	if err := os.Remove(tmpFile.Name()); err != nil {
 		fmt.Printf("failed to remove temp file: %v\n", err)
+	}
+	return nil
+}
+
+func waitForDeployment(name, namespace string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	args := []string{
+		"rollout", "status", "deployment", name,
+		"-n", namespace,
+		"--timeout", timeout.String(),
+	}
+
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	if verbose {
+		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
+	}
+	var stderr bytes.Buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	// sleep 1 second just to allow controller to create the deployment
+	time.Sleep(1 * time.Second)
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("timed out waiting for deployment to be ready")
+		}
+		return fmt.Errorf("`kubectl rollout status` failed: %w\n%s", err, stderr.String())
 	}
 	return nil
 }
@@ -457,7 +484,7 @@ func runKubectl(args ...string) error {
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s", stderr.String())
+		return fmt.Errorf("`kubectl %s` failed: %w\n%s", strings.Join(args, " "), err, stderr.String())
 	}
 
 	return nil

@@ -47,7 +47,7 @@ kmcp init python my-mcp-server
 
 # Build and test your server
 cd my-mcp-server
-kmcp build --docker --tag my-mcp-server:latest
+kmcp build
 
 # Run locally for testing
 kmcp run

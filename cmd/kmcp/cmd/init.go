@@ -96,7 +96,6 @@ func runInitFramework(
 		Email:       projectManifest.Email,
 		Tools:       projectManifest.Tools,
 		Secrets:     projectManifest.Secrets,
-		Build:       projectManifest.Build,
 		Directory:   projectPath,
 		NoGit:       initNoGit,
 		Verbose:     verbose,

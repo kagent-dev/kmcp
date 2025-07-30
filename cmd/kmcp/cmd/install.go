@@ -11,9 +11,8 @@ import (
 
 var (
 	// Controller deployment flags
-	controllerVersion        string
-	controllerNamespace      string
-	controllerRegistryConfig string
+	controllerVersion   string
+	controllerNamespace string
 )
 
 // installCmd represents the install command
@@ -49,12 +48,6 @@ func init() {
 		"kmcp-system",
 		"Namespace for the KMCP controller (defaults to kmcp-system)",
 	)
-	installCmd.Flags().StringVar(
-		&controllerRegistryConfig,
-		"registry-config",
-		"",
-		"Path to docker registry config file",
-	)
 }
 
 func runInstall(_ *cobra.Command, _ []string) error {
@@ -80,13 +73,6 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("version cannot be empty")
 	}
 
-	// Determine registry config file
-	registryConfig := controllerRegistryConfig
-	if registryConfig == "" {
-		fmt.Print("Docker registry config must be set use --registry-config\n")
-		return nil
-	}
-
 	// Install controller using Helm
 	helmArgs := []string{
 		"upgrade",
@@ -94,10 +80,6 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		"--version", version,
 		"--namespace", controllerNamespace,
 		"--create-namespace",
-	}
-
-	if registryConfig != "" {
-		helmArgs = append(helmArgs, "--set", fmt.Sprintf("image.pullSecrets[0].name=%s", registryConfig))
 	}
 
 	if err := runHelm(helmArgs...); err != nil {
