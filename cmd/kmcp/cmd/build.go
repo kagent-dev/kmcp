@@ -67,7 +67,11 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to load project manifest: %w", err)
 		}
 
-		imageName = fmt.Sprintf("%s:%s", strcase.KebabCase(projectManifest.Name), projectManifest.Version)
+		version := projectManifest.Version
+		if version == "" {
+			version = "latest"
+		}
+		imageName = fmt.Sprintf("%s:%s", strcase.KebabCase(projectManifest.Name), version)
 	}
 
 	// Execute build
