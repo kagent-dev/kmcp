@@ -32,7 +32,10 @@ def get_shared_config() -> dict[str, Any]:
         Shared configuration dictionary
     """
     config = load_config("kmcp.yaml")
-    return config.get("tools", {})
+    tools_config = config.get("tools", {})
+    if isinstance(tools_config, dict):
+        return tools_config
+    return {}
 
 
 def get_tool_config(tool_name: str) -> dict[str, Any]:
@@ -45,7 +48,10 @@ def get_tool_config(tool_name: str) -> dict[str, Any]:
         Tool-specific configuration
     """
     shared_config = get_shared_config()
-    return shared_config.get(tool_name, {})
+    tool_config = shared_config.get(tool_name, {})
+    if isinstance(tool_config, dict):
+        return tool_config
+    return {}
 
 
 def get_env_var(key: str, default: str = "") -> str:
