@@ -483,16 +483,23 @@ func runInspector(mcpServer *v1alpha1.MCPServer, projectDir string) error {
 		return err
 	}
 
+	fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, you will need to manually configure the connection in the UI:")
+	fmt.Println("1. Set Transport Type to 'Streamable HTTP'")
+	fmt.Println("2. Set URL to 'http://localhost:3000/mcp'")
+	fmt.Println("3. Click 'Connect'")
+	fmt.Printf("\n🚀 Starting MCP Inspector...\n")
+
 	// Run the inspector
-	return runMCPInspector(configPath, mcpServer.Name, "")
+	return runMCPInspector(configPath, mcpServer.Name, projectDir)
 }
 
 func runPortForward(mcpServer *v1alpha1.MCPServer) (*exec.Cmd, error) {
-	port := mcpServer.Spec.Deployment.Port
-	if port == 0 {
-		port = 3000 // Default port
+	remotePort := mcpServer.Spec.Deployment.Port
+	if remotePort == 0 {
+		remotePort = 3000 // Default port
 	}
-	portMapping := fmt.Sprintf("%d:%d", port, port)
+	localPort := 3000
+	portMapping := fmt.Sprintf("%d:%d", localPort, remotePort)
 	args := []string{
 		"port-forward",
 		"service/" + mcpServer.Name,
