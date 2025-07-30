@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,11 +19,9 @@ func fileExists(path string) bool {
 
 func promptForInput(promptText string) (string, error) {
 	fmt.Print(promptText)
-	var input string
-	if _, err := fmt.Scanln(&input); err != nil {
-		if err.Error() == "unexpected newline" {
-			return "", nil
-		}
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(input), nil

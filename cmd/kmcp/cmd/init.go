@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/kagent-dev/kmcp/pkg/frameworks"
@@ -145,27 +148,51 @@ func validateProjectName(name string) error {
 
 func promptForAuthor() string {
 	fmt.Print("Enter author name (optional): ")
-	var author string
-	if _, err := fmt.Scanln(&author); err != nil {
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(author)
+	return strings.TrimSpace(input)
 }
 
 func promptForEmail() string {
-	fmt.Print("Enter author email (optional): ")
-	var email string
-	if _, err := fmt.Scanln(&email); err != nil {
-		return ""
+	for {
+		fmt.Print("Enter author email (optional): ")
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return ""
+		}
+		email := strings.TrimSpace(input)
+
+		// If empty, allow it (optional field)
+		if email == "" {
+			return email
+		}
+
+		// Basic email validation
+		if isValidEmail(email) {
+			return email
+		}
+
+		fmt.Println("Invalid email format. Please enter a valid email address or leave empty.")
 	}
-	return strings.TrimSpace(email)
 }
 
 func promptForDescription() string {
 	fmt.Print("Enter description (optional): ")
-	var description string
-	if _, err := fmt.Scanln(&description); err != nil {
-		return "" // Ignore error, treat as empty
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return ""
 	}
-	return strings.TrimSpace(description)
+	return strings.TrimSpace(input)
+}
+
+// isValidEmail performs basic email validation
+func isValidEmail(email string) bool {
+	// Basic email regex pattern
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }
