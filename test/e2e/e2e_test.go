@@ -172,7 +172,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			var portForwardCmd *exec.Cmd
 			localPort := 8080
 			projectDir := "knowledge-assistant"
-			imageName := "knowledge-assistant:latest"
 
 			ginkgo.By("building the kmcp CLI")
 			cmd := exec.Command("make", "build-cli")

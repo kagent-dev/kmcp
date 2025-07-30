@@ -483,7 +483,8 @@ func runInspector(mcpServer *v1alpha1.MCPServer, projectDir string) error {
 		return err
 	}
 
-	fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, you will need to manually configure the connection in the UI:")
+	fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, " +
+		"you will need to manually configure the connection in the UI:")
 	fmt.Println("1. Set Transport Type to 'Streamable HTTP'")
 	fmt.Println("2. Set URL to 'http://localhost:3000/mcp'")
 	fmt.Println("3. Click 'Connect'")

@@ -42,7 +42,8 @@ func init() {
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
 	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")
 	buildCmd.Flags().BoolVar(&buildKindLoad, "kind-load", false, "Load image into kind cluster (requires kind)")
-	buildCmd.Flags().StringVar(&buildKindLoadCluster, "kind-load-cluster", "", "Name of the kind cluster to load image into")
+	buildCmd.Flags().StringVar(&buildKindLoadCluster, "kind-load-cluster", "",
+		"Name of the kind cluster to load image into (default: current cluster)")
 	buildCmd.Flags().StringVarP(&buildDir, "project-dir", "d", "", "Build directory (default: current directory)")
 	buildCmd.Flags().StringVar(&buildPlatform, "platform", "", "Target platform (e.g., linux/amd64,linux/arm64)")
 }
