@@ -23,11 +23,70 @@
   </div>
 </div>
 
+
 # kmcp
 
-**Model Context Protocol Development & Deployment Platform**
+**A development platform and control plane for the Model Context Protocol (MCP)**
 
-Kmcp is a platform for developing and deploying Model Context Protocol (MCP) servers particularly for cloud-native deployment. Kmcp provides a kubernetes controller that automates the lifecycle management of an MCP server deployment alongside a CLI tool that supports MCP project scaffolding in multiple languages (Python, and Golang with more planned) and functionality to deploy your MCP server to a kubernetes environment.
+`kmcp` is a comprehensive toolkit for building, deploying, and managing Model Context Protocol (MCP) servers. It provides a command-line interface (CLI) for local development and a Kubernetes controller for production deployments, enabling a seamless transition from development to production.
+
+## Core Concepts
+
+`kmcp` is composed of three primary components that work together to provide a complete MCP server-management solution:
+
+1.  **The `kmcp` CLI**: The CLI is your primary tool for local development. It allows you to scaffold new MCP projects, manage tools, build container images, and run your MCP server locally for testing and development.
+
+2.  **The Kubernetes Controller**: The `kmcp` controller runs in your Kubernetes cluster and manages the lifecycle of your MCP server deployments. It uses a Custom Resource Definition (CRD) to define MCP servers as native Kubernetes objects, allowing you to manage them with familiar `kubectl` commands.
+
+3.  **The Agent Gateway**: In a Kubernetes environment, `kmcp` deploys your MCP server behind a dedicated [Agent Gateway](https://www.solo.io/press-releases/solo-io-launches-agent-gateway-and-introduces-agent-mesh/). `kmcp` acts as a control plane for this gateway, configuring it to provide enterprise-grade features for your MCP server without requiring any changes to your code. These features include:
+    -   Rate limiting
+    -   Authorization and Authentication (AuthZ/N)
+    -   Observability (tracing, logging, and metrics)
+    -   Health checks
+    -   TLS Termination
+
+## Features (CLI Command Overview)
+
+The `kmcp` CLI provides a set of commands to manage the entire lifecycle of your MCP server:
+
+-   `kmcp init`: Scaffolds a new MCP server project. Supported frameworks include [FastMCP](https://github.com/jlowin/fastmcp) for Python and the [official MCP Go SDK](https://github.com/mark3labs/mcp-go) for Go.
+-   `kmcp add-tool`: Adds a new tool to your project, automatically handling boilerplate and registration.
+-   `kmcp run`: Runs the MCP server in a local development environment.
+-   `kmcp build`: Builds a Docker image for your MCP server.
+-   `kmcp install`: Installs the `kmcp` controller on a Kubernetes cluster.
+-   `kmcp deploy`: Deploys your MCP server to a Kubernetes cluster, placing it behind a pre-configured Agent Gateway.
+-   `kmcp secrets`: Manages secrets for your MCP server deployment in Kubernetes.
+
+## Architecture
+
+The following diagram illustrates the `kmcp` workflow, from local development to a production deployment in Kubernetes:
+
+```mermaid
+graph TD
+    subgraph Local Development
+        A[Developer] -- kmcp init --> B(MCP Project);
+        B -- kmcp add-tool --> B;
+        B -- kmcp run --> C{Local MCP Server};
+        A -- Edits Code --> B;
+    end
+
+    subgraph Production Deployment
+        B -- kmcp build --> D[Docker Image];
+        D -- kmcp deploy --> E(Kubernetes Cluster);
+    end
+
+    subgraph Kubernetes Cluster
+        F[kmcp Controller] -- Manages --> G(MCP Server CRD);
+        G -- Deploys --> H[Agent Gateway];
+        H -- Proxies Traffic --> I[MCP Server Pod];
+    end
+
+    A -- Interacts with --> C;
+    E -- Contains --> F;
+    E -- Contains --> G;
+    E -- Contains --> H;
+    E -- Contains --> I;
+```
 
 ## Get started
 
