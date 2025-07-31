@@ -12,7 +12,8 @@
       <img src="https://github.com/kagent-dev/kmcp/actions/workflows/tag.yaml/badge.svg" alt="Build Status" height="20">
     </a>
     <a href="https://opensource.org/licenses/Apache-2.0">
-      <img src="https://img.shields.io/badge/License-Apache2.0-brightgreen.svg?style=flat" alt="License: Apache 2.0">
+      <img src="https://img.shields.io/badge/LicenREADME.md
+      se-Apache2.0-brightgreen.svg?style=flat" alt="License: Apache 2.0">
     </a>
     <a href="https://github.com/kagent-dev/kmcp">
       <img src="https://img.shields.io/github/stars/kagent-dev/kmcp.svg?style=flat&logo=github&label=Stars" alt="Stars">
@@ -31,29 +32,12 @@ Kmcp is a platform for developing and deploying Model Context Protocol (MCP) ser
 
 ## Get started
 
-- [Quick Start](https://kagent.dev/docs/kmcp/quick-start)
+- [Quick Start](https://kagent.dev/docs/kmcp/quickstart)
+- [Installation Guide](https://kagent.dev/docs/kmcp/deploy/install-controller)
 
 ## Documentation
 
 The kmcp documentation is available at [kagent.dev/docs/kmcp](https://kagent.dev/docs/kmcp).
-
-## 🎯 What is MCP?
-
-The Model Context Protocol (MCP) is an open standard developed by Anthropic that standardizes how AI applications provide context to Large Language Models (LLMs). Think of MCP as a universal adapter that allows AI models to seamlessly connect to various data sources and external tools.
-
-### Key Benefits:
-
-- **Standardized Data Access**: Consistent way for AI models to access external data
-- **Tool Integration**: Connect AI assistants to business tools and internal systems  
-- **Structured Responses**: Ensure consistent, structured outputs from AI models
-- **Improved Context**: Give AI models the context they need for better responses
-- **Vendor Independence**: Open standard that works across different AI providers
-
-### MCP Architecture:
-
-- **MCP Clients**: AI applications (Claude Desktop, Cursor, etc.) that consume MCP services
-- **MCP Servers**: Lightweight programs that expose capabilities through standardized interfaces
-- **Transport Protocols**: Communication via stdio (standard input/output) and HTTP with SSE
 
 ## 🤝 Contributing
 
