@@ -153,7 +153,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					Command:         []string{"sh"},
 					Args: []string{
 						"-c",
-						"/agentbin/agentgateway -f /config/local.yaml",
+						"/usr/bin/agentgateway -f /config/local.yaml",
 					},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      "config",

@@ -92,7 +92,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		controllerNamespace,
 	)
 	fmt.Printf(
-		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp-controller-manager -n %s\n",
+		"💡 View controller logs with: kubectl logs -l app.kubernetes.io/name=kmcp -n %s\n",
 		controllerNamespace,
 	)
 
