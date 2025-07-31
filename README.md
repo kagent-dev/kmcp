@@ -11,14 +11,13 @@
     <a href="https://github.com/kagent-dev/kmcp/actions/workflows/tag.yaml">
       <img src="https://github.com/kagent-dev/kmcp/actions/workflows/tag.yaml/badge.svg" alt="Build Status" height="20">
     </a>
-    <a href="https://opensource.org/licenses/Apache-2.0">
-      <img src="https://img.shields.io/badge/LicenREADME.md
-      se-Apache2.0-brightgreen.svg?style=flat" alt="License: Apache 2.0">
+      <a href="https://opensource.org/licenses/Apache-2.0">
+      <img src="https://img.shields.io/badge/License-Apache2.0-brightgreen.svg?style=flat" alt="License: Apache 2.0">
     </a>
     <a href="https://github.com/kagent-dev/kmcp">
       <img src="https://img.shields.io/github/stars/kagent-dev/kmcp.svg?style=flat&logo=github&label=Stars" alt="Stars">
     </a>
-    <a href="https://discord.gg/Fu3k65f2k3">
+      <a href="https://discord.gg/Fu3k65f2k3">
       <img src="https://img.shields.io/discord/1346225185166065826?style=flat&label=Join%20Discord&color=6D28D9" alt="Discord">
     </a>
   </div>
@@ -28,7 +27,7 @@
 
 **Model Context Protocol Development & Deployment Platform**
 
-Kmcp is a platform for developing and deploying Model Context Protocol (MCP) servers particularly for cloud-native deployment. Kmcp provides a kubernetes controller that automates the lifecycle management of an MCP server deployment alongside a CLI tool that supports MCP project scaffolding in multiple languages and functionality to deploy your MCP server to a kubernetes environment.
+Kmcp is a platform for developing and deploying Model Context Protocol (MCP) servers particularly for cloud-native deployment. Kmcp provides a kubernetes controller that automates the lifecycle management of an MCP server deployment alongside a CLI tool that supports MCP project scaffolding in multiple languages (Python, and Golang with more planned) and functionality to deploy your MCP server to a kubernetes environment.
 
 ## Get started
 
