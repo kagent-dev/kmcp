@@ -91,3 +91,9 @@ service:
   type: ClusterIP
   port: 8443
   targetPort: 8443
+
+# Override the name of the controller
+nameOverride: ""
+
+# Override the full name of the controller
+fullnameOverride: ""
