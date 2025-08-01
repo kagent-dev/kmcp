@@ -7,7 +7,7 @@ should create cluster role binding when RBAC enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-rolebinding
     roleRef:
@@ -27,7 +27,7 @@ should create cluster role when RBAC enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-role
     rules:
@@ -91,7 +91,7 @@ should create leader election role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-leader-election-role
       namespace: NAMESPACE
@@ -136,7 +136,7 @@ should create leader election role binding:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-leader-election-rolebinding
       namespace: NAMESPACE
@@ -157,7 +157,7 @@ should create metrics auth cluster role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-auth-role
     rules:
@@ -182,7 +182,7 @@ should create metrics auth cluster role binding:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-auth-rolebinding
     roleRef:
@@ -202,7 +202,7 @@ should create metrics reader cluster role:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-metrics-reader
     rules:
@@ -220,7 +220,7 @@ should create service account when enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -233,7 +233,7 @@ should include mcpservers finalizers rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-role
     rules:
@@ -297,7 +297,7 @@ should include mcpservers resource rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-role
     rules:
@@ -361,7 +361,7 @@ should include mcpservers status rules:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-role
     rules:
@@ -428,7 +428,7 @@ should include service account annotations when specified:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE

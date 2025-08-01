@@ -7,7 +7,7 @@ should create deployment when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -17,7 +17,7 @@ should create deployment when metrics enabled:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -25,7 +25,7 @@ should create deployment when metrics enabled:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:
@@ -85,7 +85,7 @@ should create deployment with default values:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -95,7 +95,7 @@ should create deployment with default values:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -103,7 +103,7 @@ should create deployment with default values:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:
@@ -163,7 +163,7 @@ should create deployment with minimal configuration:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -173,7 +173,7 @@ should create deployment with minimal configuration:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -181,7 +181,7 @@ should create deployment with minimal configuration:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:
@@ -237,7 +237,7 @@ should include metrics port in deployment when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -247,7 +247,7 @@ should include metrics port in deployment when metrics enabled:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -255,7 +255,7 @@ should include metrics port in deployment when metrics enabled:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:
@@ -315,7 +315,7 @@ should use custom namespace:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller
       namespace: NAMESPACE
@@ -325,7 +325,7 @@ should use custom namespace:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -333,7 +333,7 @@ should use custom namespace:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:
@@ -393,7 +393,7 @@ should use custom release name:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-custom-release-controller
       namespace: NAMESPACE
@@ -403,7 +403,7 @@ should use custom release name:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
           app.kubernetes.io/name: kmcp
-          control-plane: controller-manager
+          control-plane: controller
       template:
         metadata:
           annotations:
@@ -411,7 +411,7 @@ should use custom release name:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
             app.kubernetes.io/name: kmcp
-            control-plane: controller-manager
+            control-plane: controller
         spec:
           containers:
             - args:

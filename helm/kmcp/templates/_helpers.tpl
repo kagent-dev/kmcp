@@ -48,7 +48,7 @@ Selector labels
 {{- define "kmcp.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kmcp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-control-plane: controller-manager
+control-plane: controller
 {{- end }}
 
 {{/*

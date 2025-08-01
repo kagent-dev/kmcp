@@ -56,14 +56,14 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		_, err = utils.Run(cmd)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to label namespace with restricted policy")
 
-		ginkgo.By("deploying the controller-manager using Helm")
+		ginkgo.By("deploying the controller using Helm")
 		cmd = exec.Command("helm", "install", "kmcp", "helm/kmcp",
 			"--namespace", namespace,
 			"--wait", "--timeout=5m",
 			"--set", fmt.Sprintf("image.repository=%s", getImageRepository(projectImage)),
 			"--set", fmt.Sprintf("image.tag=%s", getImageTag(projectImage)))
 		_, err = utils.Run(cmd)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy the controller-manager using Helm")
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy the controller using Helm")
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller using Helm
@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 
-		ginkgo.By("undeploying the controller-manager using Helm")
+		ginkgo.By("undeploying the controller using Helm")
 		cmd = exec.Command("helm", "uninstall", "kmcp", "--namespace", namespace)
 		_, _ = utils.Run(cmd)
 
@@ -134,11 +134,11 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 	ginkgo.Context("Manager", func() {
 		ginkgo.It("should run successfully", func() {
-			ginkgo.By("validating that the controller-manager pod is running as expected")
+			ginkgo.By("validating that the controller pod is running as expected")
 			verifyControllerUp := func(g gomega.Gomega) {
-				// Get the name of the controller-manager pod
+				// Get the name of the controller pod
 				cmd := exec.Command("kubectl", "get",
-					"pods", "-l", "control-plane=controller-manager",
+					"pods", "-l", "control-plane=controller",
 					"-o", "go-template={{ range .items }}"+
 						"{{ if not .metadata.deletionTimestamp }}"+
 						"{{ .metadata.name }}"+
@@ -147,11 +147,11 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				)
 
 				podOutput, err := utils.Run(cmd)
-				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to retrieve controller-manager pod information")
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to retrieve controller pod information")
 				podNames := utils.GetNonEmptyLines(podOutput)
 				g.Expect(podNames).To(gomega.HaveLen(1), "expected 1 controller pod running")
 				controllerPodName = podNames[0]
-				g.Expect(controllerPodName).To(gomega.ContainSubstring("controller-manager"))
+				g.Expect(controllerPodName).To(gomega.ContainSubstring("controller"))
 
 				// Validate the pod's status
 				cmd = exec.Command("kubectl", "get",
@@ -160,7 +160,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(gomega.HaveOccurred())
-				g.Expect(output).To(gomega.Equal("Running"), "Incorrect controller-manager pod status")
+				g.Expect(output).To(gomega.Equal("Running"), "Incorrect controller pod status")
 			}
 			gomega.Eventually(verifyControllerUp).Should(gomega.Succeed())
 		})

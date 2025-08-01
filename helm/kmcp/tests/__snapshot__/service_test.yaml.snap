@@ -7,7 +7,7 @@ should create service when metrics enabled:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-metrics-service
       namespace: NAMESPACE
@@ -20,7 +20,7 @@ should create service when metrics enabled:
       selector:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
       type: ClusterIP
 should set custom service port:
   1: |
@@ -31,7 +31,7 @@ should set custom service port:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-metrics-service
       namespace: NAMESPACE
@@ -44,7 +44,7 @@ should set custom service port:
       selector:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
       type: ClusterIP
 should set custom service type:
   1: |
@@ -55,7 +55,7 @@ should set custom service type:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-metrics-service
       namespace: NAMESPACE
@@ -68,7 +68,7 @@ should set custom service type:
       selector:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
       type: LoadBalancer
 should set custom target port:
   1: |
@@ -79,7 +79,7 @@ should set custom target port:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
         helm.sh/chart: kmcp-0.1.0
       name: RELEASE-NAME-controller-metrics-service
       namespace: NAMESPACE
@@ -92,5 +92,5 @@ should set custom target port:
       selector:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: kmcp
-        control-plane: controller-manager
+        control-plane: controller
       type: ClusterIP
