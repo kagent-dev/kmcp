@@ -1,10 +1,12 @@
 package agentgateway
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kagent-dev/kmcp/api/v1alpha1"
@@ -28,21 +30,28 @@ type Outputs struct {
 	ConfigMap *corev1.ConfigMap
 }
 
+// Translator is the interface for translating MCPServer objects to AgentGateway objects.
 type Translator interface {
-	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) (*Outputs, error)
+	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) (*Outputs, error)
 }
 
+// agentGatewayTranslator is the implementation of the Translator interface.
 type agentGatewayTranslator struct {
 	scheme *runtime.Scheme
+	client client.Client
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme) Translator {
+// NewAgentGatewayTranslator creates a new instance of the agentGatewayTranslator.
+func NewAgentGatewayTranslator(scheme *runtime.Scheme, client client.Client) Translator {
 	return &agentGatewayTranslator{
 		scheme: scheme,
+		client: client,
 	}
 }
 
+// TranslateAgentGatewayOutputs translates an MCPServer object to AgentGateway objects.
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
+	ctx context.Context,
 	server *v1alpha1.MCPServer,
 ) (*Outputs, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
@@ -53,7 +62,7 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway service: %w", err)
 	}
-	configMap, err := t.translateAgentGatewayConfigMap(server)
+	configMap, err := t.translateAgentGatewayConfigMap(ctx, server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
 	}
@@ -308,17 +317,16 @@ func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.M
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
-	config, err := t.translateAgentGatewayConfig(server)
+func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+) (*corev1.ConfigMap, error) {
+	config, err := t.translateAgentGatewayConfig(ctx, server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate MCP server config: %w", err)
 	}
 
-	if config == nil {
-		return nil, nil // No config needed
-	}
-
-	configYaml, err := yaml.Marshal(config)
+	configYAML, err := yaml.Marshal(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
 	}
@@ -333,14 +341,17 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		Data: map[string]string{
-			"local.yaml": string(configYaml), // Assuming ToYAML() is a method that converts LocalConfig to YAML
+			"local.yaml": string(configYAML),
 		},
 	}
 
 	return configMap, controllerutil.SetOwnerReference(server, configMap, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
+func (t *agentGatewayTranslator) translateAgentGatewayConfig(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+) (*LocalConfig, error) {
 	if server.Spec.TransportType != v1alpha1.TransportTypeStdio {
 		return nil, nil // Only Stdio transport is supported for now
 	}
@@ -375,7 +386,41 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 		return nil, fmt.Errorf("unsupported transport type: %s", server.Spec.TransportType)
 	}
 
-	config := &LocalConfig{
+	var policies *FilterOrPolicy
+	if auth := server.Spec.Authentication; auth != nil && auth.JWT != nil {
+		jwt := auth.JWT
+		if jwt.JWKS != nil {
+			secret := &corev1.Secret{}
+			secretKey := client.ObjectKey{
+				Namespace: server.Namespace,
+				Name:      jwt.JWKS.Name,
+			}
+			if err := t.client.Get(ctx, secretKey, secret); err != nil {
+				return nil, fmt.Errorf("failed to get JWKS secret %s: %w", jwt.JWKS.Name, err)
+			}
+
+			jwksBytes, ok := secret.Data[jwt.JWKS.Key]
+			if !ok {
+				return nil, fmt.Errorf("key %s not found in JWKS secret %s", jwt.JWKS.Key, jwt.JWKS.Name)
+			}
+
+			if policies == nil {
+				policies = &FilterOrPolicy{}
+			}
+
+			policies = &FilterOrPolicy{
+				JWTAuth: &JWTAuth{
+					Issuer:    jwt.Issuer,
+					Audiences: jwt.Audiences,
+					JWKS: &JWKS{
+						Inline: string(jwksBytes),
+					},
+				},
+			}
+		}
+	}
+
+	return &LocalConfig{
 		Config: struct{}{},
 		Binds: []LocalBind{
 			{
@@ -405,12 +450,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 									Targets: []MCPTarget{mcpTarget},
 								},
 							}},
+							Policies: policies,
 						}},
 					},
 				},
 			},
 		},
-	}
-
-	return config, nil
+	}, nil
 }

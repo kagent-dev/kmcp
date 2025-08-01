@@ -54,12 +54,12 @@ type LocalTLSServerConfig struct {
 
 // LocalRoute represents an HTTP route configuration
 type LocalRoute struct {
-	RouteName string          `json:"name,omitempty" yaml:"name,omitempty"`
-	RuleName  string          `json:"ruleName,omitempty" yaml:"ruleName,omitempty"`
-	Hostnames []string        `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
-	Matches   []RouteMatch    `json:"matches,omitempty" yaml:"matches,omitempty"`
+	RouteName string           `json:"name,omitempty" yaml:"name,omitempty"`
+	RuleName  string           `json:"ruleName,omitempty" yaml:"ruleName,omitempty"`
+	Hostnames []string         `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
+	Matches   []RouteMatch     `json:"matches,omitempty" yaml:"matches,omitempty"`
 	Policies  *FilterOrPolicy `json:"policies,omitempty" yaml:"policies,omitempty"`
-	Backends  []RouteBackend  `json:"backends,omitempty" yaml:"backends,omitempty"`
+	Backends  []RouteBackend   `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
 // LocalTCPRoute represents a TCP route configuration
@@ -100,7 +100,7 @@ type FilterOrPolicy struct {
 	BackendAuth      *BackendAuth      `json:"backendAuth,omitempty" yaml:"backendAuth,omitempty"`
 	LocalRateLimit   []interface{}     `json:"localRateLimit,omitempty" yaml:"localRateLimit,omitempty"`   // Skipped complex type
 	RemoteRateLimit  interface{}       `json:"remoteRateLimit,omitempty" yaml:"remoteRateLimit,omitempty"` // Skipped complex type
-	JWTAuth          interface{}       `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
+	JWTAuth          *JWTAuth          `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
 	ExtAuthz         interface{}       `json:"extAuthz,omitempty" yaml:"extAuthz,omitempty"`               // Skipped complex type
 
 	// Traffic Policy
@@ -323,7 +323,20 @@ type PathRedirect struct {
 
 // MCPAuthorization represents MCP authorization policy
 type MCPAuthorization struct {
-	Rules interface{} `json:"rules" yaml:"rules"` // RuleSet - skipped complex type
+	Rules []string `json:"rules" yaml:"rules"`
+}
+
+// JWTAuth represents JWT authentication policy
+type JWTAuth struct {
+	Issuer    string   `json:"issuer" yaml:"issuer"`
+	Audiences []string `json:"audiences,omitempty" yaml:"audiences,omitempty"`
+	JWKS      *JWKS    `json:"jwks,omitempty" yaml:"jwks,omitempty"`
+}
+
+// JWKS represents JSON Web Key Set
+type JWKS struct {
+	// Inline represents inline JWKS configuration
+	Inline string `json:"inline,omitempty" yaml:"inline,omitempty"`
 }
 
 // A2APolicy represents application-to-application policy
