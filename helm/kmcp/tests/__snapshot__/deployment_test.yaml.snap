@@ -9,7 +9,7 @@ should create deployment with default values:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -73,7 +73,7 @@ should create deployment with default values:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include health probe ports when health probe enabled:
@@ -87,7 +87,7 @@ should include health probe ports when health probe enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -151,7 +151,7 @@ should include health probe ports when health probe enabled:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include image pull secrets when specified:
@@ -165,7 +165,7 @@ should include image pull secrets when specified:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -231,7 +231,7 @@ should include image pull secrets when specified:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include metrics port when metrics enabled:
@@ -245,7 +245,7 @@ should include metrics port when metrics enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -309,7 +309,7 @@ should include metrics port when metrics enabled:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include node selector when specified:
@@ -323,7 +323,7 @@ should include node selector when specified:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -389,7 +389,7 @@ should include node selector when specified:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include pod annotations when specified:
@@ -403,7 +403,7 @@ should include pod annotations when specified:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -469,7 +469,7 @@ should include pod annotations when specified:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include tolerations when specified:
@@ -483,7 +483,7 @@ should include tolerations when specified:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -547,7 +547,7 @@ should include tolerations when specified:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           tolerations:
             - effect: NoSchedule
@@ -566,7 +566,7 @@ should set custom replica count:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 3
@@ -630,7 +630,7 @@ should set custom replica count:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should set custom resources:
@@ -644,7 +644,7 @@ should set custom resources:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -708,7 +708,7 @@ should set custom resources:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should set pod security context:
@@ -722,7 +722,7 @@ should set pod security context:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -786,7 +786,7 @@ should set pod security context:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should set security context:
@@ -800,7 +800,7 @@ should set security context:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -864,7 +864,7 @@ should set security context:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should set termination grace period:
@@ -878,7 +878,7 @@ should set termination grace period:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -942,6 +942,6 @@ should set termination grace period:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []

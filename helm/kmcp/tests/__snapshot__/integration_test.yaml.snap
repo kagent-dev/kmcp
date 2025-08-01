@@ -9,7 +9,7 @@ should create deployment when metrics enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -73,7 +73,7 @@ should create deployment when metrics enabled:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should create deployment with default values:
@@ -87,7 +87,7 @@ should create deployment with default values:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -151,7 +151,7 @@ should create deployment with default values:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should create deployment with minimal configuration:
@@ -165,7 +165,7 @@ should create deployment with minimal configuration:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -225,7 +225,7 @@ should create deployment with minimal configuration:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: default
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should include metrics port in deployment when metrics enabled:
@@ -239,7 +239,7 @@ should include metrics port in deployment when metrics enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -303,7 +303,7 @@ should include metrics port in deployment when metrics enabled:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should use custom namespace:
@@ -317,7 +317,7 @@ should use custom namespace:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -381,7 +381,7 @@ should use custom namespace:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-controller
           terminationGracePeriodSeconds: 10
           volumes: []
 should use custom release name:
@@ -395,7 +395,7 @@ should use custom release name:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-controller-manager
+      name: RELEASE-NAME-custom-release-controller
       namespace: NAMESPACE
     spec:
       replicas: 1
@@ -459,6 +459,6 @@ should use custom release name:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
-          serviceAccountName: RELEASE-NAME-kmcp-controller-manager
+          serviceAccountName: RELEASE-NAME-custom-release-controller
           terminationGracePeriodSeconds: 10
           volumes: []

@@ -9,14 +9,14 @@ should create cluster role binding when RBAC enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-manager-rolebinding
+      name: RELEASE-NAME-controller-rolebinding
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
-      name: RELEASE-NAME-manager-role
+      name: RELEASE-NAME-controller-role
     subjects:
       - kind: ServiceAccount
-        name: RELEASE-NAME-kmcp-controller-manager
+        name: RELEASE-NAME-controller
         namespace: NAMESPACE
 should create cluster role when RBAC enabled:
   1: |
@@ -29,7 +29,7 @@ should create cluster role when RBAC enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-manager-role
+      name: RELEASE-NAME-controller-role
     rules:
       - apiGroups:
           - ""
@@ -146,7 +146,7 @@ should create leader election role binding:
       name: RELEASE-NAME-leader-election-role
     subjects:
       - kind: ServiceAccount
-        name: RELEASE-NAME-kmcp-controller-manager
+        name: RELEASE-NAME-controller
         namespace: NAMESPACE
 should create metrics auth cluster role:
   1: |
@@ -191,7 +191,7 @@ should create metrics auth cluster role binding:
       name: RELEASE-NAME-metrics-auth-role
     subjects:
       - kind: ServiceAccount
-        name: RELEASE-NAME-kmcp-controller-manager
+        name: RELEASE-NAME-controller
         namespace: NAMESPACE
 should create metrics reader cluster role:
   1: |
@@ -222,7 +222,7 @@ should create service account when enabled:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE
 should include mcpservers finalizers rules:
   1: |
@@ -235,7 +235,7 @@ should include mcpservers finalizers rules:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-manager-role
+      name: RELEASE-NAME-controller-role
     rules:
       - apiGroups:
           - ""
@@ -299,7 +299,7 @@ should include mcpservers resource rules:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-manager-role
+      name: RELEASE-NAME-controller-role
     rules:
       - apiGroups:
           - ""
@@ -363,7 +363,7 @@ should include mcpservers status rules:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-manager-role
+      name: RELEASE-NAME-controller-role
     rules:
       - apiGroups:
           - ""
@@ -430,5 +430,5 @@ should include service account annotations when specified:
         app.kubernetes.io/name: kmcp
         control-plane: controller-manager
         helm.sh/chart: kmcp-0.1.0
-      name: RELEASE-NAME-kmcp-controller-manager
+      name: RELEASE-NAME-controller
       namespace: NAMESPACE

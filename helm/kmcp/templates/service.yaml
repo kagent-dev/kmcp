@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-controller-manager-metrics-service
+  name: {{ include "kmcp.fullname" . }}-controller-metrics-service
   namespace: {{ include "kmcp.namespace" . }}
   labels:
     {{- include "kmcp.labels" . | nindent 4 }}
