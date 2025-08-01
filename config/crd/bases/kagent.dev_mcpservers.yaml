@@ -40,8 +40,10 @@ spec:
             description: MCPServerSpec defines the desired state of MCPServer.
             properties:
               authentication:
-                description: MCPServerAuthentication defines the authentication configuration
-                  for the MCP server.
+                description: |-
+                  Authentication defines the authentication configuration for the MCP server.
+                  This field is optional and can be used to configure JWT authentication.
+                  If not specified, the MCP server will not require authentication.
                 properties:
                   jwt:
                     description: JWT defines the JWT authentication configuration.
@@ -55,9 +57,9 @@ spec:
                       issuer:
                         description: Issuer is the JWT issuer URL.
                         type: string
-                      jwksRef:
+                      jwks:
                         description: |-
-                          JWKSRef references a secret containing the JSON Web Key Set.
+                          JWKS references a secret containing the JSON Web Key Set.
                           The secret must contain a key with the JWKS content.
                         properties:
                           key:
@@ -84,8 +86,20 @@ spec:
                     type: object
                 type: object
               authorization:
-                description: MCPServerAuthorization defines the authorization configuration
-                  for the MCP server.
+                description: |-
+                  Authorization defines the authorization configuration for the MCP server.
+                  This field is optional and can be used to configure authorization rules
+                  for the MCP server. If not specified, the MCP server will not enforce
+                  any authorization rules.
+                properties:
+                  rules:
+                    description: Rules are a list of CEL rules for authorizing client
+                      mcp requests.
+                    items:
+                      type: string
+                    type: array
+                required:
+                - rules
                 type: object
               deployment:
                 description: Configuration to Deploy the MCP Server using a docker

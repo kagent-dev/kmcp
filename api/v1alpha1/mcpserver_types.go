@@ -147,8 +147,17 @@ type MCPServerSpec struct {
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
 
+	// Authentication defines the authentication configuration for the MCP server.
+	// This field is optional and can be used to configure JWT authentication.
+	// If not specified, the MCP server will not require authentication.
+	// +optional
 	Authentication *MCPServerAuthentication `json:"authentication,omitempty"`
 
+	// Authorization defines the authorization configuration for the MCP server.
+	// This field is optional and can be used to configure authorization rules
+	// for the MCP server. If not specified, the MCP server will not enforce
+	// any authorization rules.
+	// +optional
 	Authorization *MCPServerAuthorization `json:"authorization,omitempty"`
 }
 
@@ -222,7 +231,7 @@ type MCPServerAuthentication struct {
 
 // MCPServerAuthorization defines the authorization configuration for the MCP server.
 type MCPServerAuthorization struct {
-	// Rules are a list of
+	// Rules are a list of CEL rules for authorizing client mcp requests.
 	Rules []string `json:"rules" yaml:"rules"`
 }
 
@@ -234,8 +243,8 @@ type MCPServerJWTAuthentication struct {
 	// Audiences is a list of audiences that the JWT must match.
 	Audiences []string `json:"audiences,omitempty"`
 
-	// JWKS defines the inline JSON Web Key Set for public keys to verify JWT signatures.
-	// +optional
+	// JWKS references a secret containing the JSON Web Key Set.
+	// The secret must contain a key with the JWKS content.
 	JWKS *corev1.SecretKeySelector `json:"jwks,omitempty"`
 }
 
