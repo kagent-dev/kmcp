@@ -387,8 +387,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 	}
 
 	var policies *FilterOrPolicy
-	if auth := server.Spec.Authentication; auth != nil && auth.JWT != nil {
-		jwt := auth.JWT
+
+	if authn := server.Spec.Authentication; authn != nil && authn.JWT != nil {
+		jwt := authn.JWT
 		if jwt.JWKS != nil {
 			secret := &corev1.Secret{}
 			secretKey := client.ObjectKey{
@@ -417,6 +418,18 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 					},
 				},
 			}
+		}
+	}
+
+	if authz := server.Spec.Authorization; authz != nil && len(authz.Rules) > 0 {
+		if policies == nil {
+			policies = &FilterOrPolicy{}
+		}
+
+		policies = &FilterOrPolicy{
+			MCPAuthorization: &MCPAuthorization{
+				Rules: authz.Rules,
+			},
 		}
 	}
 
