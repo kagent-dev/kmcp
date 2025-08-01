@@ -146,6 +146,10 @@ type MCPServerSpec struct {
 
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
+
+	Authentication *MCPServerAuthentication `json:"authentication,omitempty"`
+
+	Authorization *MCPServerAuthorization `json:"authorization,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -208,6 +212,31 @@ type MCPServerDeployment struct {
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
 	SecretRefs []corev1.ObjectReference `json:"secretRefs,omitempty"`
+}
+
+// MCPServerAuthentication defines the authentication configuration for the MCP server.
+type MCPServerAuthentication struct {
+	// JWT defines the JWT authentication configuration.
+	JWT *MCPServerJWTAuthentication `json:"jwt,omitempty"`
+}
+
+// MCPServerAuthorization defines the authorization configuration for the MCP server.
+type MCPServerAuthorization struct {
+	// Rules are a list of
+	Rules []string `json:"rules" yaml:"rules"`
+}
+
+// MCPServerJWTAuthentication defines the JWT authentication configuration for the MCP server.
+type MCPServerJWTAuthentication struct {
+	// Issuer is the JWT issuer URL.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of audiences that the JWT must match.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// JWKS defines the inline JSON Web Key Set for public keys to verify JWT signatures.
+	// +optional
+	JWKS *corev1.SecretKeySelector `json:"jwks,omitempty"`
 }
 
 // +kubebuilder:object:root=true
