@@ -56,6 +56,13 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		_, err = utils.Run(cmd)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to label namespace with restricted policy")
 
+		ginkgo.By("deploying the CRDs using Helm")
+		cmd = exec.Command("helm", "install", "kmcp-crds", "helm/kmcp-crds",
+			"--namespace", namespace,
+			"--wait", "--timeout=5m")
+		_, err = utils.Run(cmd)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy the CRDs using Helm")
+
 		ginkgo.By("deploying the controller-manager using Helm")
 		cmd = exec.Command("helm", "install", "kmcp", "helm/kmcp",
 			"--namespace", namespace,
