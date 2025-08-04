@@ -409,27 +409,25 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 				policies = &FilterOrPolicy{}
 			}
 
-			policies = &FilterOrPolicy{
-				JWTAuth: &JWTAuth{
-					Issuer:    jwt.Issuer,
-					Audiences: jwt.Audiences,
-					JWKS: &JWKS{
-						Inline: string(jwksBytes),
-					},
+			policies.JWTAuth = &JWTAuth{
+				Issuer:    jwt.Issuer,
+				Audiences: jwt.Audiences,
+				JWKS: &JWKS{
+					Inline: string(jwksBytes),
 				},
 			}
 		}
 	}
 
-	if authz := server.Spec.Authorization; authz != nil && len(authz.Rules) > 0 {
+	if authz := server.Spec.Authorization; authz != nil &&
+		authz.CEL != nil &&
+		len(authz.CEL.Rules) > 0 {
 		if policies == nil {
 			policies = &FilterOrPolicy{}
 		}
 
-		policies = &FilterOrPolicy{
-			MCPAuthorization: &MCPAuthorization{
-				Rules: authz.Rules,
-			},
+		policies.MCPAuthorization = &MCPAuthorization{
+			Rules: authz.CEL.Rules,
 		}
 	}
 

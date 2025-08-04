@@ -229,12 +229,6 @@ type MCPServerAuthentication struct {
 	JWT *MCPServerJWTAuthentication `json:"jwt,omitempty"`
 }
 
-// MCPServerAuthorization defines the authorization configuration for the MCP server.
-type MCPServerAuthorization struct {
-	// Rules are a list of CEL rules for authorizing client mcp requests.
-	Rules []string `json:"rules" yaml:"rules"`
-}
-
 // MCPServerJWTAuthentication defines the JWT authentication configuration for the MCP server.
 type MCPServerJWTAuthentication struct {
 	// Issuer is the JWT issuer URL.
@@ -246,6 +240,18 @@ type MCPServerJWTAuthentication struct {
 	// JWKS references a secret containing the JSON Web Key Set.
 	// The secret must contain a key with the JWKS content.
 	JWKS *corev1.SecretKeySelector `json:"jwks,omitempty"`
+}
+
+// MCPServerAuthorization defines the authorization configuration for the MCP server.
+type MCPServerAuthorization struct {
+	// CELAuthorization defines the CEL-based authorization configuration for the MCP server.
+	CEL *MCPServerCELAuthorization `json:"cel,omitempty"`
+}
+
+// MCPServerCELAuthorization defines the authorization configuration for the MCP server using CEL rules.
+type MCPServerCELAuthorization struct {
+	// Rules are a list of CEL rules for authorizing client mcp requests.
+	Rules []string `json:"rules" yaml:"rules"`
 }
 
 // +kubebuilder:object:root=true
