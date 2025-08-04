@@ -99,6 +99,9 @@ helm-publish: helm-package ## Publish Helm chart to OCI registry
 	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
 	@helm push $(DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
 	@echo "Helm chart published successfully"
+	@echo "Publishing CRDs to $(HELM_REPO)/kmcp-crds/helm..."
+	@helm push $(DIST_FOLDER)/kmcp-crds-$(VERSION).tgz $(HELM_REPO)/kmcp-crds/helm
+	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
 helm-test:
