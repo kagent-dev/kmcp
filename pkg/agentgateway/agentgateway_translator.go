@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
+	agentGatewayContainerImage = "ttl.sh/1754501888:24h"
 )
 
 type Outputs struct {
@@ -93,10 +93,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				Name:            "copy-binary",
 				Image:           agentGatewayContainerImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"sh"},
+				Command:         []string{},
 				Args: []string{
-					"-c",
-					"cp /usr/bin/agentgateway /agentbin/agentgateway",
+					"--copy-self",
+					"/agentbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "binary",
@@ -109,43 +109,67 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				Image:           image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
-					"sh",
+					"/agentbin/agentgateway",
 				},
 				Args: []string{
-					"-c",
-					"/agentbin/agentgateway -f /config/local.yaml",
+					"-f",
+					"/config/local.yaml",
 				},
 				EnvFrom: secretEnvFrom,
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "config",
-						MountPath: "/config",
-					},
-					{
-						Name:      "binary",
-						MountPath: "/agentbin",
-					},
-				},
+				VolumeMounts: func() []corev1.VolumeMount {
+					mounts := []corev1.VolumeMount{
+						{
+							Name:      "config",
+							MountPath: "/config",
+						},
+						{
+							Name:      "binary",
+							MountPath: "/agentbin",
+						},
+					}
+					// Add JWKS secret mount if file-based JWT authentication is configured
+					if isFileBasedJWTAuth(server) {
+						mounts = append(mounts, corev1.VolumeMount{
+							Name:      "jwks",
+							MountPath: "/jwks",
+						})
+					}
+					return mounts
+				}(),
 				SecurityContext: getSecurityContext(),
 			}},
-			Volumes: []corev1.Volume{
-				{
-					Name: "config",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: server.Name, // ConfigMap name matches the MCPServer name
+			Volumes: func() []corev1.Volume {
+				volumes := []corev1.Volume{
+					{
+						Name: "config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: server.Name, // ConfigMap name matches the MCPServer name
+								},
 							},
 						},
 					},
-				},
-				{
-					Name: "binary",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
+					{
+						Name: "binary",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
+						},
 					},
-				},
-			},
+				}
+				// Add JWKS secret volume if file-based JWT authentication is configured
+				if isFileBasedJWTAuth(server) {
+					volumes = append(volumes, corev1.Volume{
+						Name: "jwks",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: server.Spec.Authentication.JWT.JWKS.Name,
+							},
+						},
+					})
+				}
+				return volumes
+			}(),
 		}
 	case v1alpha1.TransportTypeHTTP:
 		// run the gateway as a sidecar when running with HTTP transport
@@ -159,15 +183,25 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					Name:            "agent-gateway",
 					Image:           agentGatewayContainerImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"sh"},
+					Command:         []string{},
 					Args: []string{
-						"-c",
-						"/usr/bin/agentgateway -f /config/local.yaml",
+						"--copy-self",
+						"/agentbin/agentgateway",
 					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "config",
-						MountPath: "/config",
-					}},
+					VolumeMounts: func() []corev1.VolumeMount {
+						mounts := []corev1.VolumeMount{{
+							Name:      "config",
+							MountPath: "/config",
+						}}
+						// Add JWKS secret mount if file-based JWT authentication is configured
+						if isFileBasedJWTAuth(server) {
+							mounts = append(mounts, corev1.VolumeMount{
+								Name:      "jwks",
+								MountPath: "/jwks",
+							})
+						}
+						return mounts
+					}(),
 					SecurityContext: getSecurityContext(),
 				},
 				{
@@ -180,18 +214,32 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					EnvFrom:         secretEnvFrom,
 					SecurityContext: getSecurityContext(),
 				}},
-			Volumes: []corev1.Volume{
-				{
-					Name: "config",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: server.Name, // ConfigMap name matches the MCPServer name
+			Volumes: func() []corev1.Volume {
+				volumes := []corev1.Volume{
+					{
+						Name: "config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: server.Name, // ConfigMap name matches the MCPServer name
+								},
 							},
 						},
 					},
-				},
-			},
+				}
+				// Add JWKS secret volume if file-based JWT authentication is configured
+				if isFileBasedJWTAuth(server) {
+					volumes = append(volumes, corev1.Volume{
+						Name: "jwks",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: server.Spec.Authentication.JWT.JWKS.Name,
+							},
+						},
+					})
+				}
+				return volumes
+			}(),
 		}
 	}
 
@@ -282,6 +330,13 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 		return envVars[i].Name < envVars[j].Name
 	})
 	return envVars
+}
+
+// isFileBasedJWTAuth checks if the JWT authentication is configured to use file-based JWKS
+func isFileBasedJWTAuth(server *v1alpha1.MCPServer) bool {
+	return server.Spec.Authentication != nil &&
+		server.Spec.Authentication.JWT != nil &&
+		server.Spec.Authentication.JWT.JWKS != nil
 }
 
 func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
@@ -400,11 +455,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 				return nil, fmt.Errorf("failed to get JWKS secret %s: %w", jwt.JWKS.Name, err)
 			}
 
-			jwksBytes, ok := secret.Data[jwt.JWKS.Key]
-			if !ok {
-				return nil, fmt.Errorf("key %s not found in JWKS secret %s", jwt.JWKS.Key, jwt.JWKS.Name)
-			}
-
 			if policies == nil {
 				policies = &FilterOrPolicy{}
 			}
@@ -413,7 +463,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 				Issuer:    jwt.Issuer,
 				Audiences: jwt.Audiences,
 				JWKS: &JWKS{
-					Inline: string(jwksBytes),
+					File: "/jwks/" + jwt.JWKS.Key,
 				},
 			}
 		}
@@ -457,7 +507,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{
-									Name:    mcpTarget.Name,
 									Targets: []MCPTarget{mcpTarget},
 								},
 							}},

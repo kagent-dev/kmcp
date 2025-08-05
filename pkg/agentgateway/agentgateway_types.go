@@ -54,12 +54,12 @@ type LocalTLSServerConfig struct {
 
 // LocalRoute represents an HTTP route configuration
 type LocalRoute struct {
-	RouteName string           `json:"name,omitempty" yaml:"name,omitempty"`
-	RuleName  string           `json:"ruleName,omitempty" yaml:"ruleName,omitempty"`
-	Hostnames []string         `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
-	Matches   []RouteMatch     `json:"matches,omitempty" yaml:"matches,omitempty"`
+	RouteName string          `json:"name,omitempty" yaml:"name,omitempty"`
+	RuleName  string          `json:"ruleName,omitempty" yaml:"ruleName,omitempty"`
+	Hostnames []string        `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
+	Matches   []RouteMatch    `json:"matches,omitempty" yaml:"matches,omitempty"`
 	Policies  *FilterOrPolicy `json:"policies,omitempty" yaml:"policies,omitempty"`
-	Backends  []RouteBackend   `json:"backends,omitempty" yaml:"backends,omitempty"`
+	Backends  []RouteBackend  `json:"backends,omitempty" yaml:"backends,omitempty"`
 }
 
 // LocalTCPRoute represents a TCP route configuration
@@ -206,7 +206,6 @@ type Target struct {
 
 // MCPBackend represents an MCP backend
 type MCPBackend struct {
-	Name    string      `json:"name" yaml:"name"`
 	Targets []MCPTarget `json:"targets" yaml:"targets"`
 }
 
@@ -335,8 +334,8 @@ type JWTAuth struct {
 
 // JWKS represents JSON Web Key Set
 type JWKS struct {
-	// Inline represents inline JWKS configuration
-	Inline string `json:"inline,omitempty" yaml:"inline,omitempty"`
+	// File represents a file path to JWKS configuration
+	File string `json:"file,omitempty" yaml:"file,omitempty"`
 }
 
 // A2APolicy represents application-to-application policy

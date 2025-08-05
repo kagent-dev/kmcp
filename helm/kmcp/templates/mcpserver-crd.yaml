@@ -41,6 +41,73 @@ spec:
           spec:
             description: MCPServerSpec defines the desired state of MCPServer.
             properties:
+              authentication:
+                description: |-
+                  Authentication defines the authentication configuration for the MCP server.
+                  This field is optional and can be used to configure JWT authentication.
+                  If not specified, the MCP server will not require authentication.
+                properties:
+                  jwt:
+                    description: JWT defines the JWT authentication configuration.
+                    properties:
+                      audiences:
+                        description: Audiences is a list of audiences that the JWT
+                          must match.
+                        items:
+                          type: string
+                        type: array
+                      issuer:
+                        description: Issuer is the JWT issuer URL.
+                        type: string
+                      jwks:
+                        description: |-
+                          JWKS references a secret containing the JSON Web Key Set.
+                          The secret must contain a key with the JWKS content.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                type: object
+              authorization:
+                description: |-
+                  Authorization defines the authorization configuration for the MCP server.
+                  This field is optional and can be used to configure authorization rules
+                  for the MCP server. If not specified, the MCP server will not enforce
+                  any authorization rules.
+                properties:
+                  cel:
+                    description: CELAuthorization defines the CEL-based authorization
+                      configuration for the MCP server.
+                    properties:
+                      rules:
+                        description: Rules are a list of CEL rules for authorizing
+                          client mcp requests.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - rules
+                    type: object
+                type: object
               deployment:
                 description: Configuration to Deploy the MCP Server using a docker
                   container
