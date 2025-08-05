@@ -5,7 +5,7 @@ This template is inspired by the Kubernetes Enhancement Proposal (KEP) template:
 
 To get started with this template:
 
-- [ ] **Create an issue in kagent-dev/kagent**
+- [ ] **Create an issue in kagent-dev/kmcp**
 - [ ] **Make a copy of this template.**
   `EP-[ID]: [Feature/Enhancement Name]`, where `ID` is the issue number (with no
   leading-zero padding) assigned to your enhancement above.
