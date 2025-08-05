@@ -92,14 +92,19 @@ spec:
                   for the MCP server. If not specified, the MCP server will not enforce
                   any authorization rules.
                 properties:
-                  rules:
-                    description: Rules are a list of CEL rules for authorizing client
-                      mcp requests.
-                    items:
-                      type: string
-                    type: array
-                required:
-                - rules
+                  cel:
+                    description: CELAuthorization defines the CEL-based authorization
+                      configuration for the MCP server.
+                    properties:
+                      rules:
+                        description: Rules are a list of CEL rules for authorizing
+                          client mcp requests.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - rules
+                    type: object
                 type: object
               deployment:
                 description: Configuration to Deploy the MCP Server using a docker
