@@ -500,10 +500,9 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(toolsResponse).NotTo(gomega.BeNil())
 			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
 
-			// Log the available tools for debugging
-			for _, tool := range toolsResponse.Tools {
-				_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
-			}
+			// we expect only the `read_file` tool to be available
+			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(1))
+			gomega.Expect(toolsResponse.Tools[0].Name).To(gomega.Equal("read_file"))
 
 			ginkgo.By("reading JWT tokens from example files")
 			// Read the JWT tokens from the test data files
@@ -552,6 +551,15 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to initialize MCP client with example1 token")
 			gomega.Expect(initResponse1).NotTo(gomega.BeNil())
 
+			// list tools when using example1 token
+			toolsResponse, err = mcpClient1.ListTools(ctx1, mcp.ListToolsRequest{})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to list tools")
+			gomega.Expect(toolsResponse).NotTo(gomega.BeNil())
+			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
+
+			// we expect 3 tools to be available, `read_file`, `list_directory`, and `write_file`
+			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(3))
+
 			// Test list_directory tool with example1 token - should succeed
 			callResponse1, err := mcpClient1.CallTool(ctx1, mcp.CallToolRequest{
 				Params: mcp.CallToolParams{
@@ -591,6 +599,15 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			})
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to initialize MCP client with example2 token")
 			gomega.Expect(initResponse2).NotTo(gomega.BeNil())
+
+			// list tools when using example2 token
+			toolsResponse, err = mcpClient2.ListTools(ctx1, mcp.ListToolsRequest{})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to list tools")
+			gomega.Expect(toolsResponse).NotTo(gomega.BeNil())
+			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
+
+			// we expect 2 tools to be available, `read_file` and `write_file`
+			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(2))
 
 			// Test list_directory tool with example2 token (should fail)
 			_, err = mcpClient2.CallTool(ctx2, mcp.CallToolRequest{
