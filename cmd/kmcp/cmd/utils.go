@@ -63,10 +63,7 @@ func getLatestReleaseTag(repo string) (string, error) {
 	}
 
 	// Strip the leading 'v' from the tag name
-	tagName := release.TagName
-	if strings.HasPrefix(tagName, "v") {
-		tagName = tagName[1:]
-	}
+	tagName := strings.TrimPrefix(release.TagName, "v")
 
 	return tagName, nil
 }
