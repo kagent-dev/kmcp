@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
-	"github.com/kagent-dev/kmcp/internal/controller"
+	"github.com/kagent-dev/kmcp/pkg/controller"
 	// +kubebuilder:scaffold:imports
 )
 

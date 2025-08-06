@@ -53,7 +53,7 @@ The `kmcp` CLI provides a set of commands to manage the entire lifecycle of your
 -   `kmcp add-tool`: Adds a new tool to your project, automatically handling boilerplate and registration.
 -   `kmcp run`: Runs the MCP server in a local development environment.
 -   `kmcp build`: Builds a Docker image for your MCP server.
--   `kmcp install`: Installs the `kmcp` controller on a Kubernetes cluster.
+-   `kmcp install`: Installs the `kmcp` controller and CRDs on a Kubernetes cluster.
 -   `kmcp deploy`: Deploys your MCP server to a Kubernetes cluster, placing it behind a pre-configured Agent Gateway.
 -   `kmcp secrets`: Manages secrets for your MCP server deployment in Kubernetes.
 

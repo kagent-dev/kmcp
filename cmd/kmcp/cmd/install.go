@@ -73,8 +73,20 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("version cannot be empty")
 	}
 
+	crdHelmArgs := []string{
+		"upgrade",
+		"--install", "kmcp-crds", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp-crds",
+		"--version", version,
+		"--namespace", controllerNamespace,
+		"--create-namespace",
+	}
+
+	if err := runHelm(crdHelmArgs...); err != nil {
+		return fmt.Errorf("helm install failed: %w", err)
+	}
+
 	// Install controller using Helm
-	helmArgs := []string{
+	controllerHelmArgs := []string{
 		"upgrade",
 		"--install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
 		"--version", version,
@@ -82,7 +94,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		"--create-namespace",
 	}
 
-	if err := runHelm(helmArgs...); err != nil {
+	if err := runHelm(controllerHelmArgs...); err != nil {
 		return fmt.Errorf("helm install failed: %w", err)
 	}
 

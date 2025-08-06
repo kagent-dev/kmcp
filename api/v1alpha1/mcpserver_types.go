@@ -256,6 +256,10 @@ type MCPServerCELAuthorization struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=mcps;mcp
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:categories=kagent
 
 // MCPServer is the Schema for the mcpservers API.
 type MCPServer struct {

@@ -70,23 +70,8 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 helm-lint:
 	helm lint helm/kmcp
 
-.PHONY: helm-crd
-helm-crd: manifests ## Generate Helm CRD template from the generated CRD definition.
-	@echo "Generating Helm CRD template from config/crd/bases/kagent.dev_mcpservers.yaml"
-	@mkdir -p helm/kmcp/templates/crds
-	@echo '{{- if .Values.crd.create }}' > helm/kmcp/templates/crds/mcpserver-crd.yaml
-	@awk '/^  name: mcpservers.kagent.dev$$/ { \
-		print; \
-		print "  labels:"; \
-		print "    {{- include \"kmcp.labels\" . | nindent 4 }}"; \
-		next; \
-	} \
-	{ print }' config/crd/bases/kagent.dev_mcpservers.yaml >> helm/kmcp/templates/crds/mcpserver-crd.yaml
-	@echo '{{- end }}' >> helm/kmcp/templates/crds/mcpserver-crd.yaml
-	@echo "Helm CRD template generated at helm/kmcp/templates/crds/mcpserver-crd.yaml"
-
 .PHONY: helm-package
-helm-package:
+helm-package: manifests
 	mkdir -p $(DIST_FOLDER)
 	@echo "Packaging Helm chart with version $(VERSION)..."
 	@cp helm/kmcp/Chart.yaml helm/kmcp/Chart.yaml.bak
@@ -94,6 +79,12 @@ helm-package:
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
 	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
 	@echo "Helm package created: $(DIST_FOLDER)/kmcp-$(VERSION).tgz"
+	@cp config/crd/bases/kagent.dev_mcpservers.yaml helm/kmcp-crds/templates/mcpserver-crd.yaml
+	@cp helm/kmcp-crds/Chart.yaml helm/kmcp-crds/Chart.yaml.bak
+	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp-crds/Chart.yaml.bak > helm/kmcp-crds/Chart.yaml
+	@helm package helm/kmcp-crds --version $(VERSION) -d $(DIST_FOLDER)
+	@mv helm/kmcp-crds/Chart.yaml.bak helm/kmcp-crds/Chart.yaml
+	@echo "Helm package created: $(DIST_FOLDER)/kmcp-crds-$(VERSION).tgz"
 
 .PHONY: helm-cleanup
 helm-cleanup: ## Clean up Helm chart packages
@@ -107,6 +98,9 @@ helm-build: helm-lint helm-package ## Build and package the Helm chart
 helm-publish: helm-package ## Publish Helm chart to OCI registry
 	@echo "Publishing Helm chart to $(HELM_REPO)/kmcp/helm..."
 	@helm push $(DIST_FOLDER)/kmcp-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
+	@echo "Helm chart published successfully"
+	@echo "Publishing CRDs to $(HELM_REPO)/kmcp/helm..."
+	@helm push $(DIST_FOLDER)/kmcp-crds-$(VERSION).tgz $(HELM_REPO)/kmcp/helm
 	@echo "Helm chart published successfully"
 
 .PHONY: helm-test
