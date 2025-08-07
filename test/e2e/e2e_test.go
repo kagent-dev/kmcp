@@ -501,7 +501,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
 
 			// we expect only the `read_file` tool to be available
-			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(1))
+			gomega.Expect(toolsResponse.Tools).To(gomega.HaveLen(1))
 			gomega.Expect(toolsResponse.Tools[0].Name).To(gomega.Equal("read_file"))
 
 			ginkgo.By("reading JWT tokens from example files")
@@ -558,7 +558,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
 
 			// we expect 3 tools to be available, `read_file`, `list_directory`, and `write_file`
-			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(3))
+			gomega.Expect(toolsResponse.Tools).To(gomega.HaveLen(3))
 
 			// Test list_directory tool with example1 token - should succeed
 			callResponse1, err := mcpClient1.CallTool(ctx1, mcp.CallToolRequest{
@@ -607,7 +607,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			gomega.Expect(toolsResponse.Tools).NotTo(gomega.BeEmpty(), "Expected at least one tool to be available")
 
 			// we expect 2 tools to be available, `read_file` and `write_file`
-			gomega.Expect(len(toolsResponse.Tools)).To(gomega.Equal(2))
+			gomega.Expect(toolsResponse.Tools).To(gomega.HaveLen(2))
 
 			// Test list_directory tool with example2 token (should fail)
 			_, err = mcpClient2.CallTool(ctx2, mcp.CallToolRequest{
