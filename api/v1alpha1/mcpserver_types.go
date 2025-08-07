@@ -146,6 +146,19 @@ type MCPServerSpec struct {
 
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
+
+	// Authentication defines the authentication configuration for the MCP server.
+	// This field is optional and can be used to configure JWT authentication.
+	// If not specified, the MCP server will not require authentication.
+	// +optional
+	Authentication *MCPServerAuthentication `json:"authentication,omitempty"`
+
+	// Authorization defines the authorization configuration for the MCP server.
+	// This field is optional and can be used to configure authorization rules
+	// for the MCP server. If not specified, the MCP server will not enforce
+	// any authorization rules.
+	// +optional
+	Authorization *MCPServerAuthorization `json:"authorization,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -208,6 +221,37 @@ type MCPServerDeployment struct {
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
 	SecretRefs []corev1.ObjectReference `json:"secretRefs,omitempty"`
+}
+
+// MCPServerAuthentication defines the authentication configuration for the MCP server.
+type MCPServerAuthentication struct {
+	// JWT defines the JWT authentication configuration.
+	JWT *MCPServerJWTAuthentication `json:"jwt,omitempty"`
+}
+
+// MCPServerJWTAuthentication defines the JWT authentication configuration for the MCP server.
+type MCPServerJWTAuthentication struct {
+	// Issuer is the JWT issuer URL.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of audiences that the JWT must match.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// JWKS references a secret containing the JSON Web Key Set.
+	// The secret must contain a key with the JWKS content.
+	JWKS *corev1.SecretKeySelector `json:"jwks,omitempty"`
+}
+
+// MCPServerAuthorization defines the authorization configuration for the MCP server.
+type MCPServerAuthorization struct {
+	// CELAuthorization defines the CEL-based authorization configuration for the MCP server.
+	CEL *MCPServerCELAuthorization `json:"cel,omitempty"`
+}
+
+// MCPServerCELAuthorization defines the authorization configuration for the MCP server using CEL rules.
+type MCPServerCELAuthorization struct {
+	// Rules are a list of CEL rules for authorizing client mcp requests.
+	Rules []string `json:"rules" yaml:"rules"`
 }
 
 // +kubebuilder:object:root=true

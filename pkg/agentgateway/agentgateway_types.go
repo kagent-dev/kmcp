@@ -100,7 +100,7 @@ type FilterOrPolicy struct {
 	BackendAuth      *BackendAuth      `json:"backendAuth,omitempty" yaml:"backendAuth,omitempty"`
 	LocalRateLimit   []interface{}     `json:"localRateLimit,omitempty" yaml:"localRateLimit,omitempty"`   // Skipped complex type
 	RemoteRateLimit  interface{}       `json:"remoteRateLimit,omitempty" yaml:"remoteRateLimit,omitempty"` // Skipped complex type
-	JWTAuth          interface{}       `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
+	JWTAuth          *JWTAuth          `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
 	ExtAuthz         interface{}       `json:"extAuthz,omitempty" yaml:"extAuthz,omitempty"`               // Skipped complex type
 
 	// Traffic Policy
@@ -206,7 +206,6 @@ type Target struct {
 
 // MCPBackend represents an MCP backend
 type MCPBackend struct {
-	Name    string      `json:"name" yaml:"name"`
 	Targets []MCPTarget `json:"targets" yaml:"targets"`
 }
 
@@ -323,7 +322,20 @@ type PathRedirect struct {
 
 // MCPAuthorization represents MCP authorization policy
 type MCPAuthorization struct {
-	Rules interface{} `json:"rules" yaml:"rules"` // RuleSet - skipped complex type
+	Rules []string `json:"rules" yaml:"rules"`
+}
+
+// JWTAuth represents JWT authentication policy
+type JWTAuth struct {
+	Issuer    string   `json:"issuer" yaml:"issuer"`
+	Audiences []string `json:"audiences,omitempty" yaml:"audiences,omitempty"`
+	JWKS      *JWKS    `json:"jwks,omitempty" yaml:"jwks,omitempty"`
+}
+
+// JWKS represents JSON Web Key Set
+type JWKS struct {
+	// File represents a file path to JWKS configuration
+	File string `json:"file,omitempty" yaml:"file,omitempty"`
 }
 
 // A2APolicy represents application-to-application policy
