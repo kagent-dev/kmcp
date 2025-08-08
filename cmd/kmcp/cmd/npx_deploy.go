@@ -8,6 +8,7 @@ import (
 
 	"github.com/kagent-dev/kmcp/api/v1alpha1"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -30,7 +31,8 @@ Examples:
   kmcp npx-deploy my-server --image custom:tag              # Use custom image
   kmcp npx-deploy my-server --args package1,package2        # Custom npx arguments
   kmcp npx-deploy my-server --port 8080                     # Use custom port
-  kmcp npx-deploy my-server --env "KEY1=value1,KEY2=value2" # Set environment variables`,
+  kmcp npx-deploy my-server --env "KEY1=value1,KEY2=value2" # Set environment variables
+  kmcp npx-deploy my-server --secrets secret1,secret2       # Mount Kubernetes secrets`,
 	Args: cobra.ExactArgs(1),
 	RunE: runNpxDeploy,
 }
@@ -43,6 +45,7 @@ var (
 	npxDeployArgs      []string
 	npxDeployPort      int
 	npxDeployEnv       string
+	npxDeploySecrets   []string
 )
 
 func init() {
@@ -59,9 +62,13 @@ func init() {
 	npxDeployCmd.Flags().StringVarP(&npxDeployNamespace, "namespace", "n", currentNamespace, "Kubernetes namespace")
 	npxDeployCmd.Flags().BoolVar(&npxDeployDryRun, "dry-run", false, "Print out the MCPServer yaml without deploying")
 	npxDeployCmd.Flags().StringVar(&npxDeployImage, "image", "docker.io/mcp/everything", "Docker image to use")
-	npxDeployCmd.Flags().StringSliceVar(&npxDeployArgs, "args", []string{"@modelcontextprotocol/server-github"}, "Arguments to pass to npx")
+	npxDeployCmd.Flags().StringSliceVar(&npxDeployArgs, "args",
+		[]string{"@modelcontextprotocol/server-github"}, "Arguments to pass to npx")
 	npxDeployCmd.Flags().IntVar(&npxDeployPort, "port", 3000, "MCP server container port")
-	npxDeployCmd.Flags().StringVar(&npxDeployEnv, "env", "", "Comma-separated environment variables (KEY1=value1,KEY2=value2)")
+	npxDeployCmd.Flags().StringVar(&npxDeployEnv, "env", "",
+		"Comma-separated environment variables (KEY1=value1,KEY2=value2)")
+	npxDeployCmd.Flags().StringSliceVar(&npxDeploySecrets, "secrets", []string{},
+		"List of Kubernetes secret names to mount to the MCP server container")
 }
 
 func runNpxDeploy(_ *cobra.Command, args []string) error {
@@ -69,6 +76,16 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 
 	// Parse environment variables
 	envMap := parseCommaSeparatedEnvVars(npxDeployEnv)
+
+	// Convert secret names to ObjectReferences
+	secretRefs := make([]corev1.ObjectReference, 0, len(npxDeploySecrets))
+	for _, secretName := range npxDeploySecrets {
+		secretRefs = append(secretRefs, corev1.ObjectReference{
+			Kind:      "Secret",
+			Name:      secretName,
+			Namespace: npxDeployNamespace,
+		})
+	}
 
 	// Create MCPServer
 	mcpServer := &v1alpha1.MCPServer{
@@ -82,11 +99,12 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 		},
 		Spec: v1alpha1.MCPServerSpec{
 			Deployment: v1alpha1.MCPServerDeployment{
-				Image: npxDeployImage,
-				Port:  uint16(npxDeployPort),
-				Cmd:   "npx",
-				Args:  npxDeployArgs,
-				Env:   envMap,
+				Image:      npxDeployImage,
+				Port:       uint16(npxDeployPort),
+				Cmd:        "npx",
+				Args:       npxDeployArgs,
+				Env:        envMap,
+				SecretRefs: secretRefs,
 			},
 			TransportType: v1alpha1.TransportTypeStdio,
 		},
@@ -106,27 +124,6 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 
 	// Apply to cluster
 	return applyMCPServerToCluster(yamlData, mcpServer)
-}
-
-func parseCommaSeparatedString(input string) []string {
-	if input == "" {
-		return []string{}
-	}
-
-	// Split by comma and trim whitespace
-	parts := strings.Split(input, ",")
-	result := make([]string, 0, len(parts))
-
-	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			// Remove quotes if present
-			trimmed = strings.Trim(trimmed, "'\"")
-			result = append(result, trimmed)
-		}
-	}
-
-	return result
 }
 
 func parseCommaSeparatedEnvVars(input string) map[string]string {

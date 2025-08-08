@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
+	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.3-musl"
 )
 
 type Outputs struct {
@@ -84,10 +84,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				Name:            "copy-binary",
 				Image:           agentGatewayContainerImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"sh"},
+				Command:         []string{},
 				Args: []string{
-					"-c",
-					"cp /usr/bin/agentgateway /agentbin/agentgateway",
+					"--copy-self",
+					"/agentbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "binary",
@@ -100,11 +100,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				Image:           image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
-					"sh",
+					"/agentbin/agentgateway",
 				},
 				Args: []string{
-					"-c",
-					"/agentbin/agentgateway -f /config/local.yaml",
+					"-f",
+					"/config/local.yaml",
 				},
 				EnvFrom: secretEnvFrom,
 				VolumeMounts: []corev1.VolumeMount{
@@ -150,10 +150,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					Name:            "agent-gateway",
 					Image:           agentGatewayContainerImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"sh"},
+					Command:         []string{},
 					Args: []string{
-						"-c",
-						"/usr/bin/agentgateway -f /config/local.yaml",
+						"--copy-self",
+						"/agentbin/agentgateway",
 					},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      "config",
@@ -401,7 +401,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{
-									Name:    mcpTarget.Name,
 									Targets: []MCPTarget{mcpTarget},
 								},
 							}},
