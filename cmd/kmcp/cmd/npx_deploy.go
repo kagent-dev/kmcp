@@ -165,7 +165,6 @@ func applyMCPServerToCluster(yamlData []byte, mcpServer *v1alpha1.MCPServer) err
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
 
 	// Write YAML content to temp file
 	if _, err := tmpFile.Write(yamlData); err != nil {
@@ -177,6 +176,9 @@ func applyMCPServerToCluster(yamlData []byte, mcpServer *v1alpha1.MCPServer) err
 
 	// Apply using kubectl
 	err = runKubectl("apply", "-f", tmpFile.Name())
+	if err := os.Remove(tmpFile.Name()); err != nil {
+		fmt.Printf("failed to remove temp file: %v\n", err)
+	}
 	if err != nil {
 		// Check for CRD not found error
 		if strings.Contains(err.Error(), "no matches for kind") {
