@@ -61,7 +61,7 @@ func init() {
 	// npx-deploy flags
 	npxDeployCmd.Flags().StringVarP(&npxDeployNamespace, "namespace", "n", currentNamespace, "Kubernetes namespace")
 	npxDeployCmd.Flags().BoolVar(&npxDeployDryRun, "dry-run", false, "Print out the MCPServer yaml without deploying")
-	npxDeployCmd.Flags().StringVar(&npxDeployImage, "image", "docker.io/mcp/everything", "Docker image to use")
+	npxDeployCmd.Flags().StringVar(&npxDeployImage, "image", "node:24-alpine3.21", "Docker image to use")
 	npxDeployCmd.Flags().StringSliceVar(&npxDeployArgs, "args",
 		[]string{"@modelcontextprotocol/server-github"}, "Arguments to pass to npx")
 	npxDeployCmd.Flags().IntVar(&npxDeployPort, "port", 3000, "MCP server container port")
