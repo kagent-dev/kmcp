@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/spf13/cobra"
 )
 
@@ -95,7 +95,7 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 	}
 
 	// Run uv sync first
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running uv sync in: %s\n", projectDir)
 	}
 	syncCmd := exec.Command("uv", "sync")
@@ -144,7 +144,7 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 	}
 
 	// Run go mod tidy first to ensure dependencies are up to date
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running go mod tidy in: %s\n", projectDir)
 	}
 	tidyCmd := exec.Command("go", "mod", "tidy")
@@ -206,7 +206,7 @@ func getProjectDir() (string, error) {
 		}
 	}
 
-	if verbose {
+	if Verbose {
 		fmt.Printf("Using project directory: %s\n", dir)
 	}
 

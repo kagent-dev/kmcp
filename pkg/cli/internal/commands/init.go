@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"bufio"
@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kagent-dev/kmcp/pkg/frameworks"
-	"github.com/kagent-dev/kmcp/pkg/manifest"
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 
 	"github.com/spf13/cobra"
 )
@@ -101,7 +101,7 @@ func runInitFramework(
 		Secrets:     projectManifest.Secrets,
 		Directory:   projectPath,
 		NoGit:       initNoGit,
-		Verbose:     verbose,
+		Verbose:     Verbose,
 	}
 
 	// Customize project config for the specific framework

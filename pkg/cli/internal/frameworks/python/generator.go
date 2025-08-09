@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kagent-dev/kmcp/pkg/frameworks/common"
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/common"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 	"github.com/stoewer/go-strcase"
 )
 
