@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/kagent-dev/kmcp/api/v1alpha1"
-	"github.com/kagent-dev/kmcp/pkg/manifest"
-	"github.com/kagent-dev/kmcp/pkg/wellknown"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/wellknown"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,7 +79,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(deployCmd)
+	addRootSubCmd(deployCmd)
 
 	// Get current namespace from kubeconfig
 	currentNamespace, err := getCurrentNamespaceFromKubeconfig()
@@ -155,7 +155,7 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 	// Set namespace
 	mcpServer.Namespace = deployNamespace
 
-	if verbose {
+	if Verbose {
 		fmt.Printf("Generated MCPServer: %s/%s\n", mcpServer.Namespace, mcpServer.Name)
 	}
 
@@ -524,7 +524,7 @@ func waitForDeployment(name, namespace string, timeout time.Duration) error {
 	}
 
 	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
 	}
 	var stderr bytes.Buffer
@@ -544,7 +544,7 @@ func waitForDeployment(name, namespace string, timeout time.Duration) error {
 }
 
 func runKubectl(args ...string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
 	}
 

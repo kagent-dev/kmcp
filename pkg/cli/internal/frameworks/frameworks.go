@@ -3,9 +3,9 @@ package frameworks
 import (
 	"fmt"
 
-	"github.com/kagent-dev/kmcp/pkg/frameworks/golang"
-	"github.com/kagent-dev/kmcp/pkg/frameworks/python"
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/golang"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/python"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 )
 
 // Generator defines the interface for a framework-specific generator.

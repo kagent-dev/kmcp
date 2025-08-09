@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 
-	"github.com/kagent-dev/kmcp/pkg/frameworks"
-	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(addToolCmd)
+	addRootSubCmd(addToolCmd)
 
 	addToolCmd.Flags().StringVarP(&addToolDescription, "description", "d", "", "Tool description")
 	addToolCmd.Flags().BoolVarP(&addToolForce, "force", "f", false, "Overwrite existing tool file")
@@ -87,7 +87,7 @@ func runAddTool(_ *cobra.Command, args []string) error {
 	toolPath := filepath.Join("src", "tools", toolName+".py")
 	toolExists := fileExists(toolPath)
 
-	if verbose {
+	if Verbose {
 		fmt.Printf("Tool file path: %s\n", toolPath)
 		fmt.Printf("Tool exists: %v\n", toolExists)
 	}
@@ -174,7 +174,7 @@ func createToolInteractive(toolName, projectRoot, framework string) error {
 }
 
 func createTool(toolName, projectRoot, framework string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Creating tool: %s\n", toolName)
 	}
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/stoewer/go-strcase"
 
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

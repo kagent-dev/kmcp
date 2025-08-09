@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/stoewer/go-strcase"
 
-	"github.com/kagent-dev/kmcp/pkg/build"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/build"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(buildCmd)
+	addRootSubCmd(buildCmd)
 
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
 	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")
@@ -88,7 +88,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		ProjectDir: buildDirectory,
 		Tag:        imageName,
 		Platform:   buildPlatform,
-		Verbose:    verbose,
+		Verbose:    Verbose,
 	}
 
 	if err := builder.Build(opts); err != nil {
@@ -110,7 +110,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			var err error
 			clusterName, err = getCurrentKindClusterName()
 			if err != nil {
-				if verbose {
+				if Verbose {
 					fmt.Printf("could not detect kind cluster name: %v, using default\n", err)
 				}
 				clusterName = "kind" // default to kind cluster
@@ -129,7 +129,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 }
 
 func runDocker(args ...string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: docker %s\n", strings.Join(args, " "))
 	}
 	cmd := exec.Command("docker", args...)
@@ -139,7 +139,7 @@ func runDocker(args ...string) error {
 }
 
 func runKind(args ...string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: kind %s\n", strings.Join(args, " "))
 	}
 	cmd := exec.Command("kind", args...)
