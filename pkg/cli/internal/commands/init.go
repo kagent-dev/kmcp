@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	addRootSubCmd(initCmd)
 
 	initCmd.PersistentFlags().BoolVar(&initForce, "force", false, "Overwrite existing directory")
 	initCmd.PersistentFlags().BoolVar(&initNoGit, "no-git", false, "Skip git initialization")

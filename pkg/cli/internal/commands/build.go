@@ -37,7 +37,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(buildCmd)
+	addRootSubCmd(buildCmd)
 
 	buildCmd.Flags().StringVarP(&buildTag, "tag", "t", "", "Docker image tag (alias for --output)")
 	buildCmd.Flags().BoolVar(&buildPush, "push", false, "Push Docker image to registry")

@@ -33,7 +33,7 @@ It will install the following resources:
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
+	addRootSubCmd(installCmd)
 
 	// Controller deployment flags
 	installCmd.Flags().StringVar(

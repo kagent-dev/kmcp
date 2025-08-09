@@ -59,7 +59,7 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(secretsCmd)
+	addRootSubCmd(secretsCmd)
 
 	// Add subcommands
 	secretsCmd.AddCommand(syncCmd)

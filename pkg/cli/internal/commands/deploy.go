@@ -79,7 +79,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(deployCmd)
+	addRootSubCmd(deployCmd)
 
 	// Get current namespace from kubeconfig
 	currentNamespace, err := getCurrentNamespaceFromKubeconfig()

@@ -20,14 +20,15 @@ func rootCmd(version string) *cobra.Command {
 
 	root.PersistentFlags().BoolVarP(&commands.Verbose, "verbose", "v", false, "verbose output")
 
+	root.AddCommand(commands.GetSubCommands()...)
+
 	return root
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-func Execute() error {
-	return rootCmd(version.GetVersion()).Execute()
+func RootWithVersion(version string) *cobra.Command {
+	return rootCmd(version)
 }
 
-func ExecuteWithVersion(version string) error {
-	return rootCmd(version).Execute()
+func Root() *cobra.Command {
+	return rootCmd(version.GetVersion())
 }

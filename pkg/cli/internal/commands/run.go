@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(runCmd)
+	addRootSubCmd(runCmd)
 
 	runCmd.Flags().StringVarP(
 		&projectDir,

@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(addToolCmd)
+	addRootSubCmd(addToolCmd)
 
 	addToolCmd.Flags().StringVarP(&addToolDescription, "description", "d", "", "Tool description")
 	addToolCmd.Flags().BoolVarP(&addToolForce, "force", "f", false, "Overwrite existing tool file")
