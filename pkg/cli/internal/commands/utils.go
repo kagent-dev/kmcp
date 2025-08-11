@@ -61,6 +61,9 @@ func getLatestReleaseTag(repo string) (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return "", err
 	}
+
+	release.TagName = strings.TrimPrefix(release.TagName, "v")
+
 	return release.TagName, nil
 }
 
