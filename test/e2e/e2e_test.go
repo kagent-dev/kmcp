@@ -409,7 +409,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 						Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
 					},
 					TransportType: "stdio",
-					Authentication: &v1alpha1.MCPServerAuthentication{
+					Authn: &v1alpha1.MCPServerAuthentication{
 						JWT: &v1alpha1.MCPServerJWTAuthentication{
 							Issuer:    "agentgateway.dev",
 							Audiences: []string{"test.agentgateway.dev"},
@@ -421,7 +421,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 							},
 						},
 					},
-					Authorization: &v1alpha1.MCPServerAuthorization{
+					Authz: &v1alpha1.MCPServerAuthorization{
 						CEL: &v1alpha1.MCPServerCELAuthorization{
 							Rules: []string{
 								// Allow anyone to call 'read_file'
