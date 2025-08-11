@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -231,13 +231,13 @@ func (in *MCPServerSpec) DeepCopyInto(out *MCPServerSpec) {
 		*out = new(HTTPTransport)
 		**out = **in
 	}
-	if in.Authentication != nil {
-		in, out := &in.Authentication, &out.Authentication
+	if in.Authn != nil {
+		in, out := &in.Authn, &out.Authn
 		*out = new(MCPServerAuthentication)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Authorization != nil {
-		in, out := &in.Authorization, &out.Authorization
+	if in.Authz != nil {
+		in, out := &in.Authz, &out.Authz
 		*out = new(MCPServerAuthorization)
 		(*in).DeepCopyInto(*out)
 	}

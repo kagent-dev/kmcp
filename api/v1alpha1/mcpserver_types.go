@@ -147,18 +147,18 @@ type MCPServerSpec struct {
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
 
-	// Authentication defines the authentication configuration for the MCP server.
+	// Authn defines the authentication configuration for the MCP server.
 	// This field is optional and can be used to configure JWT authentication.
 	// If not specified, the MCP server will not require authentication.
 	// +optional
-	Authentication *MCPServerAuthentication `json:"authentication,omitempty"`
+	Authn *MCPServerAuthentication `json:"authn,omitempty"`
 
-	// Authorization defines the authorization configuration for the MCP server.
+	// Authz defines the authorization configuration for the MCP server.
 	// This field is optional and can be used to configure authorization rules
 	// for the MCP server. If not specified, the MCP server will not enforce
 	// any authorization rules.
 	// +optional
-	Authorization *MCPServerAuthorization `json:"authorization,omitempty"`
+	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
