@@ -111,7 +111,7 @@ func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				var requests []reconcile.Request
 				for _, server := range mcpServers.Items {
-					if auth := server.Spec.Authentication; auth != nil && auth.JWT != nil && auth.JWT.JWKS != nil {
+					if auth := server.Spec.Authn; auth != nil && auth.JWT != nil && auth.JWT.JWKS != nil {
 						if auth.JWT.JWKS.Name == o.GetName() && server.Namespace == o.GetNamespace() {
 							requests = append(requests, reconcile.Request{
 								NamespacedName: types.NamespacedName{

@@ -163,7 +163,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						Name: "jwks",
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: server.Spec.Authentication.JWT.JWKS.Name,
+								SecretName: server.Spec.Authn.JWT.JWKS.Name,
 							},
 						},
 					})
@@ -233,7 +233,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						Name: "jwks",
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: server.Spec.Authentication.JWT.JWKS.Name,
+								SecretName: server.Spec.Authn.JWT.JWKS.Name,
 							},
 						},
 					})
@@ -334,9 +334,9 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 
 // isFileBasedJWTAuth checks if the JWT authentication is configured to use file-based JWKS
 func isFileBasedJWTAuth(server *v1alpha1.MCPServer) bool {
-	return server.Spec.Authentication != nil &&
-		server.Spec.Authentication.JWT != nil &&
-		server.Spec.Authentication.JWT.JWKS != nil
+	return server.Spec.Authn != nil &&
+		server.Spec.Authn.JWT != nil &&
+		server.Spec.Authn.JWT.JWKS != nil
 }
 
 func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
@@ -443,7 +443,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 
 	var policies *FilterOrPolicy
 
-	if authn := server.Spec.Authentication; authn != nil && authn.JWT != nil {
+	if authn := server.Spec.Authn; authn != nil && authn.JWT != nil {
 		jwt := authn.JWT
 		if jwt.JWKS != nil {
 			secret := &corev1.Secret{}
@@ -469,7 +469,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	if authz := server.Spec.Authorization; authz != nil &&
+	if authz := server.Spec.Authz; authz != nil &&
 		authz.CEL != nil &&
 		len(authz.CEL.Rules) > 0 {
 		if policies == nil {
