@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "ttl.sh/1754501888:24h"
+	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.3-musl"
 )
 
 type Outputs struct {
