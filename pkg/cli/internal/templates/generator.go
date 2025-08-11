@@ -1,6 +1,6 @@
 package templates
 
-import "github.com/kagent-dev/kmcp/pkg/manifest"
+import "github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 
 // ProjectConfig contains all the information needed to generate a project
 type ProjectConfig struct {

@@ -1,9 +1,9 @@
-package cmd
+package commands
 
 import (
 	"fmt"
 
-	"github.com/kagent-dev/kmcp/pkg/templates"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 	"github.com/spf13/cobra"
 )
 

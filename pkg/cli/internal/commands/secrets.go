@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kagent-dev/kmcp/pkg/manifest"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,7 +59,7 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(secretsCmd)
+	addRootSubCmd(secretsCmd)
 
 	// Add subcommands
 	secretsCmd.AddCommand(syncCmd)

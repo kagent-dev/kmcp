@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ It will install the following resources:
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
+	addRootSubCmd(installCmd)
 
 	// Controller deployment flags
 	installCmd.Flags().StringVar(
@@ -113,7 +113,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 
 // runHelm executes helm commands
 func runHelm(args ...string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: helm %s\n", strings.Join(args, " "))
 	}
 

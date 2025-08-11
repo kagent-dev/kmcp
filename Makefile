@@ -9,6 +9,12 @@ BUILD_DATE := $(shell date -u '+%Y-%m-%d')
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/-dirty//' | grep v || echo "v0.0.1+$(GIT_COMMIT)")
 
+
+# Version information for the build
+LDFLAGS := "-X github.com/kagent-dev/kmcp/pkg/internal/version.Version=$(VERSION)      \
+            -X github.com/kagent-dev/kmcp/pkg/internal/version.GitCommit=$(GIT_COMMIT) \
+            -X github.com/kagent-dev/kmcp/pkg/internal/version.BuildDate=$(BUILD_DATE)"
+
 # Local architecture detection to build for the current platform
 LOCALARCH ?= $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 
@@ -176,7 +182,7 @@ build: manifests generate fmt vet ## Build manager binary.
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
 	mkdir -p $(DIST_FOLDER)
-	go build -ldflags="-X 'github.com/kagent-dev/kmcp/cmd/kmcp/cmd.Version=$(VERSION)'" -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
+	go build -ldflags=$(LDFLAGS) -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
