@@ -62,10 +62,9 @@ func getLatestReleaseTag(repo string) (string, error) {
 		return "", err
 	}
 
-	// Strip the leading 'v' from the tag name
-	tagName := strings.TrimPrefix(release.TagName, "v")
+	release.TagName = strings.TrimPrefix(release.TagName, "v")
 
-	return tagName, nil
+	return release.TagName, nil
 }
 
 func getCurrentKindClusterName() (string, error) {
