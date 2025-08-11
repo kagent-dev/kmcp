@@ -62,9 +62,7 @@ func getLatestReleaseTag(repo string) (string, error) {
 		return "", err
 	}
 
-	if strings.HasPrefix(release.TagName, "v") {
-		release.TagName = strings.TrimPrefix(release.TagName, "v")
-	}
+	release.TagName = strings.TrimPrefix(release.TagName, "v")
 
 	return release.TagName, nil
 }
