@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ func createMCPInspectorConfig(serverName string, serverConfig map[string]interfa
 		return fmt.Errorf("failed to write mcp-server-config.json: %w", err)
 	}
 
-	if verbose {
+	if Verbose {
 		fmt.Printf("Created mcp-server-config.json: %s\n", configPath)
 		fmt.Printf("Config content:\n%s\n", string(configData))
 	}
@@ -58,7 +58,7 @@ func runMCPInspector(configPath, serverName string, workingDir string) error {
 		"--server", serverName,
 	}
 
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: npx %s\n", args)
 	}
 
