@@ -115,6 +115,60 @@ spec:
                     - rules
                     type: object
                 type: object
+              clientAuthn:
+                description: ClientAuthn defines the authentication configuration
+                  for the MCP client.
+                properties:
+                  audience:
+                    type: string
+                  issuer:
+                    type: string
+                  jwksUrl:
+                    type: string
+                  provider:
+                    description: MCPClientProvider represents the union of supported
+                      identity providers
+                    properties:
+                      auth0:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      keycloak:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  resourceMetadata:
+                    description: MCPClientResourceMetadata represents resource metadata
+                      for MCP client authentication
+                    properties:
+                      additionalFields:
+                        additionalProperties:
+                          type: string
+                        description: Additional resource metadata fields
+                        type: object
+                      bearerMethodsSupported:
+                        description: Bearer methods supported by this resource
+                        items:
+                          type: string
+                        type: array
+                      resource:
+                        description: Resource is the required resource identifier
+                        type: string
+                      scopesSupported:
+                        description: Scopes supported by this resource
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - resource
+                    type: object
+                required:
+                - audience
+                - issuer
+                - jwksUrl
+                - resourceMetadata
+                type: object
               deployment:
                 description: Configuration to Deploy the MCP Server using a docker
                   container
@@ -204,6 +258,45 @@ spec:
                       server.over HTTP
                     format: int32
                     type: integer
+                type: object
+              pathMatch:
+                description: |-
+                  PathMatch defines custom path matching rules for the MCP server.
+                  If provided, this will override the default path matches `/sse` and `/mcp`.
+                items:
+                  description: PathMatch defines a path matching rule for MCP server
+                    routes
+                  properties:
+                    exact:
+                      description: Exact matches the exact path
+                      type: string
+                    pathPrefix:
+                      description: PathPrefix matches paths that start with the given
+                        prefix
+                      type: string
+                  type: object
+                type: array
+              routeFilter:
+                description: |-
+                  RouteFilter defines route filtering configuration for the MCP server.
+                  Currently only supports CORS filtering.
+                properties:
+                  cors:
+                    description: CORS defines CORS configuration for the route
+                    properties:
+                      allowHeaders:
+                        description: AllowHeaders is a list of HTTP headers that can
+                          be used when making the actual request
+                        items:
+                          type: string
+                        type: array
+                      allowOrigins:
+                        description: AllowOrigins is a list of origins that are allowed
+                          to make requests
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               stdioTransport:
                 description: StdioTransport defines the configuration for a standard

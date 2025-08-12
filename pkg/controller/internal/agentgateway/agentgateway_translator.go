@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.3-musl"
+	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
 )
 
 type Outputs struct {
@@ -441,8 +441,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		return nil, fmt.Errorf("unsupported transport type: %s", server.Spec.TransportType)
 	}
 
-	var policies *FilterOrPolicy
-
+	policies := &FilterOrPolicy{}
 	if authn := server.Spec.Authn; authn != nil && authn.JWT != nil {
 		jwt := authn.JWT
 		if jwt.JWKS != nil {
@@ -455,10 +454,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 				return nil, fmt.Errorf("failed to get JWKS secret %s: %w", jwt.JWKS.Name, err)
 			}
 
-			if policies == nil {
-				policies = &FilterOrPolicy{}
-			}
-
 			policies.JWTAuth = &JWTAuth{
 				Issuer:    jwt.Issuer,
 				Audiences: jwt.Audiences,
@@ -469,15 +464,104 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	if authz := server.Spec.Authz; authz != nil &&
-		authz.CEL != nil &&
-		len(authz.CEL.Rules) > 0 {
-		if policies == nil {
-			policies = &FilterOrPolicy{}
-		}
-
+	if authz := server.Spec.Authz; authz != nil && authz.CEL != nil && len(authz.CEL.Rules) > 0 {
 		policies.MCPAuthorization = &MCPAuthorization{
 			Rules: authz.CEL.Rules,
+		}
+	}
+
+	if mcpClientAuthn := server.Spec.ClientAuthn; mcpClientAuthn != nil {
+		// Create the provider map to match the API structure
+		var providerMap map[string]interface{}
+
+		if mcpClientAuthn.Provider != nil {
+			providerMap = make(map[string]interface{})
+
+			if mcpClientAuthn.Provider.Keycloak != nil {
+				providerMap["keycloak"] = *mcpClientAuthn.Provider.Keycloak
+			}
+
+			if mcpClientAuthn.Provider.Auth0 != nil {
+				providerMap["auth0"] = *mcpClientAuthn.Provider.Auth0
+			}
+		}
+
+		// Flatten the resource metadata into a single map
+		resourceMetadata := make(map[string]interface{})
+
+		// Add the required resource field
+		resourceMetadata["resource"] = mcpClientAuthn.ResourceMetadata.Resource
+
+		// Add scopes if they exist
+		if mcpClientAuthn.ResourceMetadata.ScopesSupported != nil {
+			resourceMetadata["scopesSupported"] = mcpClientAuthn.ResourceMetadata.ScopesSupported
+		}
+
+		// Add bearer methods if they exist
+		if mcpClientAuthn.ResourceMetadata.BearerMethodsSupported != nil {
+			resourceMetadata["bearerMethodsSupported"] = mcpClientAuthn.ResourceMetadata.BearerMethodsSupported
+		}
+
+		// Add any additional fields if they exist
+		if mcpClientAuthn.ResourceMetadata.AdditionalFields != nil {
+			for k, v := range mcpClientAuthn.ResourceMetadata.AdditionalFields {
+				resourceMetadata[k] = v
+			}
+		}
+
+		policies.MCPAuthentication = &MCPAuthentication{
+			Issuer:           mcpClientAuthn.Issuer,
+			Audience:         mcpClientAuthn.Audience,
+			JwksURL:          mcpClientAuthn.JwksURL,
+			Provider:         providerMap,
+			ResourceMetadata: resourceMetadata,
+		}
+	}
+
+	// Add CORS policy if routeFilter is configured
+	if routeFilter := server.Spec.RouteFilter; routeFilter != nil && routeFilter.CORS != nil {
+		policies.CORS = &CORS{
+			AllowHeaders: routeFilter.CORS.AllowHeaders,
+			AllowOrigins: routeFilter.CORS.AllowOrigins,
+		}
+	}
+
+	// Determine path matches - use custom if provided, otherwise use defaults
+	var pathMatches []RouteMatch
+	if len(server.Spec.PathMatch) > 0 {
+		// Use custom path matching from deployment spec
+		for _, pm := range server.Spec.PathMatch {
+			if pm.Exact != "" && pm.PathPrefix != "" {
+				return nil, fmt.Errorf("exact and pathPrefix cannot be used together")
+			}
+			if pm.Exact != "" {
+				pathMatches = append(pathMatches, RouteMatch{
+					Path: PathMatch{
+						Exact: pm.Exact,
+					},
+				})
+			}
+			if pm.PathPrefix != "" {
+				pathMatches = append(pathMatches, RouteMatch{
+					Path: PathMatch{
+						PathPrefix: pm.PathPrefix,
+					},
+				})
+			}
+		}
+	} else {
+		// Use default path matching
+		pathMatches = []RouteMatch{
+			{
+				Path: PathMatch{
+					PathPrefix: "/sse",
+				},
+			},
+			{
+				Path: PathMatch{
+					PathPrefix: "/mcp",
+				},
+			},
 		}
 	}
 
@@ -492,18 +576,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 						Protocol: "HTTP",
 						Routes: []LocalRoute{{
 							RouteName: "mcp",
-							Matches: []RouteMatch{
-								{
-									Path: PathMatch{
-										PathPrefix: "/sse",
-									},
-								},
-								{
-									Path: PathMatch{
-										PathPrefix: "/mcp",
-									},
-								},
-							},
+							Matches:   pathMatches,
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{

@@ -93,15 +93,16 @@ type FilterOrPolicy struct {
 	CORS                   *CORS            `json:"cors,omitempty" yaml:"cors,omitempty"`
 
 	// Policies
-	MCPAuthorization *MCPAuthorization `json:"mcpAuthorization,omitempty" yaml:"mcpAuthorization,omitempty"`
-	A2A              *A2APolicy        `json:"a2a,omitempty" yaml:"a2a,omitempty"`
-	AI               interface{}       `json:"ai,omitempty" yaml:"ai,omitempty"` // Skipped complex type
-	BackendTLS       *BackendTLS       `json:"backendTLS,omitempty" yaml:"backendTLS,omitempty"`
-	BackendAuth      *BackendAuth      `json:"backendAuth,omitempty" yaml:"backendAuth,omitempty"`
-	LocalRateLimit   []interface{}     `json:"localRateLimit,omitempty" yaml:"localRateLimit,omitempty"`   // Skipped complex type
-	RemoteRateLimit  interface{}       `json:"remoteRateLimit,omitempty" yaml:"remoteRateLimit,omitempty"` // Skipped complex type
-	JWTAuth          *JWTAuth          `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
-	ExtAuthz         interface{}       `json:"extAuthz,omitempty" yaml:"extAuthz,omitempty"`               // Skipped complex type
+	MCPAuthorization  *MCPAuthorization  `json:"mcpAuthorization,omitempty" yaml:"mcpAuthorization,omitempty"`
+	MCPAuthentication *MCPAuthentication `json:"mcpAuthentication,omitempty" yaml:"mcpAuthentication,omitempty"`
+	A2A               *A2APolicy         `json:"a2a,omitempty" yaml:"a2a,omitempty"`
+	AI                interface{}        `json:"ai,omitempty" yaml:"ai,omitempty"` // Skipped complex type
+	BackendTLS        *BackendTLS        `json:"backendTLS,omitempty" yaml:"backendTLS,omitempty"`
+	BackendAuth       *BackendAuth       `json:"backendAuth,omitempty" yaml:"backendAuth,omitempty"`
+	LocalRateLimit    []interface{}      `json:"localRateLimit,omitempty" yaml:"localRateLimit,omitempty"`   // Skipped complex type
+	RemoteRateLimit   interface{}        `json:"remoteRateLimit,omitempty" yaml:"remoteRateLimit,omitempty"` // Skipped complex type
+	JWTAuth           *JWTAuth           `json:"jwtAuth,omitempty" yaml:"jwtAuth,omitempty"`                 // Skipped complex type
+	ExtAuthz          interface{}        `json:"extAuthz,omitempty" yaml:"extAuthz,omitempty"`               // Skipped complex type
 
 	// Traffic Policy
 	Timeout *TimeoutPolicy `json:"timeout,omitempty" yaml:"timeout,omitempty"`
@@ -372,6 +373,19 @@ type RetryPolicy struct {
 	Attempts      int           `json:"attempts" yaml:"attempts"`
 	PerTryTimeout time.Duration `json:"perTryTimeout" yaml:"perTryTimeout"`
 	RetryOn       []string      `json:"retryOn,omitempty" yaml:"retryOn,omitempty"`
+}
+
+// ============================================================================
+// MCP Authentication Types
+// ============================================================================
+
+// MCPAuthentication represents MCP authentication configuration
+type MCPAuthentication struct {
+	Issuer           string                 `json:"issuer" yaml:"issuer"`
+	Audience         string                 `json:"audience" yaml:"audience"`
+	JwksURL          string                 `json:"jwksUrl" yaml:"jwksUrl"`
+	Provider         map[string]interface{} `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ResourceMetadata map[string]interface{} `json:"resourceMetadata" yaml:"resourceMetadata"`
 }
 
 // ============================================================================

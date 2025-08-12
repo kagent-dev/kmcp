@@ -159,6 +159,20 @@ type MCPServerSpec struct {
 	// any authorization rules.
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
+
+	// ClientAuthn defines the authentication configuration for the MCP client.
+	// +optional
+	ClientAuthn *MCPClientAuthentication `json:"clientAuthn,omitempty"`
+
+	// PathMatch defines custom path matching rules for the MCP server.
+	// If provided, this will override the default path matches `/sse` and `/mcp`.
+	// +optional
+	PathMatch []PathMatch `json:"pathMatch,omitempty"`
+
+	// RouteFilter defines route filtering configuration for the MCP server.
+	// Currently only supports CORS filtering.
+	// +optional
+	RouteFilter *RouteFilter `json:"routeFilter,omitempty" yaml:"routeFilter,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -252,6 +266,66 @@ type MCPServerAuthorization struct {
 type MCPServerCELAuthorization struct {
 	// Rules are a list of CEL rules for authorizing client mcp requests.
 	Rules []string `json:"rules" yaml:"rules"`
+}
+
+// MCPClientAuthentication represents MCP client authentication configuration
+type MCPClientAuthentication struct {
+	Issuer           string                    `json:"issuer" yaml:"issuer"`
+	Audience         string                    `json:"audience" yaml:"audience"`
+	JwksURL          string                    `json:"jwksUrl" yaml:"jwksUrl"`
+	Provider         *MCPClientProvider        `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ResourceMetadata MCPClientResourceMetadata `json:"resourceMetadata" yaml:"resourceMetadata"`
+}
+
+// MCPClientProvider represents the union of supported identity providers
+// +kubebuilder:validation:Xor
+type MCPClientProvider struct {
+	Auth0    *map[string]string `json:"auth0,omitempty" yaml:"auth0,omitempty"`
+	Keycloak *map[string]string `json:"keycloak,omitempty" yaml:"keycloak,omitempty"`
+}
+
+// PathMatch defines a path matching rule for MCP server routes
+// +kubebuilder:validation:Xor
+type PathMatch struct {
+	// Exact matches the exact path
+	// +optional
+	Exact string `json:"exact,omitempty" yaml:"exact,omitempty"`
+	// PathPrefix matches paths that start with the given prefix
+	// +optional
+	PathPrefix string `json:"pathPrefix,omitempty" yaml:"pathPrefix,omitempty"`
+}
+
+// CORS defines CORS configuration for the MCP server
+type CORS struct {
+	// AllowHeaders is a list of HTTP headers that can be used when making the actual request
+	// +optional
+	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
+	// AllowOrigins is a list of origins that are allowed to make requests
+	// +optional
+	AllowOrigins []string `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
+}
+
+// RouteFilter defines route filtering configuration for the MCP server
+// Only CORS filtering is currently supported
+type RouteFilter struct {
+	// CORS defines CORS configuration for the route
+	// +optional
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+}
+
+// MCPClientResourceMetadata represents resource metadata for MCP client authentication
+type MCPClientResourceMetadata struct {
+	// Resource is the required resource identifier
+	Resource string `json:"resource" yaml:"resource"`
+	// Scopes supported by this resource
+	// +optional
+	ScopesSupported []string `json:"scopesSupported,omitempty" yaml:"scopesSupported,omitempty"`
+	// Bearer methods supported by this resource
+	// +optional
+	BearerMethodsSupported []string `json:"bearerMethodsSupported,omitempty" yaml:"bearerMethodsSupported,omitempty"`
+	// Additional resource metadata fields
+	// +optional
+	AdditionalFields map[string]string `json:"additionalFields,omitempty" yaml:"additionalFields,omitempty"`
 }
 
 // +kubebuilder:object:root=true
