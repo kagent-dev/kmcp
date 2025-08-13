@@ -160,13 +160,6 @@ type MCPServerSpec struct {
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 
-	// AuthzServer defines the configuration for the MCP authorization server that protects the MCP server.
-	// Setting this field will configure agentgateway to use the authorization server
-	// to protect the MCP server and its resources as well as adapt traffic to the MCP client to comply with the
-	// MCP authorization spec before forwarding traffic to the MCP client.
-	// +optional
-	AuthzServer *MCPAuthorizationServer `json:"authzServer,omitempty"`
-
 	// PathMatch defines custom path matching rules for the MCP server.
 	// If provided, this will override the default path matches `/sse` and `/mcp`.
 	// +optional
@@ -261,6 +254,13 @@ type MCPServerJWTAuthentication struct {
 
 // MCPServerAuthorization defines the authorization configuration for the MCP server.
 type MCPServerAuthorization struct {
+	// Server defines the configuration for the MCP authorization server that protects the MCP server.
+	// Setting this field will configure agentgateway to use the authorization server
+	// to protect the MCP server and its resources as well as adapt traffic to the MCP client to comply with the
+	// MCP authorization spec before forwarding traffic to the MCP client.
+	// +optional
+	Server *MCPAuthorizationServer `json:"server,omitempty"`
+
 	// CELAuthorization defines the CEL-based authorization configuration for the MCP server.
 	CEL *MCPServerCELAuthorization `json:"cel,omitempty"`
 }

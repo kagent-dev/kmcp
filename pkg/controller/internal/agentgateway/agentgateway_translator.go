@@ -464,51 +464,53 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	if authz := server.Spec.Authz; authz != nil && authz.CEL != nil && len(authz.CEL.Rules) > 0 {
-		policies.MCPAuthorization = &MCPAuthorization{
-			Rules: authz.CEL.Rules,
-		}
-	}
-
-	if mcpAuthzServer := server.Spec.AuthzServer; mcpAuthzServer != nil {
-		providerMap := make(map[string]interface{})
-		if mcpAuthzServer.Provider != nil {
-			if mcpAuthzServer.Provider.Keycloak != nil {
-				providerMap["keycloak"] = *mcpAuthzServer.Provider.Keycloak
-			}
-			if mcpAuthzServer.Provider.Auth0 != nil {
-				providerMap["auth0"] = *mcpAuthzServer.Provider.Auth0
+	if authz := server.Spec.Authz; authz != nil {
+		if authz.CEL != nil && len(authz.CEL.Rules) > 0 {
+			policies.MCPAuthorization = &MCPAuthorization{
+				Rules: authz.CEL.Rules,
 			}
 		}
 
-		// agentgateway expects a map[string]interface{}
-		resourceMetadata := make(map[string]interface{})
-		// Add the required resource field
-		resourceMetadata["resource"] = mcpAuthzServer.ResourceMetadata.Resource
-
-		// Add scopes if they exist
-		if mcpAuthzServer.ResourceMetadata.ScopesSupported != nil {
-			resourceMetadata["scopesSupported"] = mcpAuthzServer.ResourceMetadata.ScopesSupported
-		}
-
-		// Add bearer methods if they exist
-		if mcpAuthzServer.ResourceMetadata.BearerMethodsSupported != nil {
-			resourceMetadata["bearerMethodsSupported"] = mcpAuthzServer.ResourceMetadata.BearerMethodsSupported
-		}
-
-		// Add any additional fields if they exist
-		if mcpAuthzServer.ResourceMetadata.AdditionalFields != nil {
-			for k, v := range mcpAuthzServer.ResourceMetadata.AdditionalFields {
-				resourceMetadata[k] = v
+		if authz.Server != nil {
+			providerMap := make(map[string]interface{})
+			if authz.Server.Provider != nil {
+				if authz.Server.Provider.Keycloak != nil {
+					providerMap["keycloak"] = *authz.Server.Provider.Keycloak
+				}
+				if authz.Server.Provider.Auth0 != nil {
+					providerMap["auth0"] = *authz.Server.Provider.Auth0
+				}
 			}
-		}
 
-		policies.MCPAuthentication = &MCPAuthentication{
-			Issuer:           mcpAuthzServer.Issuer,
-			Audience:         mcpAuthzServer.Audience,
-			JwksURL:          mcpAuthzServer.JwksURL,
-			Provider:         providerMap,
-			ResourceMetadata: resourceMetadata,
+			// agentgateway expects a map[string]interface{}
+			resourceMetadata := make(map[string]interface{})
+			// Add the required resource field
+			resourceMetadata["resource"] = authz.Server.ResourceMetadata.Resource
+
+			// Add scopes if they exist
+			if authz.Server.ResourceMetadata.ScopesSupported != nil {
+				resourceMetadata["scopesSupported"] = authz.Server.ResourceMetadata.ScopesSupported
+			}
+
+			// Add bearer methods if they exist
+			if authz.Server.ResourceMetadata.BearerMethodsSupported != nil {
+				resourceMetadata["bearerMethodsSupported"] = authz.Server.ResourceMetadata.BearerMethodsSupported
+			}
+
+			// Add any additional fields if they exist
+			if authz.Server.ResourceMetadata.AdditionalFields != nil {
+				for k, v := range authz.Server.ResourceMetadata.AdditionalFields {
+					resourceMetadata[k] = v
+				}
+			}
+
+			policies.MCPAuthentication = &MCPAuthentication{
+				Issuer:           authz.Server.Issuer,
+				Audience:         authz.Server.Audience,
+				JwksURL:          authz.Server.JwksURL,
+				Provider:         providerMap,
+				ResourceMetadata: resourceMetadata,
+			}
 		}
 	}
 
