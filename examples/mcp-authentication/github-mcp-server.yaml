@@ -12,12 +12,6 @@ spec:
       - "-y"
       - "@modelcontextprotocol/server-github"
   transportType: stdio
-  pathMatch:
-    - exact: "/keycloak/mcp"
-    - exact: "/.well-known/oauth-protected-resource/keycloak/mcp"
-    - exact: "/.well-known/oauth-authorization-server/keycloak/mcp"
-    - exact: "/.well-known/oauth-authorization-server/keycloak/mcp/client-registration"
-    - exact: "/realms/mcp/protocol/openid-connect/certs"
   routeFilter:
     cors:
       allowHeaders:
@@ -33,13 +27,10 @@ spec:
       provider:
         keycloak: {}
       resourceMetadata:
-        resource: "http://localhost:3000/keycloak/mcp"
+        baseUrl: "http://localhost:3000"
         scopesSupported:
         - "read:all"
         bearerMethodsSupported:
         - "header"
         - "body"
         - "query"
-        additionalFields:
-          resourceDocumentation: "http://localhost:3000/keycloak/docs"
-          resourcePolicyUri: "http://localhost:3000/keycloak/policies"

@@ -474,18 +474,15 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		if authz.Server != nil {
 			providerMap := make(map[string]interface{})
 			if authz.Server.Provider != nil {
-				if authz.Server.Provider.Keycloak != nil {
-					providerMap["keycloak"] = *authz.Server.Provider.Keycloak
-				}
-				if authz.Server.Provider.Auth0 != nil {
-					providerMap["auth0"] = *authz.Server.Provider.Auth0
-				}
+				// only keycloak is supported for now
+				providerMap["keycloak"] = struct{}{}
 			}
 
 			// agentgateway expects a map[string]interface{}
 			resourceMetadata := make(map[string]interface{})
-			// Add the required resource field
-			resourceMetadata["resource"] = authz.Server.ResourceMetadata.Resource
+			// Add the required resource field using the base url of the protected resource
+			// and the default path prefix for the MCP server
+			resourceMetadata["resource"] = fmt.Sprintf("%s/mcp", authz.Server.ResourceMetadata.BaseUrl)
 
 			// Add scopes if they exist
 			if authz.Server.ResourceMetadata.ScopesSupported != nil {
@@ -535,29 +532,39 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 			},
 		},
 	}
-	// override default path matches if provided
-	if len(server.Spec.PathMatch) > 0 {
-		for _, pm := range server.Spec.PathMatch {
-			if pm.Exact != "" && pm.PathPrefix != "" {
-				return nil, fmt.Errorf("exact and pathPrefix cannot be used together")
-			}
-			if pm.Exact != "" {
-				pathMatches = append(pathMatches, RouteMatch{
-					Path: PathMatch{
-						Exact: pm.Exact,
-					},
-				})
-			}
-			if pm.PathPrefix != "" {
-				pathMatches = append(pathMatches, RouteMatch{
-					Path: PathMatch{
-						PathPrefix: pm.PathPrefix,
-					},
-				})
-			}
+	if authz := server.Spec.Authz; authz != nil && authz.Server != nil && authz.Server.Provider != nil {
+		if authz.Server.Provider.Keycloak.Realm == "" {
+			return nil, fmt.Errorf("keycloak realm must be specified when using keycloak as the authorization server")
 		}
-	}
 
+		// add path for public keys enabled by the realm
+		pathMatches = append(pathMatches, RouteMatch{
+			Path: PathMatch{
+				PathPrefix: fmt.Sprintf("/realms/%s", authz.Server.Provider.Keycloak.Realm),
+			},
+		})
+
+		// add path for endpoint containing metadata about the protected resource
+		pathMatches = append(pathMatches, RouteMatch{
+			Path: PathMatch{
+				Exact: "/.well-known/oauth-protected-resource/mcp",
+			},
+		})
+
+		// add path for the dynamic client registration endpoint
+		pathMatches = append(pathMatches, RouteMatch{
+			Path: PathMatch{
+				Exact: "/.well-known/oauth-authorization-server/mcp/client-registration",
+			},
+		})
+
+		// add path for the authorization server metadata endpoint
+		pathMatches = append(pathMatches, RouteMatch{
+			Path: PathMatch{
+				Exact: "/.well-known/oauth-authorization-server/mcp",
+			},
+		})
+	}
 	return &LocalConfig{
 		Config: struct{}{},
 		Binds: []LocalBind{

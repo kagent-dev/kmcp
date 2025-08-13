@@ -128,16 +128,15 @@ spec:
                       jwksUrl:
                         type: string
                       provider:
-                        description: MCPClientProvider represents the union of supported
-                          identity providers
+                        description: MCPClientProvider represents the support identity
+                          providers currently only keycloak is supported
                         properties:
-                          auth0:
-                            additionalProperties:
-                              type: string
-                            type: object
                           keycloak:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              realm:
+                                type: string
+                            required:
+                            - realm
                             type: object
                         type: object
                       resourceMetadata:
@@ -149,22 +148,22 @@ spec:
                               type: string
                             description: Additional resource metadata fields
                             type: object
+                          baseUrl:
+                            description: 'BaseURL denotes the protected base url of
+                              the protected resource ie: http://localhost:3000'
+                            type: string
                           bearerMethodsSupported:
                             description: Bearer methods supported by this resource
                             items:
                               type: string
                             type: array
-                          resource:
-                            description: 'Resource denotes the protected resource
-                              ie: http://localhost:3000/mcp'
-                            type: string
                           scopesSupported:
                             description: Scopes supported by this resource
                             items:
                               type: string
                             type: array
                         required:
-                        - resource
+                        - baseUrl
                         type: object
                     required:
                     - audience
@@ -263,23 +262,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              pathMatch:
-                description: |-
-                  PathMatch defines custom path matching rules for the MCP server.
-                  If provided, this will override the default path matches `/sse` and `/mcp`.
-                items:
-                  description: PathMatch defines a path matching rule for MCP server
-                    routes
-                  properties:
-                    exact:
-                      description: Exact matches the exact path
-                      type: string
-                    pathPrefix:
-                      description: PathPrefix matches paths that start with the given
-                        prefix
-                      type: string
-                  type: object
-                type: array
               routeFilter:
                 description: |-
                   RouteFilter defines route filtering configuration for the MCP server.

@@ -160,11 +160,6 @@ type MCPServerSpec struct {
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 
-	// PathMatch defines custom path matching rules for the MCP server.
-	// If provided, this will override the default path matches `/sse` and `/mcp`.
-	// +optional
-	PathMatch []PathMatch `json:"pathMatch,omitempty"`
-
 	// RouteFilter defines route filtering configuration for the MCP server.
 	// Currently only supports CORS filtering.
 	// +optional
@@ -280,22 +275,13 @@ type MCPAuthorizationServer struct {
 	ResourceMetadata MCPClientResourceMetadata `json:"resourceMetadata" yaml:"resourceMetadata"`
 }
 
-// MCPClientProvider represents the union of supported identity providers
-// +kubebuilder:validation:Xor
+// MCPClientProvider represents the support identity providers currently only keycloak is supported
 type MCPClientProvider struct {
-	Auth0    *map[string]string `json:"auth0,omitempty" yaml:"auth0,omitempty"`
-	Keycloak *map[string]string `json:"keycloak,omitempty" yaml:"keycloak,omitempty"`
+	Keycloak KeycloakProvider `json:"keycloak,omitempty" yaml:"keycloak,omitempty"`
 }
 
-// PathMatch defines a path matching rule for MCP server routes
-// +kubebuilder:validation:Xor
-type PathMatch struct {
-	// Exact matches the exact path
-	// +optional
-	Exact string `json:"exact,omitempty" yaml:"exact,omitempty"`
-	// PathPrefix matches paths that start with the given prefix
-	// +optional
-	PathPrefix string `json:"pathPrefix,omitempty" yaml:"pathPrefix,omitempty"`
+type KeycloakProvider struct {
+	Realm string `json:"realm" yaml:"realm"`
 }
 
 // CORS defines CORS configuration for the MCP server
@@ -318,8 +304,8 @@ type RouteFilter struct {
 
 // MCPClientResourceMetadata represents resource metadata for MCP client authentication
 type MCPClientResourceMetadata struct {
-	// Resource denotes the protected resource ie: http://localhost:3000/mcp
-	Resource string `json:"resource" yaml:"resource"`
+	// BaseURL denotes the protected base url of the protected resource ie: http://localhost:3000
+	BaseUrl string `json:"baseUrl" yaml:"resource"`
 	// Scopes supported by this resource
 	// +optional
 	ScopesSupported []string `json:"scopesSupported,omitempty" yaml:"scopesSupported,omitempty"`
