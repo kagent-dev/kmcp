@@ -25,7 +25,7 @@ spec:
         - content-type
       allowOrigins:
         - '*'
-  clientAuthn:
+  authzServer:
     issuer: "http://keycloak.default.svc.cluster.local:8080/realms/mcp"
     jwksUrl: "http://keycloak.default.svc.cluster.local:8080/realms/mcp/protocol/openid-connect/certs"
     audience: "mcp_proxy"

@@ -153,16 +153,18 @@ type MCPServerSpec struct {
 	// +optional
 	Authn *MCPServerAuthentication `json:"authn,omitempty"`
 
-	// Authz defines the authorization configuration for the MCP server.
+	// Authz defines the authorization rule configuration for the MCP server.
 	// This field is optional and can be used to configure authorization rules
-	// for the MCP server. If not specified, the MCP server will not enforce
+	// for access to the MCP server and specific tools. If not specified, the MCP server will not enforce
 	// any authorization rules.
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 
-	// ClientAuthn defines the authentication configuration for the MCP client.
+	// AuthzServer defines the authentication configuration for the MCP authorization server.
+	// Setting this field will enable agentgateway to adapt traffic to comply with the
+	// MCP authorization spec before forwarding traffic to the MCP client.
 	// +optional
-	ClientAuthn *MCPClientAuthentication `json:"clientAuthn,omitempty"`
+	AuthzServer *MCPAuthorizationServer `json:"authzServer,omitempty"`
 
 	// PathMatch defines custom path matching rules for the MCP server.
 	// If provided, this will override the default path matches `/sse` and `/mcp`.
@@ -268,8 +270,8 @@ type MCPServerCELAuthorization struct {
 	Rules []string `json:"rules" yaml:"rules"`
 }
 
-// MCPClientAuthentication represents MCP client authentication configuration
-type MCPClientAuthentication struct {
+// MCPAuthorizationServer represents the configuration for the MCP authorization server
+type MCPAuthorizationServer struct {
 	Issuer           string                    `json:"issuer" yaml:"issuer"`
 	Audience         string                    `json:"audience" yaml:"audience"`
 	JwksURL          string                    `json:"jwksUrl" yaml:"jwksUrl"`

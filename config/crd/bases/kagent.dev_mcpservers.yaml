@@ -96,9 +96,9 @@ spec:
                 type: object
               authz:
                 description: |-
-                  Authz defines the authorization configuration for the MCP server.
+                  Authz defines the authorization rule configuration for the MCP server.
                   This field is optional and can be used to configure authorization rules
-                  for the MCP server. If not specified, the MCP server will not enforce
+                  for access to the MCP server and specific tools. If not specified, the MCP server will not enforce
                   any authorization rules.
                 properties:
                   cel:
@@ -115,9 +115,11 @@ spec:
                     - rules
                     type: object
                 type: object
-              clientAuthn:
-                description: ClientAuthn defines the authentication configuration
-                  for the MCP client.
+              authzServer:
+                description: |-
+                  AuthzServer defines the authentication configuration for the MCP authorization server.
+                  Setting this field will enable agentgateway to adapt traffic to comply with the
+                  MCP authorization spec before forwarding traffic to the MCP client.
                 properties:
                   audience:
                     type: string

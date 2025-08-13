@@ -470,43 +470,43 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	if mcpClientAuthn := server.Spec.ClientAuthn; mcpClientAuthn != nil {
+	if mcpAuthzServer := server.Spec.AuthzServer; mcpAuthzServer != nil {
 		providerMap := make(map[string]interface{})
-		if mcpClientAuthn.Provider != nil {
-			if mcpClientAuthn.Provider.Keycloak != nil {
-				providerMap["keycloak"] = *mcpClientAuthn.Provider.Keycloak
+		if mcpAuthzServer.Provider != nil {
+			if mcpAuthzServer.Provider.Keycloak != nil {
+				providerMap["keycloak"] = *mcpAuthzServer.Provider.Keycloak
 			}
-			if mcpClientAuthn.Provider.Auth0 != nil {
-				providerMap["auth0"] = *mcpClientAuthn.Provider.Auth0
+			if mcpAuthzServer.Provider.Auth0 != nil {
+				providerMap["auth0"] = *mcpAuthzServer.Provider.Auth0
 			}
 		}
 
 		// agentgateway expects a map[string]interface{}
 		resourceMetadata := make(map[string]interface{})
 		// Add the required resource field
-		resourceMetadata["resource"] = mcpClientAuthn.ResourceMetadata.Resource
+		resourceMetadata["resource"] = mcpAuthzServer.ResourceMetadata.Resource
 
 		// Add scopes if they exist
-		if mcpClientAuthn.ResourceMetadata.ScopesSupported != nil {
-			resourceMetadata["scopesSupported"] = mcpClientAuthn.ResourceMetadata.ScopesSupported
+		if mcpAuthzServer.ResourceMetadata.ScopesSupported != nil {
+			resourceMetadata["scopesSupported"] = mcpAuthzServer.ResourceMetadata.ScopesSupported
 		}
 
 		// Add bearer methods if they exist
-		if mcpClientAuthn.ResourceMetadata.BearerMethodsSupported != nil {
-			resourceMetadata["bearerMethodsSupported"] = mcpClientAuthn.ResourceMetadata.BearerMethodsSupported
+		if mcpAuthzServer.ResourceMetadata.BearerMethodsSupported != nil {
+			resourceMetadata["bearerMethodsSupported"] = mcpAuthzServer.ResourceMetadata.BearerMethodsSupported
 		}
 
 		// Add any additional fields if they exist
-		if mcpClientAuthn.ResourceMetadata.AdditionalFields != nil {
-			for k, v := range mcpClientAuthn.ResourceMetadata.AdditionalFields {
+		if mcpAuthzServer.ResourceMetadata.AdditionalFields != nil {
+			for k, v := range mcpAuthzServer.ResourceMetadata.AdditionalFields {
 				resourceMetadata[k] = v
 			}
 		}
 
 		policies.MCPAuthentication = &MCPAuthentication{
-			Issuer:           mcpClientAuthn.Issuer,
-			Audience:         mcpClientAuthn.Audience,
-			JwksURL:          mcpClientAuthn.JwksURL,
+			Issuer:           mcpAuthzServer.Issuer,
+			Audience:         mcpAuthzServer.Audience,
+			JwksURL:          mcpAuthzServer.JwksURL,
 			Provider:         providerMap,
 			ResourceMetadata: resourceMetadata,
 		}
