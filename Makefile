@@ -32,7 +32,11 @@ CONTROLLER_IMG ?= $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):$(C
 
 # Image URL to use all building/pushing image targets (backward compatibility)
 IMG ?= $(CONTROLLER_IMG)
+
+## Location to install dependencies to
 DIST_FOLDER ?= dist
+$(DIST_FOLDER):
+	mkdir -p $(DIST_FOLDER)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -181,8 +185,46 @@ build: manifests generate fmt vet ## Build manager binary.
 
 .PHONY: build-cli
 build-cli: fmt vet ## Build kmcp CLI binary.
-	mkdir -p $(DIST_FOLDER)
-	go build -ldflags=$(LDFLAGS) -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
+	CGO_ENABLED=0 go build -ldflags=$(LDFLAGS) -o $(DIST_FOLDER)/kmcp cmd/kmcp/main.go
+
+
+$(DIST_FOLDER)/kmcp-linux-amd64:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DIST_FOLDER)/kmcp-linux-amd64 cmd/kmcp/main.go
+
+$(DIST_FOLDER)/kmcp-linux-amd64.sha256: $(DIST_FOLDER)/kmcp-linux-amd64
+	sha256sum $(DIST_FOLDER)/kmcp-linux-amd64 > $(DIST_FOLDER)/kmcp-linux-amd64.sha256
+
+$(DIST_FOLDER)/kmcp-linux-arm64:
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DIST_FOLDER)/kmcp-linux-arm64 cmd/kmcp/main.go
+
+$(DIST_FOLDER)/kmcp-linux-arm64.sha256: $(DIST_FOLDER)/kmcp-linux-arm64
+	sha256sum $(DIST_FOLDER)/kmcp-linux-arm64 > $(DIST_FOLDER)/kmcp-linux-arm64.sha256
+
+$(DIST_FOLDER)/kmcp-darwin-amd64:
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DIST_FOLDER)/kmcp-darwin-amd64 cmd/kmcp/main.go
+
+$(DIST_FOLDER)/kmcp-darwin-amd64.sha256: $(DIST_FOLDER)/kmcp-darwin-amd64
+	sha256sum $(DIST_FOLDER)/kmcp-darwin-amd64 > $(DIST_FOLDER)/kmcp-darwin-amd64.sha256
+
+$(DIST_FOLDER)/kmcp-darwin-arm64:
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DIST_FOLDER)/kmcp-darwin-arm64 cmd/kmcp/main.go
+
+$(DIST_FOLDER)/kmcp-darwin-arm64.sha256: $(DIST_FOLDER)/kmcp-darwin-arm64
+	sha256sum $(DIST_FOLDER)/kmcp-darwin-arm64 > $(DIST_FOLDER)/kmcp-darwin-arm64.sha256
+
+$(DIST_FOLDER)/kmcp-windows-amd64.exe:
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DIST_FOLDER)/kmcp-windows-amd64.exe cmd/kmcp/main.go
+
+$(DIST_FOLDER)/kmcp-windows-amd64.exe.sha256: $(DIST_FOLDER)/kmcp-windows-amd64.exe
+	sha256sum $(DIST_FOLDER)/kmcp-windows-amd64.exe > $(DIST_FOLDER)/kmcp-windows-amd64.exe.sha256
+
+
+.PHONY: release-cli
+release-cli: $(DIST_FOLDER)/kmcp-linux-amd64.sha256
+release-cli: $(DIST_FOLDER)/kmcp-linux-arm64.sha256
+release-cli: $(DIST_FOLDER)/kmcp-darwin-amd64.sha256
+release-cli: $(DIST_FOLDER)/kmcp-darwin-arm64.sha256
+release-cli: $(DIST_FOLDER)/kmcp-windows-amd64.exe.sha256
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
