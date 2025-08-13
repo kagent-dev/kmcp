@@ -160,8 +160,9 @@ type MCPServerSpec struct {
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 
-	// AuthzServer defines the authentication configuration for the MCP authorization server.
-	// Setting this field will enable agentgateway to adapt traffic to comply with the
+	// AuthzServer defines the configuration for the MCP authorization server that protects the MCP server.
+	// Setting this field will configure agentgateway to use the authorization server
+	// to protect the MCP server and its resources as well as adapt traffic to the MCP client to comply with the
 	// MCP authorization spec before forwarding traffic to the MCP client.
 	// +optional
 	AuthzServer *MCPAuthorizationServer `json:"authzServer,omitempty"`
