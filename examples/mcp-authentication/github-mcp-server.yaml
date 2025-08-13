@@ -11,10 +11,6 @@ spec:
     args:
       - "-y"
       - "@modelcontextprotocol/server-github"
-    secretRefs:
-      - kind: Secret
-        name: github-mcp-secret
-        namespace: default
   transportType: stdio
   pathMatch:
     - exact: "/keycloak/mcp"
@@ -29,10 +25,6 @@ spec:
         - content-type
       allowOrigins:
         - '*'
-  authz:
-    cel:
-      rules:
-        - "mcp.tool.name == \"create_branch\""
   clientAuthn:
     issuer: "http://keycloak.default.svc.cluster.local:8080/realms/mcp"
     jwksUrl: "http://keycloak.default.svc.cluster.local:8080/realms/mcp/protocol/openid-connect/certs"
