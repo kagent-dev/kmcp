@@ -153,7 +153,8 @@ spec:
                           type: string
                         type: array
                       resource:
-                        description: Resource is the required resource identifier
+                        description: 'Resource denotes the protected resource ie:
+                          http://localhost:3000/mcp'
                         type: string
                       scopesSupported:
                         description: Scopes supported by this resource

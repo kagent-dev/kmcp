@@ -471,24 +471,18 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 	}
 
 	if mcpClientAuthn := server.Spec.ClientAuthn; mcpClientAuthn != nil {
-		// Create the provider map to match the API structure
-		var providerMap map[string]interface{}
-
+		providerMap := make(map[string]interface{})
 		if mcpClientAuthn.Provider != nil {
-			providerMap = make(map[string]interface{})
-
 			if mcpClientAuthn.Provider.Keycloak != nil {
 				providerMap["keycloak"] = *mcpClientAuthn.Provider.Keycloak
 			}
-
 			if mcpClientAuthn.Provider.Auth0 != nil {
 				providerMap["auth0"] = *mcpClientAuthn.Provider.Auth0
 			}
 		}
 
-		// Flatten the resource metadata into a single map
+		// agentgateway expects a map[string]interface{}
 		resourceMetadata := make(map[string]interface{})
-
 		// Add the required resource field
 		resourceMetadata["resource"] = mcpClientAuthn.ResourceMetadata.Resource
 
@@ -526,10 +520,21 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	// Determine path matches - use custom if provided, otherwise use defaults
-	var pathMatches []RouteMatch
+	// default path matches
+	pathMatches := []RouteMatch{
+		{
+			Path: PathMatch{
+				PathPrefix: "/sse",
+			},
+		},
+		{
+			Path: PathMatch{
+				PathPrefix: "/mcp",
+			},
+		},
+	}
+	// override default path matches if provided
 	if len(server.Spec.PathMatch) > 0 {
-		// Use custom path matching from deployment spec
 		for _, pm := range server.Spec.PathMatch {
 			if pm.Exact != "" && pm.PathPrefix != "" {
 				return nil, fmt.Errorf("exact and pathPrefix cannot be used together")
@@ -548,20 +553,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 					},
 				})
 			}
-		}
-	} else {
-		// Use default path matching
-		pathMatches = []RouteMatch{
-			{
-				Path: PathMatch{
-					PathPrefix: "/sse",
-				},
-			},
-			{
-				Path: PathMatch{
-					PathPrefix: "/mcp",
-				},
-			},
 		}
 	}
 

@@ -315,7 +315,7 @@ type RouteFilter struct {
 
 // MCPClientResourceMetadata represents resource metadata for MCP client authentication
 type MCPClientResourceMetadata struct {
-	// Resource is the required resource identifier
+	// Resource denotes the protected resource ie: http://localhost:3000/mcp
 	Resource string `json:"resource" yaml:"resource"`
 	// Scopes supported by this resource
 	// +optional
