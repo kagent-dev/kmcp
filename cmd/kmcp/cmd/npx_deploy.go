@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -23,16 +22,16 @@ an MCP server using npx. It's particularly useful for running MCP servers
 that are available as npm packages.
 
 The server name is required and will be used as the name of the MCPServer resource.
+The --args flag is required and specifies the npm packages to run with npx.
 
 Examples:
-  kmcp npx-deploy my-server                                 # Deploy with default settings
-  kmcp npx-deploy my-server --dry-run                       # Print YAML without deploying
-  kmcp npx-deploy my-server --namespace prod                # Deploy to prod namespace
-  kmcp npx-deploy my-server --image custom:tag              # Use custom image
-  kmcp npx-deploy my-server --args package1,package2        # Custom npx arguments
-  kmcp npx-deploy my-server --port 8080                     # Use custom port
-  kmcp npx-deploy my-server --env "KEY1=value1,KEY2=value2" # Set environment variables
-  kmcp npx-deploy my-server --secrets secret1,secret2       # Mount Kubernetes secrets`,
+  kmcp npx-deploy my-server --args @modelcontextprotocol/server-github       # Deploy GitHub MCP server
+  kmcp npx-deploy my-server --args package1 --dry-run                        # Print YAML without deploying
+  kmcp npx-deploy my-server --args package1 --namespace prod                 # Deploy to prod namespace
+  kmcp npx-deploy my-server --args package1 --image custom:tag               # Use custom image
+  kmcp npx-deploy my-server --args package1 --port 8080                      # Use custom port
+  kmcp npx-deploy my-server --args package1 --env "KEY1=value1,KEY2=value2"  # Set environment variables
+  kmcp npx-deploy my-server --args package1 --secrets secret1,secret2        # Mount Kubernetes secrets`,
 	Args: cobra.ExactArgs(1),
 	RunE: runNpxDeploy,
 }
@@ -63,12 +62,15 @@ func init() {
 	npxDeployCmd.Flags().BoolVar(&npxDeployDryRun, "dry-run", false, "Print out the MCPServer yaml without deploying")
 	npxDeployCmd.Flags().StringVar(&npxDeployImage, "image", "node:24-alpine3.21", "Docker image to use")
 	npxDeployCmd.Flags().StringSliceVar(&npxDeployArgs, "args",
-		[]string{"@modelcontextprotocol/server-github"}, "Arguments to pass to npx")
+		[]string{}, "Arguments to pass to npx (e.g., package names)")
 	npxDeployCmd.Flags().IntVar(&npxDeployPort, "port", 3000, "MCP server container port")
 	npxDeployCmd.Flags().StringVar(&npxDeployEnv, "env", "",
 		"Comma-separated environment variables (KEY1=value1,KEY2=value2)")
 	npxDeployCmd.Flags().StringSliceVar(&npxDeploySecrets, "secrets", []string{},
 		"List of Kubernetes secret names to mount to the MCP server container")
+
+	// required flags
+	_ = npxDeployCmd.MarkFlagRequired("args")
 }
 
 func runNpxDeploy(_ *cobra.Command, args []string) error {
@@ -85,6 +87,18 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 			Name:      secretName,
 			Namespace: npxDeployNamespace,
 		})
+	}
+
+	// Create ServiceAccount
+	serviceAccount := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serverName,
+			Namespace: npxDeployNamespace,
+		},
 	}
 
 	// Create MCPServer
@@ -110,20 +124,48 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 		},
 	}
 
-	// Convert to YAML
-	yamlData, err := yaml.Marshal(mcpServer)
+	// Convert both resources to YAML
+	serviceAccountYAML, err := yaml.Marshal(serviceAccount)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ServiceAccount to YAML: %w", err)
+	}
+
+	mcpServerYAML, err := yaml.Marshal(mcpServer)
 	if err != nil {
 		return fmt.Errorf("failed to marshal MCPServer to YAML: %w", err)
 	}
 
 	if npxDeployDryRun {
 		// Print YAML to stdout
-		fmt.Println(string(yamlData))
+		fmt.Println("---")
+		fmt.Println(string(serviceAccountYAML))
+		fmt.Println("---")
+		fmt.Println(string(mcpServerYAML))
 		return nil
 	}
 
-	// Apply to cluster
-	return applyMCPServerToCluster(yamlData, mcpServer)
+	// Apply both resources to cluster
+	if err := applyResourcesToCluster(serviceAccountYAML, mcpServerYAML); err != nil {
+		return err
+	}
+
+	// Wait for the deployment to be ready
+	fmt.Printf("⌛ Waiting for deployment '%s' to be ready...\n", mcpServer.Name)
+	if err := waitForDeployment(mcpServer.Name, mcpServer.Namespace, 2*time.Minute); err != nil {
+		return fmt.Errorf("deployment not ready: %w", err)
+	}
+
+	fmt.Printf("✅ Deployment '%s' is ready.\n", mcpServer.Name)
+	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", mcpServer.Name, mcpServer.Namespace)
+	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", mcpServer.Name, mcpServer.Namespace)
+	if mcpServer.Spec.Deployment.Port != 0 {
+		fmt.Printf("💡 Port-forward to the service with: "+
+			"kubectl port-forward service/%s %d:%d -n %s\n",
+			mcpServer.Name, mcpServer.Spec.Deployment.Port,
+			mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
+	}
+
+	return nil
 }
 
 func parseCommaSeparatedEnvVars(input string) map[string]string {
@@ -150,60 +192,4 @@ func parseCommaSeparatedEnvVars(input string) map[string]string {
 	}
 
 	return result
-}
-
-func applyMCPServerToCluster(yamlData []byte, mcpServer *v1alpha1.MCPServer) error {
-	fmt.Printf("🚀 Applying MCPServer to cluster...\n")
-
-	// Check if kubectl is available
-	if err := checkKubectlAvailable(); err != nil {
-		return fmt.Errorf("kubectl is required for cluster deployment: %w", err)
-	}
-
-	// Create temporary file for kubectl apply
-	tmpFile, err := os.CreateTemp("", "mcpserver-*.yaml")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-
-	// Write YAML content to temp file
-	if _, err := tmpFile.Write(yamlData); err != nil {
-		return fmt.Errorf("failed to write to temp file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %w", err)
-	}
-
-	// Apply using kubectl
-	err = runKubectl("apply", "-f", tmpFile.Name())
-	if err := os.Remove(tmpFile.Name()); err != nil {
-		fmt.Printf("failed to remove temp file: %v\n", err)
-	}
-	if err != nil {
-		// Check for CRD not found error
-		if strings.Contains(err.Error(), "no matches for kind") {
-			return fmt.Errorf("MCPServer CRD not found. Please run 'kmcp install' first")
-		}
-		return fmt.Errorf("kubectl apply failed: %w", err)
-	}
-
-	fmt.Printf("✅ MCPServer '%s' applied successfully\n", mcpServer.Name)
-
-	// Wait for the deployment to be ready
-	fmt.Printf("⌛ Waiting for deployment '%s' to be ready...\n", mcpServer.Name)
-	if err := waitForDeployment(mcpServer.Name, mcpServer.Namespace, 2*time.Minute); err != nil {
-		return fmt.Errorf("deployment not ready: %w", err)
-	}
-
-	fmt.Printf("✅ Deployment '%s' is ready.\n", mcpServer.Name)
-	fmt.Printf("💡 Check status with: kubectl get mcpserver %s -n %s\n", mcpServer.Name, mcpServer.Namespace)
-	fmt.Printf("💡 View logs with: kubectl logs -l app.kubernetes.io/name=%s -n %s\n", mcpServer.Name, mcpServer.Namespace)
-	if mcpServer.Spec.Deployment.Port != 0 {
-		fmt.Printf("💡 Port-forward to the service with: "+
-			"kubectl port-forward service/%s %d:%d -n %s\n",
-			mcpServer.Name, mcpServer.Spec.Deployment.Port,
-			mcpServer.Spec.Deployment.Port, mcpServer.Namespace)
-	}
-
-	return nil
 }

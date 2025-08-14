@@ -2,11 +2,16 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -85,4 +90,108 @@ func getCurrentKindClusterName() (string, error) {
 	}
 
 	return "", fmt.Errorf("current cluster %q is not a kind cluster", currentContext.Cluster)
+}
+
+// applyResourcesToCluster applies multiple YAML resources to the Kubernetes cluster
+func applyResourcesToCluster(yamls ...[]byte) error {
+	fmt.Printf("🚀 Applying resources to cluster...\n")
+
+	// Check if kubectl is available
+	if err := checkKubectlAvailable(); err != nil {
+		return fmt.Errorf("kubectl is required for cluster deployment: %w", err)
+	}
+
+	// Create temporary file for kubectl apply
+	tmpFile, err := os.CreateTemp("", "resources-*.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Combine all YAML resources with separators
+	var combinedYAML []byte
+	for i, yaml := range yamls {
+		if i > 0 {
+			combinedYAML = append(combinedYAML, []byte("\n---\n")...)
+		}
+		combinedYAML = append(combinedYAML, yaml...)
+	}
+
+	if _, err := tmpFile.Write(combinedYAML); err != nil {
+		return fmt.Errorf("failed to write to temp file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to write to temp file: %w", err)
+	}
+
+	// Apply using kubectl
+	err = runKubectl("apply", "-f", tmpFile.Name())
+	if err != nil {
+		// Check for CRD not found error
+		if strings.Contains(err.Error(), "no matches for kind") {
+			return fmt.Errorf("MCPServer CRD not found. Please run 'kmcp install' first")
+		}
+		return fmt.Errorf("kubectl apply failed: %w", err)
+	}
+
+	fmt.Printf("✅ Resources applied successfully\n")
+	return nil
+}
+
+// checkKubectlAvailable checks if kubectl is available in the system
+func checkKubectlAvailable() error {
+	cmd := exec.Command("kubectl", "version", "--client")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("kubectl not found or not working: %w", err)
+	}
+	return nil
+}
+
+// runKubectl runs a kubectl command with the given arguments
+func runKubectl(args ...string) error {
+	if verbose {
+		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	var stderr bytes.Buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("`kubectl %s` failed: %w\n%s", strings.Join(args, " "), err, stderr.String())
+	}
+
+	return nil
+}
+
+// waitForDeployment waits for a Kubernetes deployment to be ready
+func waitForDeployment(name, namespace string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	args := []string{
+		"rollout", "status", "deployment", name,
+		"-n", namespace,
+		"--timeout", timeout.String(),
+	}
+
+	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	if verbose {
+		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
+	}
+	var stderr bytes.Buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	// sleep 1 second just to allow controller to create the deployment
+	time.Sleep(1 * time.Second)
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("timed out waiting for deployment to be ready")
+		}
+		return fmt.Errorf("`kubectl rollout status` failed: %w\n%s", err, stderr.String())
+	}
+	return nil
 }

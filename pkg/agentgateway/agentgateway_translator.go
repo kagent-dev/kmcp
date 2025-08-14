@@ -80,6 +80,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           agentGatewayContainerImage,
@@ -145,6 +146,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 			cmd = []string{server.Spec.Deployment.Cmd}
 		}
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			Containers: []corev1.Container{
 				{
 					Name:            "agent-gateway",
