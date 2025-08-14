@@ -28,6 +28,8 @@ type Outputs struct {
 	Service *corev1.Service
 	// AgentGateway Configmap
 	ConfigMap *corev1.ConfigMap
+	// AgentGateway ServiceAccount
+	ServiceAccount *corev1.ServiceAccount
 }
 
 // Translator is the interface for translating MCPServer objects to AgentGateway objects.
@@ -66,10 +68,15 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
 	}
+	serviceAccount, err := t.translateAgentGatewayServiceAccount(server)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
+	}
 	return &Outputs{
-		Deployment: deployment,
-		Service:    service,
-		ConfigMap:  configMap,
+		Deployment:     deployment,
+		Service:        service,
+		ConfigMap:      configMap,
+		ServiceAccount: serviceAccount,
 	}, nil
 }
 
@@ -89,6 +96,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           agentGatewayContainerImage,
@@ -115,6 +123,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					"-f",
 					"/config/local.yaml",
 				},
+				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
 				VolumeMounts: func() []corev1.VolumeMount {
 					mounts := []corev1.VolumeMount{
@@ -275,9 +284,25 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
 }
 
+func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
+	server *v1alpha1.MCPServer,
+) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      server.Name,
+			Namespace: server.Namespace,
+		},
+	}
+	return serviceAccount, controllerutil.SetOwnerReference(server, serviceAccount, t.scheme)
+}
+
 // createSecretEnvFrom creates envFrom references from secret references
 func (t *agentGatewayTranslator) createSecretEnvFrom(
-	secretRefs []corev1.ObjectReference,
+	secretRefs []corev1.LocalObjectReference,
 ) []corev1.EnvFromSource {
 	envFrom := make([]corev1.EnvFromSource, 0, len(secretRefs))
 

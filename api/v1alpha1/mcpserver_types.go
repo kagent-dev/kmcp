@@ -220,7 +220,7 @@ type MCPServerDeployment struct {
 	// SecretRefs defines the list of Kubernetes secrets to reference.
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
-	SecretRefs []corev1.ObjectReference `json:"secretRefs,omitempty"`
+	SecretRefs []corev1.LocalObjectReference `json:"secretRefs,omitempty"`
 }
 
 // MCPServerAuthentication defines the authentication configuration for the MCP server.
