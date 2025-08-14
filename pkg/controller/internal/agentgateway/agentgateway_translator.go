@@ -73,8 +73,14 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	server *v1alpha1.MCPServer,
 ) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
+	if image == "" && server.Spec.Deployment.Cmd == "uvx" {
+		image = "ghcr.io/astral-sh/uv:debian"
+	}
+	if image == "" && server.Spec.Deployment.Cmd == "npx" {
+		image = "node:24-alpine3.21"
+	}
 	if image == "" {
-		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
+		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
 	}
 
 	// Create environment variables from secrets for envFrom
