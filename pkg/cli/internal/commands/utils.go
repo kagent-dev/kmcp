@@ -109,7 +109,11 @@ func applyResourcesToCluster(yamls ...[]byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			fmt.Printf("failed to remove temp file: %v\n", err)
+		}
+	}()
 
 	// Combine all YAML resources with separators
 	var combinedYAML []byte
