@@ -80,25 +80,11 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 	envMap := parseCommaSeparatedEnvVars(npxDeployEnv)
 
 	// Convert secret names to ObjectReferences
-	secretRefs := make([]corev1.ObjectReference, 0, len(npxDeploySecrets))
+	secretRefs := make([]corev1.LocalObjectReference, 0, len(npxDeploySecrets))
 	for _, secretName := range npxDeploySecrets {
-		secretRefs = append(secretRefs, corev1.ObjectReference{
-			Kind:      "Secret",
-			Name:      secretName,
-			Namespace: npxDeployNamespace,
+		secretRefs = append(secretRefs, corev1.LocalObjectReference{
+			Name: secretName,
 		})
-	}
-
-	// Create ServiceAccount
-	serviceAccount := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serverName,
-			Namespace: npxDeployNamespace,
-		},
 	}
 
 	// Create MCPServer
@@ -124,12 +110,7 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 		},
 	}
 
-	// Convert both resources to YAML
-	serviceAccountYAML, err := yaml.Marshal(serviceAccount)
-	if err != nil {
-		return fmt.Errorf("failed to marshal ServiceAccount to YAML: %w", err)
-	}
-
+	// Convert MCPServer to YAML
 	mcpServerYAML, err := yaml.Marshal(mcpServer)
 	if err != nil {
 		return fmt.Errorf("failed to marshal MCPServer to YAML: %w", err)
@@ -137,15 +118,12 @@ func runNpxDeploy(_ *cobra.Command, args []string) error {
 
 	if npxDeployDryRun {
 		// Print YAML to stdout
-		fmt.Println("---")
-		fmt.Println(string(serviceAccountYAML))
-		fmt.Println("---")
 		fmt.Println(string(mcpServerYAML))
 		return nil
 	}
 
-	// Apply both resources to cluster
-	if err := applyResourcesToCluster(serviceAccountYAML, mcpServerYAML); err != nil {
+	// Apply MCPServer to cluster
+	if err := applyResourcesToCluster(mcpServerYAML); err != nil {
 		return err
 	}
 
