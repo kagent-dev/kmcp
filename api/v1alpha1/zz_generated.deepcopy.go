@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -218,7 +218,7 @@ func (in *MCPServerDeployment) DeepCopyInto(out *MCPServerDeployment) {
 	}
 	if in.SecretRefs != nil {
 		in, out := &in.SecretRefs, &out.SecretRefs
-		*out = make([]corev1.ObjectReference, len(*in))
+		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
 }

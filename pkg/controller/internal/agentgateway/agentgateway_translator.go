@@ -21,18 +21,9 @@ const (
 	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
 )
 
-type Outputs struct {
-	// AgentGateway Deployment
-	Deployment *appsv1.Deployment
-	// AgentGateway Service
-	Service *corev1.Service
-	// AgentGateway Configmap
-	ConfigMap *corev1.ConfigMap
-}
-
 // Translator is the interface for translating MCPServer objects to AgentGateway objects.
 type Translator interface {
-	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) (*Outputs, error)
+	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
 // agentGatewayTranslator is the implementation of the Translator interface.
@@ -53,7 +44,7 @@ func NewAgentGatewayTranslator(scheme *runtime.Scheme, client client.Client) Tra
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	ctx context.Context,
 	server *v1alpha1.MCPServer,
-) (*Outputs, error) {
+) ([]client.Object, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
@@ -66,10 +57,15 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
 	}
-	return &Outputs{
-		Deployment: deployment,
-		Service:    service,
-		ConfigMap:  configMap,
+	serviceAccount, err := t.translateAgentGatewayServiceAccount(server)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
+	}
+	return []client.Object{
+		deployment,
+		service,
+		configMap,
+		serviceAccount,
 	}, nil
 }
 
@@ -89,6 +85,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           agentGatewayContainerImage,
@@ -115,6 +112,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					"-f",
 					"/config/local.yaml",
 				},
+				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
 				VolumeMounts: func() []corev1.VolumeMount {
 					mounts := []corev1.VolumeMount{
@@ -275,9 +273,25 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
 }
 
+func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
+	server *v1alpha1.MCPServer,
+) (*corev1.ServiceAccount, error) {
+	serviceAccount := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      server.Name,
+			Namespace: server.Namespace,
+		},
+	}
+	return serviceAccount, controllerutil.SetOwnerReference(server, serviceAccount, t.scheme)
+}
+
 // createSecretEnvFrom creates envFrom references from secret references
 func (t *agentGatewayTranslator) createSecretEnvFrom(
-	secretRefs []corev1.ObjectReference,
+	secretRefs []corev1.LocalObjectReference,
 ) []corev1.EnvFromSource {
 	envFrom := make([]corev1.EnvFromSource, 0, len(secretRefs))
 

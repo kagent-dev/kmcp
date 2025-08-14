@@ -131,20 +131,10 @@ func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs *agentgateway.Outputs) error {
+func (r *MCPServerReconciler) reconcileOutputs(ctx context.Context, outputs []client.Object) error {
 	// upsert the outputs to the cluster
-	if outputs.Deployment != nil {
-		if err := upsertOutput(ctx, r.Client, outputs.Deployment); err != nil {
-			return err
-		}
-	}
-	if outputs.Service != nil {
-		if err := upsertOutput(ctx, r.Client, outputs.Service); err != nil {
-			return err
-		}
-	}
-	if outputs.ConfigMap != nil {
-		if err := upsertOutput(ctx, r.Client, outputs.ConfigMap); err != nil {
+	for _, output := range outputs {
+		if err := upsertOutput(ctx, r.Client, output); err != nil {
 			return err
 		}
 	}

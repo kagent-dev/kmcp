@@ -13,7 +13,6 @@ import (
 
 	"github.com/kagent-dev/kmcp/api/v1alpha1"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
-	"github.com/kagent-dev/kmcp/pkg/cli/internal/wellknown"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -267,7 +266,7 @@ func generateMCPServer(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret reference: %w", err)
 	}
-	var secretRefs []corev1.ObjectReference
+	var secretRefs []corev1.LocalObjectReference
 	if secretRef != nil {
 		secretRefs = append(secretRefs, *secretRef)
 	}
@@ -327,7 +326,7 @@ func generateMCPServer(
 func getSecretRefFromManifest(
 	projectManifest *manifest.ProjectManifest,
 	environment string,
-) (*corev1.ObjectReference, error) {
+) (*corev1.LocalObjectReference, error) {
 	if environment == "" {
 		return nil, nil // No environment specified
 	}
@@ -342,15 +341,9 @@ func getSecretRefFromManifest(
 		if secretName == "" {
 			return nil, fmt.Errorf("secretName not found in secret provider config for environment %s", environment)
 		}
-		namespace := secretProvider.Namespace
-		if namespace == "" {
-			return nil, fmt.Errorf("namespace not found in secret provider config for environment %s", environment)
-		}
 
-		return &corev1.ObjectReference{
-			Kind:      wellknown.SecretKind,
-			Name:      secretName,
-			Namespace: namespace,
+		return &corev1.LocalObjectReference{
+			Name: secretName,
 		}, nil
 	}
 
