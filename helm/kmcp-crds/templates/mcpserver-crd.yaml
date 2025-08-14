@@ -216,6 +216,7 @@ spec:
                 required:
                 - args
                 - cmd
+                - port
                 type: object
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
