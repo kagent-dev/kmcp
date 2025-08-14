@@ -34,7 +34,7 @@ type Outputs struct {
 
 // Translator is the interface for translating MCPServer objects to AgentGateway objects.
 type Translator interface {
-	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) (*Outputs, error)
+	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
 // agentGatewayTranslator is the implementation of the Translator interface.
@@ -55,7 +55,7 @@ func NewAgentGatewayTranslator(scheme *runtime.Scheme, client client.Client) Tra
 func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	ctx context.Context,
 	server *v1alpha1.MCPServer,
-) (*Outputs, error) {
+) ([]client.Object, error) {
 	deployment, err := t.translateAgentGatewayDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
@@ -72,11 +72,11 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
 	}
-	return &Outputs{
-		Deployment:     deployment,
-		Service:        service,
-		ConfigMap:      configMap,
-		ServiceAccount: serviceAccount,
+	return []client.Object{
+		deployment,
+		service,
+		configMap,
+		serviceAccount,
 	}, nil
 }
 
