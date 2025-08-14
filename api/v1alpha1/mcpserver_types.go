@@ -251,14 +251,9 @@ type MCPServerAuthorization struct {
 	// +optional
 	Server *MCPAuthorizationServer `json:"server,omitempty"`
 
-	// CELAuthorization defines the CEL-based authorization configuration for the MCP server.
-	CEL *MCPServerCELAuthorization `json:"cel,omitempty"`
-}
-
-// MCPServerCELAuthorization defines the authorization configuration for the MCP server using CEL rules.
-type MCPServerCELAuthorization struct {
-	// Rules are a list of CEL rules for authorizing client mcp requests.
-	Rules []string `json:"rules" yaml:"rules"`
+	// Rules defines the CEL-based authorization rules that control access to the MCP server resources.
+	// +optional
+	Rules *[]string `json:"rules,omitempty"`
 }
 
 // MCPAuthorizationServer represents the configuration for the MCP authorization server
@@ -277,16 +272,6 @@ type MCPClientProvider struct {
 
 type KeycloakProvider struct {
 	Realm string `json:"realm" yaml:"realm"`
-}
-
-// CORS defines CORS configuration for the MCP server
-type CORS struct {
-	// AllowHeaders is a list of HTTP headers that can be used when making the actual request
-	// +optional
-	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
-	// AllowOrigins is a list of origins that are allowed to make requests
-	// +optional
-	AllowOrigins []string `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
 }
 
 // MCPClientResourceMetadata represents resource metadata for MCP client authentication

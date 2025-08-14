@@ -101,19 +101,12 @@ spec:
                   for access to the MCP server and specific tools. If not specified, the MCP server will not enforce
                   any authorization rules.
                 properties:
-                  cel:
-                    description: CELAuthorization defines the CEL-based authorization
-                      configuration for the MCP server.
-                    properties:
-                      rules:
-                        description: Rules are a list of CEL rules for authorizing
-                          client mcp requests.
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - rules
-                    type: object
+                  rules:
+                    description: Rules defines the CEL-based authorization rules that
+                      control access to the MCP server resources.
+                    items:
+                      type: string
+                    type: array
                   server:
                     description: |-
                       Server defines the configuration for the MCP authorization server that protects the MCP server.

@@ -422,15 +422,13 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 						},
 					},
 					Authz: &v1alpha1.MCPServerAuthorization{
-						CEL: &v1alpha1.MCPServerCELAuthorization{
-							Rules: []string{
-								// Allow anyone to call 'read_file'
-								"mcp.tool.name == 'read_file'",
-								// Only the test-user can call 'write_file'
-								"jwt.sub == 'test-user' && mcp.tool.name == 'write_file'",
-								// Any authenticated user with the claim `nested.key == value` can access 'list_directory'
-								"mcp.tool.name == \"list_directory\" && jwt.nested.key == \"value\"",
-							},
+						Rules: &[]string{
+							// Allow anyone to call 'read_file'
+							"mcp.tool.name == 'read_file'",
+							// Only the test-user can call 'write_file'
+							"jwt.sub == 'test-user' && mcp.tool.name == 'write_file'",
+							// Any authenticated user with the claim `nested.key == value` can access 'list_directory'
+							"mcp.tool.name == \"list_directory\" && jwt.nested.key == \"value\"",
 						},
 					},
 				},

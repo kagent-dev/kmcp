@@ -465,9 +465,9 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 	}
 
 	if authz := server.Spec.Authz; authz != nil {
-		if authz.CEL != nil && len(authz.CEL.Rules) > 0 {
+		if authz.Rules != nil {
 			policies.MCPAuthorization = &MCPAuthorization{
-				Rules: authz.CEL.Rules,
+				Rules: *authz.Rules,
 			}
 		}
 
