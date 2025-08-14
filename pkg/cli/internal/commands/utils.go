@@ -152,7 +152,7 @@ func checkKubectlAvailable() error {
 
 // runKubectl runs a kubectl command with the given arguments
 func runKubectl(args ...string) error {
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
 	}
 
@@ -180,7 +180,7 @@ func waitForDeployment(name, namespace string, timeout time.Duration) error {
 	}
 
 	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	if verbose {
+	if Verbose {
 		fmt.Printf("Running: kubectl %s\n", strings.Join(args, " "))
 	}
 	var stderr bytes.Buffer
