@@ -21,17 +21,6 @@ const (
 	agentGatewayContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
 )
 
-type Outputs struct {
-	// AgentGateway Deployment
-	Deployment *appsv1.Deployment
-	// AgentGateway Service
-	Service *corev1.Service
-	// AgentGateway Configmap
-	ConfigMap *corev1.ConfigMap
-	// AgentGateway ServiceAccount
-	ServiceAccount *corev1.ServiceAccount
-}
-
 // Translator is the interface for translating MCPServer objects to AgentGateway objects.
 type Translator interface {
 	TranslateAgentGatewayOutputs(ctx context.Context, server *v1alpha1.MCPServer) ([]client.Object, error)
