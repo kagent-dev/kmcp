@@ -213,6 +213,10 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     type: array
+                required:
+                - args
+                - cmd
+                - port
                 type: object
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
