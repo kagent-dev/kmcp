@@ -159,11 +159,6 @@ type MCPServerSpec struct {
 	// any authorization rules.
 	// +optional
 	Authz *MCPServerAuthorization `json:"authz,omitempty"`
-
-	// RouteFilter defines route filtering configuration for the MCP server.
-	// Currently only supports CORS filtering.
-	// +optional
-	RouteFilter *RouteFilter `json:"routeFilter,omitempty" yaml:"routeFilter,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -292,14 +287,6 @@ type CORS struct {
 	// AllowOrigins is a list of origins that are allowed to make requests
 	// +optional
 	AllowOrigins []string `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
-}
-
-// RouteFilter defines route filtering configuration for the MCP server
-// Only CORS filtering is currently supported
-type RouteFilter struct {
-	// CORS defines CORS configuration for the route
-	// +optional
-	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 }
 
 // MCPClientResourceMetadata represents resource metadata for MCP client authentication

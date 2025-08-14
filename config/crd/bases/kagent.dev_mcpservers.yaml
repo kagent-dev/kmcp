@@ -262,28 +262,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              routeFilter:
-                description: |-
-                  RouteFilter defines route filtering configuration for the MCP server.
-                  Currently only supports CORS filtering.
-                properties:
-                  cors:
-                    description: CORS defines CORS configuration for the route
-                    properties:
-                      allowHeaders:
-                        description: AllowHeaders is a list of HTTP headers that can
-                          be used when making the actual request
-                        items:
-                          type: string
-                        type: array
-                      allowOrigins:
-                        description: AllowOrigins is a list of origins that are allowed
-                          to make requests
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                type: object
               stdioTransport:
                 description: StdioTransport defines the configuration for a standard
                   input/output transport.

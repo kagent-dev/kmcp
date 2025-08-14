@@ -511,12 +511,10 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(
 		}
 	}
 
-	// Add CORS policy if routeFilter is configured
-	if routeFilter := server.Spec.RouteFilter; routeFilter != nil && routeFilter.CORS != nil {
-		policies.CORS = &CORS{
-			AllowHeaders: routeFilter.CORS.AllowHeaders,
-			AllowOrigins: routeFilter.CORS.AllowOrigins,
-		}
+	// Add default CORS policy
+	policies.CORS = &CORS{
+		AllowHeaders: []string{"mcp-protocol-version", "content-type"},
+		AllowOrigins: []string{"*"},
 	}
 
 	// default path matches

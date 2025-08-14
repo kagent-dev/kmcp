@@ -12,13 +12,6 @@ spec:
       - "-y"
       - "@modelcontextprotocol/server-github"
   transportType: stdio
-  routeFilter:
-    cors:
-      allowHeaders:
-        - mcp-protocol-version
-        - content-type
-      allowOrigins:
-        - '*'
   authz:
     server:
       issuer: "http://keycloak.default.svc.cluster.local:8080/realms/mcp"
