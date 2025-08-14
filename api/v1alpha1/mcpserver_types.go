@@ -146,6 +146,19 @@ type MCPServerSpec struct {
 
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
+
+	// Authn defines the authentication configuration for the MCP server.
+	// This field is optional and can be used to configure JWT authentication.
+	// If not specified, the MCP server will not require authentication.
+	// +optional
+	Authn *MCPServerAuthentication `json:"authn,omitempty"`
+
+	// Authz defines the authorization rule configuration for the MCP server.
+	// This field is optional and can be used to configure authorization rules
+	// for access to the MCP server and specific tools. If not specified, the MCP server will not enforce
+	// any authorization rules.
+	// +optional
+	Authz *MCPServerAuthorization `json:"authz,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -208,6 +221,72 @@ type MCPServerDeployment struct {
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
 	SecretRefs []corev1.ObjectReference `json:"secretRefs,omitempty"`
+}
+
+// MCPServerAuthentication defines the authentication configuration for the MCP server.
+type MCPServerAuthentication struct {
+	// JWT defines the JWT authentication configuration.
+	JWT *MCPServerJWTAuthentication `json:"jwt,omitempty"`
+}
+
+// MCPServerJWTAuthentication defines the JWT authentication configuration for the MCP server.
+type MCPServerJWTAuthentication struct {
+	// Issuer is the JWT issuer URL.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of audiences that the JWT must match.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// JWKS references a secret containing the JSON Web Key Set.
+	// The secret must contain a key with the JWKS content.
+	JWKS *corev1.SecretKeySelector `json:"jwks,omitempty"`
+}
+
+// MCPServerAuthorization defines the authorization configuration for the MCP server.
+type MCPServerAuthorization struct {
+	// Server defines the configuration for the MCP authorization server that protects the MCP server.
+	// Setting this field will configure agentgateway to use the authorization server
+	// to protect the MCP server and its resources as well as adapt traffic to the MCP client to comply with the
+	// MCP authorization spec before forwarding traffic to the MCP client.
+	// +optional
+	Server *MCPAuthorizationServer `json:"server,omitempty"`
+
+	// Rules defines the CEL-based authorization rules that control access to the MCP server resources.
+	// +optional
+	Rules *[]string `json:"rules,omitempty"`
+}
+
+// MCPAuthorizationServer represents the configuration for the MCP authorization server
+type MCPAuthorizationServer struct {
+	Issuer           string                    `json:"issuer" yaml:"issuer"`
+	Audience         string                    `json:"audience" yaml:"audience"`
+	JwksURL          string                    `json:"jwksUrl" yaml:"jwksUrl"`
+	Provider         *MCPClientProvider        `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ResourceMetadata MCPClientResourceMetadata `json:"resourceMetadata" yaml:"resourceMetadata"`
+}
+
+// MCPClientProvider represents the support identity providers currently only keycloak is supported
+type MCPClientProvider struct {
+	Keycloak KeycloakProvider `json:"keycloak,omitempty" yaml:"keycloak,omitempty"`
+}
+
+type KeycloakProvider struct {
+	Realm string `json:"realm" yaml:"realm"`
+}
+
+// MCPClientResourceMetadata represents resource metadata for MCP client authentication
+type MCPClientResourceMetadata struct {
+	// BaseURL denotes the protected base url of the protected resource ie: http://localhost:3000
+	BaseUrl string `json:"baseUrl" yaml:"resource"`
+	// Scopes supported by this resource
+	// +optional
+	ScopesSupported []string `json:"scopesSupported,omitempty" yaml:"scopesSupported,omitempty"`
+	// Bearer methods supported by this resource
+	// +optional
+	BearerMethodsSupported []string `json:"bearerMethodsSupported,omitempty" yaml:"bearerMethodsSupported,omitempty"`
+	// Additional resource metadata fields
+	// +optional
+	AdditionalFields map[string]string `json:"additionalFields,omitempty" yaml:"additionalFields,omitempty"`
 }
 
 // +kubebuilder:object:root=true
