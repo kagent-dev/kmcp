@@ -218,7 +218,7 @@ func (in *MCPServerDeployment) DeepCopyInto(out *MCPServerDeployment) {
 	}
 	if in.SecretRefs != nil {
 		in, out := &in.SecretRefs, &out.SecretRefs
-		*out = make([]corev1.ObjectReference, len(*in))
+		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
 }
