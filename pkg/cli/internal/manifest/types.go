@@ -80,6 +80,7 @@ type DockerConfig struct {
 const (
 	FrameworkFastMCPPython = "fastmcp-python"
 	FrameworkMCPGo         = "mcp-go"
+	FrameworkTypeScript    = "typescript"
 )
 
 // Supported secret providers

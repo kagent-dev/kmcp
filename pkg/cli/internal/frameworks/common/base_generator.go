@@ -120,12 +120,12 @@ func (g *BaseGenerator) GenerateTool(projectRoot string, config templates.ToolCo
 			return nil
 		}
 
-		return g.generateToolFile(destPath, config)
+		return g.GenerateToolFile(destPath, config)
 	})
 }
 
 // GenerateToolFile generates a new tool file from the unified template
-func (g *BaseGenerator) generateToolFile(filePath string, config templates.ToolConfig) error {
+func (g *BaseGenerator) GenerateToolFile(filePath string, config templates.ToolConfig) error {
 	// Prepare template data
 	toolName := config.ToolName
 	data := map[string]interface{}{
