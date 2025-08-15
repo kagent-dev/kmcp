@@ -40,7 +40,7 @@ export async function createServer(): Promise<Server> {
     }
 
     try {
-      const result = await tool.handler(args || {});
+      const result = await tool.handler((args || {}) as any);
       return {
         content: [
           {

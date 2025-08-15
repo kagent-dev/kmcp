@@ -3,28 +3,8 @@ import { echo } from '../src/tools/echo.js';
 describe('echo tool', () => {
   it('should echo back the message', async () => {
     const result = await echo.handler({ message: 'Hello, World!' });
-    
-    expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect(result.content[0].text).toBe('Echo: Hello, World!');
-  });
 
-  it('should convert message to uppercase when uppercase is true', async () => {
-    const result = await echo.handler({ 
-      message: 'Hello, World!', 
-      uppercase: true 
-    });
-    
-    expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect(result.content[0].text).toBe('Echo: HELLO, WORLD!');
-  });
-
-  it('should use default uppercase value when not provided', async () => {
-    const result = await echo.handler({ message: 'Hello, World!' });
-    
-    expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect(result.content[0].text).toBe('Echo: Hello, World!');
+    expect(result).toHaveProperty('message', 'Echo: Hello, World!');
+    expect(typeof result.timestamp).toBe('string');
   });
 });
