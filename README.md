@@ -99,7 +99,7 @@ The kmcp documentation is available at [kagent.dev/docs/kmcp](https://kagent.dev
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTION.md) for details.
 
 Thanks to all contributors!
 
