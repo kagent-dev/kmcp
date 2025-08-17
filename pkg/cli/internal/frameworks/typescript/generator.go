@@ -135,23 +135,23 @@ func (g *Generator) regenerateToolsFile(projectRoot string) error {
 func (g *Generator) generateToolsContent(tools []string) string {
 	var content strings.Builder
 
-	// Add import statements
+	// Add import statements (named exports)
 	for _, tool := range tools {
-		content.WriteString(fmt.Sprintf("import %s from './tools/%s.js';\n", tool, tool))
+		content.WriteString(fmt.Sprintf("import { %s } from './tools/%s.js';\n", tool, tool))
 	}
 
 	// Add empty line
 	content.WriteString("\n")
 
-	// Add export statement
+	// Add export statement (flat array of tool objects)
 	content.WriteString("export const allTools = [\n")
 	for i, tool := range tools {
 		if i > 0 {
 			content.WriteString(",\n")
 		}
-		content.WriteString(fmt.Sprintf("  ...%s", tool))
+		content.WriteString(fmt.Sprintf("  %s", tool))
 	}
-	content.WriteString(",\n];\n\n")
+	content.WriteString("\n];\n\n")
 
 	// Add getTools function
 	content.WriteString("export function getTools() {\n")
