@@ -357,7 +357,7 @@ func sanitizeLabelValue(value string) string {
 func getDefaultCommand(framework string) string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
-		return "uv"
+		return "python"
 	case manifest.FrameworkMCPGo:
 		return "./server"
 	case manifest.FrameworkTypeScript:
