@@ -18,6 +18,7 @@ import (
 const (
 	frameworkFastMCPPython = "fastmcp-python"
 	frameworkMCPGo         = "mcp-go"
+	frameworkTypeScript    = "typescript"
 )
 
 var initCmd = &cobra.Command{

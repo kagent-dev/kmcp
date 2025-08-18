@@ -80,6 +80,8 @@ func executeRun(_ *cobra.Command, _ []string) error {
 		return runFastMCPPython(projectDir, manifest)
 	case "mcp-go":
 		return runMCPGo(projectDir, manifest)
+	case "typescript":
+		return runTypeScript(projectDir, manifest)
 	default:
 		return fmt.Errorf("unsupported framework: %s", manifest.Framework)
 	}
@@ -227,4 +229,53 @@ func getProjectManifest(projectDir string) (*manifest.ProjectManifest, error) {
 	}
 
 	return manifest, nil
+}
+
+func runTypeScript(projectDir string, manifest *manifest.ProjectManifest) error {
+	// Check if npm is available
+	if _, err := exec.LookPath("npm"); err != nil {
+		npmInstallURL := "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm"
+		return fmt.Errorf("npm is required to run TypeScript projects locally. Please install Node.js and npm: %s", npmInstallURL)
+	}
+
+	// Install dependencies first
+	if Verbose {
+		fmt.Printf("Installing dependencies in: %s\n", projectDir)
+	}
+	installCmd := exec.Command("npm", "install")
+	installCmd.Dir = projectDir
+	installCmd.Stdout = os.Stdout
+	installCmd.Stderr = os.Stderr
+	if err := installCmd.Run(); err != nil {
+		return fmt.Errorf("failed to install dependencies: %w", err)
+	}
+
+	if noInspector {
+		// Run the server directly with tsx (like Python uses uv run python)
+		fmt.Printf("Running server directly: npx tsx src/index.ts\n")
+		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
+		fmt.Printf("Press Ctrl+C to stop the server\n")
+
+		serverCmd := exec.Command("npx", "tsx", "src/index.ts")
+		serverCmd.Dir = projectDir
+		serverCmd.Stdout = os.Stdout
+		serverCmd.Stderr = os.Stderr
+		serverCmd.Stdin = os.Stdin
+		return serverCmd.Run()
+	}
+
+	// Create server configuration for inspector
+	serverConfig := map[string]interface{}{
+		"command": "npx",
+		"args":    []string{"tsx", "src/index.ts"},
+	}
+
+	// Create MCP inspector config
+	configPath := filepath.Join(projectDir, "mcp-server-config.json")
+	if err := createMCPInspectorConfig(manifest.Name, serverConfig, configPath); err != nil {
+		return err
+	}
+
+	// Run the inspector
+	return runMCPInspector(configPath, manifest.Name, projectDir)
 }

@@ -356,8 +356,12 @@ func sanitizeLabelValue(value string) string {
 
 func getDefaultCommand(framework string) string {
 	switch framework {
+	case manifest.FrameworkFastMCPPython:
+		return "python"
 	case manifest.FrameworkMCPGo:
 		return "./server"
+	case manifest.FrameworkTypeScript:
+		return "node"
 	default:
 		return "python"
 	}
@@ -369,6 +373,8 @@ func getDefaultArgs(framework string) []string {
 		return []string{"src/main.py"}
 	case manifest.FrameworkMCPGo:
 		return []string{}
+	case manifest.FrameworkTypeScript:
+		return []string{"dist/index.js"}
 	default:
 		return []string{"src/main.py"}
 	}
