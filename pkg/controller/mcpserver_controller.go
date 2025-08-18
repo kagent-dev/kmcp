@@ -33,9 +33,6 @@ import (
 
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // MCPServerReconciler reconciles a MCPServer object
@@ -50,7 +47,6 @@ type MCPServerReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -71,8 +67,8 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	t := agentgateway.NewAgentGatewayTranslator(r.Scheme, r.Client)
-	outputs, err := t.TranslateAgentGatewayOutputs(ctx, mcpServer)
+	t := agentgateway.NewAgentGatewayTranslator(r.Scheme)
+	outputs, err := t.TranslateAgentGatewayOutputs(mcpServer)
 	if err != nil {
 		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")
 		r.reconcileStatus(ctx, mcpServer, err)
@@ -98,35 +94,6 @@ func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Owns(&corev1.Service{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Owns(&corev1.ConfigMap{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(
-			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(func(
-				ctx context.Context,
-				o client.Object,
-			) []reconcile.Request {
-				mcpServers := &kagentdevv1alpha1.MCPServerList{}
-				if err := r.List(ctx, mcpServers); err != nil {
-					log.FromContext(ctx).Error(err,
-						"failed to list mcp servers for secret event")
-					return []reconcile.Request{}
-				}
-
-				var requests []reconcile.Request
-				for _, server := range mcpServers.Items {
-					if auth := server.Spec.Authn; auth != nil && auth.JWT != nil && auth.JWT.JWKS != nil {
-						if auth.JWT.JWKS.Name == o.GetName() && server.Namespace == o.GetNamespace() {
-							requests = append(requests, reconcile.Request{
-								NamespacedName: types.NamespacedName{
-									Name:      server.Name,
-									Namespace: server.Namespace,
-								},
-							})
-						}
-					}
-				}
-				return requests
-			}),
-		).
 		Named("mcpserver").
 		Complete(r)
 }
