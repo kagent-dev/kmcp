@@ -206,7 +206,6 @@ type Target struct {
 
 // MCPBackend represents an MCP backend
 type MCPBackend struct {
-	Name    string      `json:"name" yaml:"name"`
 	Targets []MCPTarget `json:"targets" yaml:"targets"`
 }
 
