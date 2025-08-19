@@ -130,6 +130,8 @@ const (
 	// Ready condition reasons
 	MCPServerReasonReady        MCPServerConditionReason = "Ready"
 	MCPServerReasonPodsNotReady MCPServerConditionReason = "PodsNotReady"
+	MCPServerReasonAvailable    MCPServerConditionReason = "Available"
+	MCPServerReasonNotAvailable MCPServerConditionReason = "NotAvailable"
 )
 
 // MCPServerSpec defines the desired state of MCPServer.
