@@ -19,12 +19,6 @@ Usage Examples:
   
   # Environment variable mode
   MCP_TRANSPORT_MODE=http python src/main.py
-
-HTTP Endpoints:
-  GET  /              - Server information and available endpoints
-  GET  /health        - Health check
-  POST /mcp           - Full MCP protocol over HTTP (compatible with transport adapter)
-  GET  /mcp           - Server-Sent Events for streaming operations
 """
 
 import argparse
@@ -95,7 +89,6 @@ def main() -> None:
     except Exception as e:
         print(f"Server error: {e}", file=sys.stderr)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
