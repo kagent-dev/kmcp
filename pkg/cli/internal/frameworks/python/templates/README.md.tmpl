@@ -1,12 +1,13 @@
 # {{.ProjectName}}
 
-{{.ProjectName}} is a Model Context Protocol (MCP) server built with FastMCP featuring dynamic tool loading.
+{{.ProjectName}} is a Model Context Protocol (MCP) server built with FastMCP featuring dynamic tool loading and HTTP transport support.
 
 ## Features
 
 - **Dynamic Tool Loading**: Tools are automatically discovered and loaded from `src/tools/`
 - **One Tool Per File**: Each tool is a single file with a function matching the filename
 - **FastMCP Integration**: Leverages FastMCP for robust MCP protocol handling
+- **MCP Protocol over HTTP**: Full MCP protocol support over HTTP
 - **Configuration Management**: Tool-specific configuration via `kmcp.yaml`
 - **Fail-Fast**: Server won't start if any tool fails to load
 - **Auto-Generated Tests**: Automatic test generation for tool validation
@@ -37,10 +38,29 @@ tests/                  # Generated tests
 
 2. **Run the Server**:
    ```bash
+   # Stdio mode (default MCP transport)
    uv run python src/main.py
+   
+   # HTTP mode with WebSocket MCP endpoint
+   uv run python src/main.py --http
+   
+   # HTTP mode with custom host/port
+   uv run python src/main.py --http --host 0.0.0.0 --port 8080
    ```
 
-3. **Add New Tools**:
+3. **Using uv Scripts**:
+   ```bash
+   # Development mode (HTTP on port 3000)
+   uv run dev
+   
+   # HTTP mode
+   uv run dev-http
+   
+   # Stdio mode
+   uv run start
+   ```
+
+4. **Add New Tools**:
    ```bash
    # Create a new tool (no tool types needed!)
    kmcp add-tool weather
@@ -74,6 +94,119 @@ tests/                  # Generated tests
    # Edit the tool file, then rebuild
    kmcp build
    ```
+
+## HTTP Transport Mode
+
+The server supports running in HTTP mode for development and integration purposes.
+
+### Starting in HTTP Mode
+
+```bash
+# Command line flag
+python src/main.py --http
+
+# Environment variable
+MCP_HTTP_MODE=true python src/main.py
+
+# Custom host and port
+python src/main.py --http --host localhost --port 8080
+```
+
+### HTTP Endpoints
+
+When running in HTTP mode, the server provides:
+
+- **Root Info**: `GET /` - Server information and available endpoints
+- **Health Check**: `GET /health` - Returns "OK" for monitoring
+- **MCP Protocol**: `POST /mcp` - Full MCP protocol over HTTP
+- **MCP Streaming**: `GET /mcp` - Server-Sent Events for long-running operations
+
+### MCP Protocol Support
+
+The server implements the full MCP protocol over HTTP, making it compatible with:
+
+- **Transport Adapter**: Kubernetes deployment with transport adapter
+- **MCP Inspector**: Standard MCP client tools
+- **MCP SDKs**: Any MCP-compliant client
+
+#### MCP Methods Supported
+
+- **`tools/list`** - List all available tools
+- **`tools/call`** - Execute a specific tool with arguments
+
+#### Example MCP Protocol Requests
+
+```bash
+# List tools (MCP protocol)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }'
+
+# Call tool (MCP protocol)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "echo",
+      "arguments": {"message": "Hello World"}
+    }
+  }'
+```
+
+#### Backward Compatibility
+
+For simple testing, the server also supports the legacy operation-based format:
+
+```bash
+# Legacy format (still supported)
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"operation": "list_tools"}'
+```
+
+### Environment Variables
+
+- `MCP_HTTP_MODE`: Set to "true" to enable HTTP mode
+- `HOST`: Host to bind to (default: localhost)
+- `PORT`: Port to bind to (default: 3000)
+
+### Development Scripts
+
+```bash
+# Quick HTTP development
+uv run dev
+
+# HTTP mode on specific port
+uv run dev-http
+
+# Stdio mode
+uv run start
+
+# HTTP mode
+uv run start-http
+```
+
+### Testing HTTP Transport
+
+Use the included example HTTP client to test your server:
+
+```bash
+# Start the server in HTTP mode
+python src/main.py --http
+
+# In another terminal, test the HTTP transport
+python example_http_client.py
+```
+
+The example client tests both the health endpoint and MCP WebSocket connection.
 
 ## Creating Tools
 

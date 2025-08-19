@@ -7,13 +7,21 @@ Each tool file should contain a function decorated with @mcp.tool().
 import importlib.util
 import logging
 import sys
+import asyncio
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 
 from .utils import load_config
+
+# Import FastAPI types for type hints
+try:
+    from fastapi.responses import JSONResponse
+except ImportError:
+    # Fallback if FastAPI is not available
+    JSONResponse = Any
 
 # Global FastMCP instance for tools to import
 mcp: FastMCP = FastMCP(name="Dynamic Server")
@@ -145,9 +153,19 @@ class DynamicMCPServer:
         # async
         return self.mcp._tool_manager._tools
 
-    def run(self) -> None:
-        """Run the FastMCP server."""
-        if not self.loaded_tools:
-            print("⚠️  No tools loaded. Server starting without tools.")
+    def run(self, transport_mode: str = "stdio", host: str = "localhost", port: int = 3000) -> None:
+        """Run the FastMCP server.
 
-        self.mcp.run()
+        Args:
+            transport_mode: Transport mode - "stdio", "http", or "sse"
+            host: Host to bind to in HTTP/SSE mode
+            port: Port to bind to in HTTP/SSE mode
+        """
+
+        if transport_mode == "http":
+            self.mcp.run(transport="http", host=host, port=port, path="/mcp")
+        elif transport_mode == "sse":
+            self.mcp.run(transport="sse", host=host, port=port)
+        else:
+            # Default to stdio mode
+            self.mcp.run()

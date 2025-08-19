@@ -1,4 +1,4 @@
-package agentgateway
+package transportadapter
 
 import (
 	"fmt"
@@ -17,42 +17,42 @@ import (
 )
 
 const (
-	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
+	transportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
 )
 
-// Translator is the interface for translating MCPServer objects to AgentGateway objects.
+// Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
-	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
+	TranslateTransportAdapterOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
-type agentGatewayTranslator struct {
+type transportAdapterTranslator struct {
 	scheme *runtime.Scheme
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme) Translator {
-	return &agentGatewayTranslator{
+func NewTransportAdapterTranslator(scheme *runtime.Scheme) Translator {
+	return &transportAdapterTranslator{
 		scheme: scheme,
 	}
 }
 
-func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
+func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
-	deployment, err := t.translateAgentGatewayDeployment(server)
+	deployment, err := t.translateTransportAdapterDeployment(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter deployment: %w", err)
 	}
-	service, err := t.translateAgentGatewayService(server)
+	service, err := t.translateTransportAdapterService(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway service: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter service: %w", err)
 	}
-	configMap, err := t.translateAgentGatewayConfigMap(server)
+	configMap, err := t.translateTransportAdapterConfigMap(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
 	}
-	serviceAccount, err := t.translateAgentGatewayServiceAccount(server)
+	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
 	}
 	return []client.Object{
 		deployment,
@@ -62,7 +62,7 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	}, nil
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
+func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	server *v1alpha1.MCPServer,
 ) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
@@ -81,16 +81,16 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 			ServiceAccountName: server.Name,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
-				Image:           agentGatewayContainerImage,
+				Image:           transportAdapterContainerImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"sh"},
+				Command:         []string{},
 				Args: []string{
-					"-c",
-					"cp /usr/bin/agentgateway /agentbin/agentgateway",
+					"--copy-self",
+					"/agentbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "binary",
-					MountPath: "/agentbin",
+					MountPath: "/adapterbin",
 				}},
 				SecurityContext: getSecurityContext(),
 			}},
@@ -99,11 +99,11 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 				Image:           image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
-					"sh",
+					"/adapterbin/agentgateway",
 				},
 				Args: []string{
-					"-c",
-					"/agentbin/agentgateway -f /config/local.yaml",
+					"-f",
+					"/config/local.yaml",
 				},
 				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
@@ -114,7 +114,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					},
 					{
 						Name:      "binary",
-						MountPath: "/agentbin",
+						MountPath: "/adapterbin",
 					},
 				},
 				SecurityContext: getSecurityContext(),
@@ -147,13 +147,13 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		template = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:            "agent-gateway",
-					Image:           agentGatewayContainerImage,
+					Name:            "transport-adapter",
+					Image:           transportAdapterContainerImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"sh"},
+					Command:         []string{},
 					Args: []string{
-						"-c",
-						"/usr/bin/agentgateway -f /config/local.yaml",
+						"-f",
+						"/config/local.yaml",
 					},
 					VolumeMounts: []corev1.VolumeMount{{
 						Name:      "config",
@@ -218,7 +218,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
+func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
 	server *v1alpha1.MCPServer,
 ) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
@@ -235,7 +235,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
 }
 
 // createSecretEnvFrom creates envFrom references from secret references
-func (t *agentGatewayTranslator) createSecretEnvFrom(
+func (t *transportAdapterTranslator) createSecretEnvFrom(
 	secretRefs []corev1.LocalObjectReference,
 ) []corev1.EnvFromSource {
 	envFrom := make([]corev1.EnvFromSource, 0, len(secretRefs))
@@ -291,7 +291,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
 	port := server.Spec.Deployment.Port
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
@@ -324,8 +324,8 @@ func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.M
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
-	config, err := t.translateAgentGatewayConfig(server)
+func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+	config, err := t.translateTransportAdapterConfig(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate MCP server config: %w", err)
 	}
@@ -356,11 +356,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1
 	return configMap, controllerutil.SetOwnerReference(server, configMap, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
-	if server.Spec.TransportType != v1alpha1.TransportTypeStdio {
-		return nil, nil // Only Stdio transport is supported for now
-	}
-
+func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
 	mcpTarget := MCPTarget{
 		Name: server.Name,
 	}
@@ -417,7 +413,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{
-									Name:    mcpTarget.Name,
 									Targets: []MCPTarget{mcpTarget},
 								},
 							}},

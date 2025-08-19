@@ -3,9 +3,33 @@
 
 This server automatically discovers and loads tools from the src/tools/ directory.
 Each tool file should contain a function decorated with @mcp.tool().
+
+Usage Examples:
+  # Stdio mode (default MCP transport)
+  python src/main.py
+  
+  # HTTP mode with MCP protocol over HTTP
+  python src/main.py --transport http
+  
+  # SSE mode with Server-Sent Events
+  python src/main.py --transport sse
+  
+  # Custom host/port
+  python src/main.py --transport http --host localhost --port 8080
+  
+  # Environment variable mode
+  MCP_TRANSPORT_MODE=http python src/main.py
+
+HTTP Endpoints:
+  GET  /              - Server information and available endpoints
+  GET  /health        - Health check
+  POST /mcp           - Full MCP protocol over HTTP (compatible with transport adapter)
+  GET  /mcp           - Server-Sent Events for streaming operations
 """
 
+import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -17,10 +41,35 @@ from core.server import DynamicMCPServer  # noqa: E402
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="{{.ProjectName}} MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http", "sse"],
+        default="stdio",
+        help="Transport mode: stdio, http, or sse"
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("HOST", "localhost"),
+        help="Host to bind to in HTTP/SSE mode (default: localhost)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PORT", "3000")),
+        help="Port to bind to in HTTP/SSE mode (default: 3000)"
+    )
+
+    args = parser.parse_args()
+
+    # Check environment variable for transport mode
+    transport_mode = os.getenv("MCP_TRANSPORT_MODE", args.transport)
+
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stderr)
         ]
@@ -35,7 +84,13 @@ def main() -> None:
 
         # Load tools and start server
         server.load_tools()
-        server.run()
+
+        if transport_mode in ["http", "sse"]:
+            print(f"🌐 Starting server in {transport_mode.upper()} mode on {args.host}:{args.port}")
+            server.run(transport_mode=transport_mode, host=args.host, port=args.port)
+        else:
+            print("📡 Starting server in stdio mode")
+            server.run()
 
     except KeyboardInterrupt:
         print("\nShutting down server...")
