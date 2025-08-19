@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -306,16 +305,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 
 			err = portForwardCmd.Start()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to start port-forward")
-
-			// Wait for port-forward to be ready
-			gomega.Eventually(func() error {
-				resp, err := http.Get(fmt.Sprintf("http://localhost:%d", localPort))
-				if err != nil {
-					return err
-				}
-				_ = resp.Body.Close()
-				return nil
-			}, 30*time.Second, 1*time.Second).Should(gomega.Succeed())
 
 			ginkgo.By("creating MCP client and testing connection")
 			mcpClient, err := client.NewStreamableHttpClient(fmt.Sprintf("http://localhost:%d/mcp", localPort))

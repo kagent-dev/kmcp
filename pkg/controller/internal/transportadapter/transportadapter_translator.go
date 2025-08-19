@@ -38,6 +38,10 @@ func NewTransportAdapterTranslator(scheme *runtime.Scheme) Translator {
 func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
+	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
+	}
 	deployment, err := t.translateTransportAdapterDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate TransportAdapter deployment: %w", err)
@@ -50,15 +54,11 @@ func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
 	}
-	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
-	if err != nil {
-		return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
-	}
 	return []client.Object{
+		serviceAccount,
 		deployment,
 		service,
 		configMap,
-		serviceAccount,
 	}, nil
 }
 
@@ -86,7 +86,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				Command:         []string{},
 				Args: []string{
 					"--copy-self",
-					"/agentbin/agentgateway",
+					"/adapterbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "binary",

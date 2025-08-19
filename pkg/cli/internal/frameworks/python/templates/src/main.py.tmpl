@@ -85,12 +85,10 @@ def main() -> None:
         # Load tools and start server
         server.load_tools()
 
-        if transport_mode in ["http", "sse"]:
-            print(f"🌐 Starting server in {transport_mode.upper()} mode on {args.host}:{args.port}")
-            server.run(transport_mode=transport_mode, host=args.host, port=args.port)
-        else:
-            print("📡 Starting server in stdio mode")
-            server.run()
+        if transport_mode not in ["http", "sse", "stdio"]:
+            raise ValueError(f"Invalid transport mode: {transport_mode}. Must be one of: http, sse, stdio")
+        
+        server.run(transport_mode=transport_mode, host=args.host, port=args.port)
 
     except KeyboardInterrupt:
         print("\nShutting down server...")
