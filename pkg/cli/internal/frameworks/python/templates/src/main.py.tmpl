@@ -11,9 +11,6 @@ Usage Examples:
   # HTTP mode with MCP protocol over HTTP
   python src/main.py --transport http
   
-  # SSE mode with Server-Sent Events
-  python src/main.py --transport sse
-  
   # Custom host/port
   python src/main.py --transport http --host localhost --port 8080
   
@@ -39,20 +36,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="{{.ProjectName}} MCP Server")
     parser.add_argument(
         "--transport",
-        choices=["stdio", "http", "sse"],
+        choices=["stdio", "http"],
         default="stdio",
-        help="Transport mode: stdio, http, or sse"
+        help="Transport mode: stdio, or http"
     )
     parser.add_argument(
         "--host",
         default=os.getenv("HOST", "localhost"),
-        help="Host to bind to in HTTP/SSE mode (default: localhost)"
+        help="Host to bind to in HTTP mode (default: localhost)"
     )
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.getenv("PORT", "3000")),
-        help="Port to bind to in HTTP/SSE mode (default: 3000)"
+        help="Port to bind to in HTTP mode (default: 3000)"
     )
 
     args = parser.parse_args()
@@ -79,8 +76,8 @@ def main() -> None:
         # Load tools and start server
         server.load_tools()
 
-        if transport_mode not in ["http", "sse", "stdio"]:
-            raise ValueError(f"Invalid transport mode: {transport_mode}. Must be one of: http, sse, stdio")
+        if transport_mode not in ["http", "stdio"]:
+            raise ValueError(f"Invalid transport mode: {transport_mode}. Must be one of: http, or stdio")
         
         server.run(transport_mode=transport_mode, host=args.host, port=args.port)
 

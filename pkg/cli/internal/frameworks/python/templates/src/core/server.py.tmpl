@@ -149,15 +149,13 @@ class DynamicMCPServer:
         """Run the FastMCP server.
 
         Args:
-            transport_mode: Transport mode - "stdio", "http", or "sse"
-            host: Host to bind to in HTTP/SSE mode
-            port: Port to bind to in HTTP/SSE mode
+            transport_mode: Transport mode - "stdio", or "http"
+            host: Host to bind to in HTTP mode
+            port: Port to bind to in HTTP mode
         """
 
         if transport_mode == "http":
             self.mcp.run(transport="http", host=host, port=port, path="/mcp")
-        elif transport_mode == "sse":
-            self.mcp.run(transport="sse", host=host, port=port, path="/mcp")
         elif transport_mode == "stdio":
             # Default to stdio mode
             self.mcp.run()

@@ -139,28 +139,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			},
 		}
 	case v1alpha1.TransportTypeHTTP:
-		// run the gateway as a sidecar when running with HTTP transport
 		var cmd []string
 		if server.Spec.Deployment.Cmd != "" {
 			cmd = []string{server.Spec.Deployment.Cmd}
 		}
 		template = corev1.PodSpec{
 			Containers: []corev1.Container{
-				{
-					Name:            "transport-adapter",
-					Image:           transportAdapterContainerImage,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{},
-					Args: []string{
-						"-f",
-						"/config/local.yaml",
-					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "config",
-						MountPath: "/config",
-					}},
-					SecurityContext: getSecurityContext(),
-				},
 				{
 					Name:            "mcp-server",
 					Image:           image,

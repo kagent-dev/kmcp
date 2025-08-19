@@ -128,23 +128,6 @@ func runDeployMCP(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// Validate transport configuration
-	if deployTransport == transportHTTP {
-		if deployTargetPort == 0 {
-			return fmt.Errorf("--target-port is required when --transport is set to 'http'")
-		}
-
-		// Determine the deployment port to compare against
-		deploymentPort := deployPort
-		if deploymentPort == 0 {
-			deploymentPort = 3000 // Default port
-		}
-
-		if deployTargetPort == deploymentPort {
-			return fmt.Errorf("--target-port (%d) must be different from deployment port (%d) when using HTTP transport", deployTargetPort, deploymentPort)
-		}
-	}
-
 	// Load project manifest
 	manifestManager := manifest.NewManager(projectDir)
 	if !manifestManager.Exists() {
@@ -262,6 +245,12 @@ func generateMCPServer(
 	port := deployPort
 	if port == 0 {
 		port = 3000 // Default port
+	}
+
+	if transportType == v1alpha1.TransportTypeHTTP {
+		if deployTargetPort == 0 {
+			deployTargetPort = port
+		}
 	}
 
 	// Determine command and args
@@ -388,7 +377,7 @@ func getDefaultArgs(framework string, targetPort int) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
 		if deployTransport == transportHTTP {
-			return []string{"src/main.py", "--transport", "sse", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
+			return []string{"src/main.py", "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
 		}
 		return []string{"src/main.py"}
 	case manifest.FrameworkMCPGo:
