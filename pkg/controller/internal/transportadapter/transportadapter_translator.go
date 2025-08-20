@@ -207,25 +207,20 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	}
 
 	// Add hash annotation based on MCPServer spec to initiate a restart on changes to the MCPServer spec
-	if err := t.addMCPServerSpecHashAnnotation(deployment, server); err != nil {
-		return nil, fmt.Errorf("failed to add MCPServer spec hash annotation: %w", err)
-	}
+	t.addMCPServerSpecHashAnnotation(deployment, server)
 
 	return deployment, nil
 }
 
 // addMCPServerSpecHashAnnotation adds a hash annotation to the deployment's pod template
 // based on the MCPServer spec. This ensures pod restarts when the MCPServer configuration changes.
-func (t *transportAdapterTranslator) addMCPServerSpecHashAnnotation(deployment *appsv1.Deployment, server *v1alpha1.MCPServer) error {
+func (t *transportAdapterTranslator) addMCPServerSpecHashAnnotation(deployment *appsv1.Deployment, server *v1alpha1.MCPServer) {
 	mcpServerSpecHash := t.computeMCPServerSpecHash(server)
-
 	// Add the hash to the pod template annotations
 	if deployment.Spec.Template.Annotations == nil {
 		deployment.Spec.Template.Annotations = make(map[string]string)
 	}
 	deployment.Spec.Template.Annotations["kmcp.kagent.dev/mcpserver-hash"] = mcpServerSpecHash
-
-	return nil
 }
 
 // computeMCPServerSpecHash computes a hash of the MCPServer spec
