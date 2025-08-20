@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kagent-dev/kmcp/pkg/controller/internal/agentgateway"
+	"github.com/kagent-dev/kmcp/pkg/controller/internal/transportadapter"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -67,8 +67,8 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	t := agentgateway.NewAgentGatewayTranslator(r.Scheme)
-	outputs, err := t.TranslateAgentGatewayOutputs(mcpServer)
+	t := transportadapter.NewTransportAdapterTranslator(r.Scheme)
+	outputs, err := t.TranslateTransportAdapterOutputs(mcpServer)
 	if err != nil {
 		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")
 		r.reconcileStatus(ctx, mcpServer, err)

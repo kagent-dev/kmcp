@@ -247,6 +247,12 @@ func generateMCPServer(
 		port = 3000 // Default port
 	}
 
+	if transportType == v1alpha1.TransportTypeHTTP {
+		if deployTargetPort == 0 {
+			deployTargetPort = port
+		}
+	}
+
 	// Determine command and args
 	command := deployCommand
 	args := deployArgs
@@ -254,7 +260,7 @@ func generateMCPServer(
 		// Set default command based on framework
 		command = getDefaultCommand(projectManifest.Framework)
 		if len(args) == 0 {
-			args = getDefaultArgs(projectManifest.Framework)
+			args = getDefaultArgs(projectManifest.Framework, deployTargetPort)
 		}
 	}
 
@@ -367,9 +373,12 @@ func getDefaultCommand(framework string) string {
 	}
 }
 
-func getDefaultArgs(framework string) []string {
+func getDefaultArgs(framework string, targetPort int) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
+		if deployTransport == transportHTTP {
+			return []string{"src/main.py", "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
+		}
 		return []string{"src/main.py"}
 	case manifest.FrameworkMCPGo:
 		return []string{}

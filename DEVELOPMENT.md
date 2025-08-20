@@ -1,7 +1,7 @@
 # Development
 
 - [cmd](cmd): Contains the code for KMCP CLI.
-- [pkg/agentgateway](pkg/agentgateway/): Contains the code for the kubernetes controller.
+- [pkg/transportadapter](pkg/transportadapter/): Contains the code for the kubernetes controller.
 - [pkg/frameworks](pkg/frameworks/): Contains the generator code for the supported MCP frameworks (fastmcp-python, mcp-go).
 
 
