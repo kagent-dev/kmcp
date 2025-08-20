@@ -97,7 +97,6 @@ spec:
                       x-kubernetes-map-type: atomic
                     type: array
                 required:
-                - args
                 - cmd
                 - port
                 type: object

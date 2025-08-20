@@ -200,7 +200,8 @@ type MCPServerDeployment struct {
 	Cmd string `json:"cmd"`
 
 	// Args defines the arguments to pass to the command.
-	Args []string `json:"args"`
+	// +optional
+	Args []string `json:"args,omitempty"`
 
 	// Env defines the environment variables to set in the container.
 	// +optional
