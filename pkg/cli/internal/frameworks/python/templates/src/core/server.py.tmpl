@@ -145,9 +145,17 @@ class DynamicMCPServer:
         # async
         return self.mcp._tool_manager._tools
 
-    def run(self) -> None:
-        """Run the FastMCP server."""
-        if not self.loaded_tools:
-            print("⚠️  No tools loaded. Server starting without tools.")
+    def run(self, transport_mode: str = "stdio", host: str = "localhost", port: int = 3000) -> None:
+        """Run the FastMCP server.
 
-        self.mcp.run()
+        Args:
+            transport_mode: Transport mode - "stdio", or "http"
+            host: Host to bind to in HTTP mode
+            port: Port to bind to in HTTP mode
+        """
+
+        if transport_mode == "http":
+            self.mcp.run(transport="http", host=host, port=port, path="/mcp")
+        elif transport_mode == "stdio":
+            # Default to stdio mode
+            self.mcp.run()
