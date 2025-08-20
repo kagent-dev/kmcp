@@ -108,9 +108,9 @@ func validateToolName(name string) error {
 		return fmt.Errorf("tool name cannot be empty")
 	}
 
-	// Check for valid Python identifier
-	if !isValidPythonIdentifier(name) {
-		return fmt.Errorf("tool name must be a valid Python identifier")
+	// Check for valid identifier (works for Python, Go, and TypeScript)
+	if !isValidIdentifier(name) {
+		return fmt.Errorf("tool name must be a valid identifier")
 	}
 
 	// Check for reserved names
@@ -124,7 +124,7 @@ func validateToolName(name string) error {
 	return nil
 }
 
-func isValidPythonIdentifier(name string) bool {
+func isValidIdentifier(name string) bool {
 	if len(name) == 0 {
 		return false
 	}
