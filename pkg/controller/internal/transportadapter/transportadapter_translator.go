@@ -3,7 +3,6 @@ package transportadapter
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -207,8 +206,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		return nil, err
 	}
 
-	// Add hash annotation based on MCPServer spec to force restarts on changes
-	// This ensures any change to the MCPServer spec triggers a pod restart
+	// Add hash annotation based on MCPServer spec to initiate a restart on changes to the MCPServer spec
 	if err := t.addMCPServerSpecHashAnnotation(deployment, server); err != nil {
 		return nil, fmt.Errorf("failed to add MCPServer spec hash annotation: %w", err)
 	}
@@ -217,10 +215,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 }
 
 // addMCPServerSpecHashAnnotation adds a hash annotation to the deployment's pod template
-// based on the MCPServer spec. This ensures restarts when the MCPServer configuration changes.
+// based on the MCPServer spec. This ensures pod restarts when the MCPServer configuration changes.
 func (t *transportAdapterTranslator) addMCPServerSpecHashAnnotation(deployment *appsv1.Deployment, server *v1alpha1.MCPServer) error {
-	// Create a hash of the MCPServer spec (excluding metadata and status)
-	// This is the source of truth for the deployment configuration
 	mcpServerSpecHash := t.computeMCPServerSpecHash(server)
 
 	// Add the hash to the pod template annotations
@@ -232,22 +228,20 @@ func (t *transportAdapterTranslator) addMCPServerSpecHashAnnotation(deployment *
 	return nil
 }
 
-// computeMCPServerSpecHash computes a hash of the MCPServer spec to force restarts on changes.
-// This ensures that any change to the MCPServer configuration triggers a pod restart.
+// computeMCPServerSpecHash computes a hash of the MCPServer spec
 func (t *transportAdapterTranslator) computeMCPServerSpecHash(server *v1alpha1.MCPServer) string {
-	// Create a hash of the MCPServer spec (excluding metadata and status)
-	// We hash the JSON representation to ensure all fields are considered
-	specBytes, err := json.Marshal(server.Spec)
-	if err != nil {
-		// Fallback to string-based hash if JSON marshaling fails
-		hashInput := fmt.Sprintf("%v", server.Spec)
-		hash := sha256.Sum256([]byte(hashInput))
-		return hex.EncodeToString(hash[:])[:8]
-	}
+	// Hash only the fields that affect the deployment configuration for efficiency
+	hashInput := fmt.Sprintf("%s|%s|%v|%v|%v|%d|%s",
+		server.Spec.Deployment.Image,
+		server.Spec.Deployment.Cmd,
+		server.Spec.Deployment.Args,
+		server.Spec.Deployment.Env,
+		server.Spec.Deployment.SecretRefs,
+		server.Spec.Deployment.Port,
+		server.Spec.TransportType,
+	)
 
-	// Use SHA256 for a proper hash
-	hash := sha256.Sum256(specBytes)
-	// Return first 8 characters of hex hash
+	hash := sha256.Sum256([]byte(hashInput))
 	return hex.EncodeToString(hash[:])[:8]
 }
 
