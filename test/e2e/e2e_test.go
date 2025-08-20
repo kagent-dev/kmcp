@@ -347,6 +347,37 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Available tool: %s - %s\n", tool.Name, tool.Description)
 			}
 
+			ginkgo.By("testing that updating MCPServer spec triggers pod restart")
+			// Get original pod name before update
+			cmd = exec.Command("kubectl", "get", "pods", "-l",
+				fmt.Sprintf("app.kubernetes.io/name=%s", mcpServerName), "-n", namespace,
+				"-o", "jsonpath={.items[0].metadata.name}")
+			originalPodName, err := utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get original pod name")
+			originalPodName = strings.TrimSpace(originalPodName)
+
+			// Update MCPServer spec with new environment variable
+			ginkgo.By("updating MCPServer spec with new environment variable")
+			cmd = exec.Command("kubectl", "patch", "mcpserver", mcpServerName, "-n", namespace,
+				"--type", "merge", "-p", `{"spec":{"deployment":{"env":{"NEW_TEST_VAR":"test-value"}}}}`)
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to update MCPServer spec")
+
+			// Wait for deployment update and pod restart
+			ginkgo.By("waiting for pod restart after spec update")
+			gomega.Eventually(func(g gomega.Gomega) {
+				// Get current pod name
+				cmd = exec.Command("kubectl", "get", "pods", "-l",
+					fmt.Sprintf("app.kubernetes.io/name=%s", mcpServerName), "-n", namespace,
+					"-o", "jsonpath={.items[0].metadata.name}")
+				currentPodName, err := utils.Run(cmd)
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to get current pod name")
+				currentPodName = strings.TrimSpace(currentPodName)
+
+				// Pod should have restarted (different name)
+				g.Expect(currentPodName).NotTo(gomega.Equal(originalPodName), "Pod should have been restarted")
+			}, 1*time.Minute, 5*time.Second).Should(gomega.Succeed())
+
 			ginkgo.By("cleaning up port-forward")
 			if portForwardCmd != nil && portForwardCmd.Process != nil {
 				err = portForwardCmd.Process.Kill()

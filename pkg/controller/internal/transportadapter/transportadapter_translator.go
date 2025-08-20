@@ -1,6 +1,9 @@
 package transportadapter
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -199,7 +202,53 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		},
 	}
 
-	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
+	// Set owner reference first
+	if err := controllerutil.SetOwnerReference(server, deployment, t.scheme); err != nil {
+		return nil, err
+	}
+
+	// Add hash annotation based on MCPServer spec to force restarts on changes
+	// This ensures any change to the MCPServer spec triggers a pod restart
+	if err := t.addMCPServerSpecHashAnnotation(deployment, server); err != nil {
+		return nil, fmt.Errorf("failed to add MCPServer spec hash annotation: %w", err)
+	}
+
+	return deployment, nil
+}
+
+// addMCPServerSpecHashAnnotation adds a hash annotation to the deployment's pod template
+// based on the MCPServer spec. This ensures restarts when the MCPServer configuration changes.
+func (t *transportAdapterTranslator) addMCPServerSpecHashAnnotation(deployment *appsv1.Deployment, server *v1alpha1.MCPServer) error {
+	// Create a hash of the MCPServer spec (excluding metadata and status)
+	// This is the source of truth for the deployment configuration
+	mcpServerSpecHash := t.computeMCPServerSpecHash(server)
+
+	// Add the hash to the pod template annotations
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	deployment.Spec.Template.Annotations["kmcp.kagent.dev/mcpserver-hash"] = mcpServerSpecHash
+
+	return nil
+}
+
+// computeMCPServerSpecHash computes a hash of the MCPServer spec to force restarts on changes.
+// This ensures that any change to the MCPServer configuration triggers a pod restart.
+func (t *transportAdapterTranslator) computeMCPServerSpecHash(server *v1alpha1.MCPServer) string {
+	// Create a hash of the MCPServer spec (excluding metadata and status)
+	// We hash the JSON representation to ensure all fields are considered
+	specBytes, err := json.Marshal(server.Spec)
+	if err != nil {
+		// Fallback to string-based hash if JSON marshaling fails
+		hashInput := fmt.Sprintf("%v", server.Spec)
+		hash := sha256.Sum256([]byte(hashInput))
+		return hex.EncodeToString(hash[:])[:8]
+	}
+
+	// Use SHA256 for a proper hash
+	hash := sha256.Sum256(specBytes)
+	// Return first 8 characters of hex hash
+	return hex.EncodeToString(hash[:])[:8]
 }
 
 func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
@@ -262,7 +311,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, len(env))
+	envVars := make([]corev1.EnvVar, 0, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,
