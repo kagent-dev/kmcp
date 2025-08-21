@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"sort"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/kagent-dev/kmcp/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kagent-dev/kmcp/api/v1alpha1"
 )
 
 const (
@@ -75,6 +75,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	// Create environment variables from secrets for envFrom
 	secretEnvFrom := t.createSecretEnvFrom(server.Spec.Deployment.SecretRefs)
 
+	// Create volumes from the MCPServer spec
+	volumes := t.createVolumes(server.Spec.Deployment)
+
+	// Create volume mounts from the MCPServer spec
+	volumeMounts := t.createVolumeMounts(server.Spec.Deployment)
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
@@ -109,7 +115,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				},
 				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
-				VolumeMounts: []corev1.VolumeMount{
+				VolumeMounts: append([]corev1.VolumeMount{
 					{
 						Name:      "config",
 						MountPath: "/config",
@@ -118,10 +124,10 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						Name:      "binary",
 						MountPath: "/adapterbin",
 					},
-				},
+				}, volumeMounts...),
 				SecurityContext: getSecurityContext(),
 			}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -138,7 +144,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
 					},
 				},
-			},
+			}, volumes...),
 		}
 	case v1alpha1.TransportTypeHTTP:
 		var cmd []string
@@ -155,9 +161,15 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					EnvFrom:         secretEnvFrom,
+					VolumeMounts: append([]corev1.VolumeMount{
+						{
+							Name:      "config",
+							MountPath: "/config",
+						},
+					}, volumeMounts...),
 					SecurityContext: getSecurityContext(),
 				}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -168,7 +180,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						},
 					},
 				},
-			},
+			}, volumes...),
 		}
 	}
 
@@ -268,6 +280,86 @@ func (t *transportAdapterTranslator) createSecretEnvFrom(
 	}
 
 	return envFrom
+}
+
+// createVolumes creates volumes from the MCPServer deployment spec
+func (t *transportAdapterTranslator) createVolumes(
+	deployment v1alpha1.MCPServerDeployment,
+) []corev1.Volume {
+	volumes := make([]corev1.Volume, 0)
+
+	// Add volumes from SecretRefs
+	for _, secretRef := range deployment.SecretRefs {
+		if secretRef.Name == "" {
+			continue
+		}
+		volumes = append(volumes, corev1.Volume{
+			Name: fmt.Sprintf("secret-%s", secretRef.Name),
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretRef.Name,
+				},
+			},
+		})
+	}
+
+	// Add volumes from ConfigMapRefs
+	for _, configMapRef := range deployment.ConfigMapRefs {
+		if configMapRef.Name == "" {
+			continue
+		}
+		volumes = append(volumes, corev1.Volume{
+			Name: fmt.Sprintf("configmap-%s", configMapRef.Name),
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapRef.Name,
+					},
+				},
+			},
+		})
+	}
+
+	// Add custom volumes
+	volumes = append(volumes, deployment.Volumes...)
+
+	return volumes
+}
+
+// createVolumeMounts creates volume mounts from the MCPServer deployment spec
+func (t *transportAdapterTranslator) createVolumeMounts(
+	deployment v1alpha1.MCPServerDeployment,
+) []corev1.VolumeMount {
+	volumeMounts := make([]corev1.VolumeMount, 0)
+
+	// Add volume mounts from SecretRefs
+	for _, secretRef := range deployment.SecretRefs {
+		if secretRef.Name == "" {
+			continue
+		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      fmt.Sprintf("secret-%s", secretRef.Name),
+			MountPath: fmt.Sprintf("/secrets/%s", secretRef.Name),
+			ReadOnly:  true,
+		})
+	}
+
+	// Add volume mounts from ConfigMapRefs
+	for _, configMapRef := range deployment.ConfigMapRefs {
+		if configMapRef.Name == "" {
+			continue
+		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      fmt.Sprintf("configmap-%s", configMapRef.Name),
+			MountPath: fmt.Sprintf("/configmaps/%s", configMapRef.Name),
+			ReadOnly:  true,
+		})
+	}
+
+	// Add custom volume mounts
+	volumeMounts = append(volumeMounts, deployment.VolumeMounts...)
+
+	return volumeMounts
 }
 
 // getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
