@@ -22,6 +22,7 @@ import (
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -167,6 +168,98 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 				metav1.ConditionTrue,
 				string(kagentdevv1alpha1.MCPServerReasonAvailable),
 				"Deployment is ready and all pods are running")
+		})
+	})
+
+	ginkgo.Context("Volume Mounting", func() {
+		ginkgo.It("should create deployment with ConfigMap and Secret references", func() {
+			ginkgo.By("Creating MCPServer with volume references")
+			serverWithVolumes := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-server-with-volumes",
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  8080,
+						SecretRefs: []corev1.LocalObjectReference{
+							{Name: "test-secret"},
+						},
+						ConfigMapRefs: []corev1.LocalObjectReference{
+							{Name: "test-configmap"},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "custom-volume",
+								MountPath: "/custom",
+								ReadOnly:  false,
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "custom-volume",
+								VolumeSource: corev1.VolumeSource{
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, serverWithVolumes)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer with volumes")
+			scheme := k8sClient.Scheme()
+			err = kagentdevv1alpha1.AddToScheme(scheme)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			controllerReconciler := &MCPServerReconciler{
+				Client: k8sClient,
+				Scheme: scheme,
+			}
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-server-with-volumes",
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment was created with volumes")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-server-with-volumes",
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Check that the deployment has the expected volumes
+			// config, binary, cm-test-configmap, custom-volume
+			gomega.Expect(deployment.Spec.Template.Spec.Volumes).To(gomega.HaveLen(4))
+
+			// Check that the container has the expected volume mounts
+			container := deployment.Spec.Template.Spec.Containers[0]
+			// config, binary, cm-test-configmap, custom-volume
+			gomega.Expect(container.VolumeMounts).To(gomega.HaveLen(4))
+
+			// Verify that custom volume mount is present
+			foundCustomMount := false
+			for _, mount := range container.VolumeMounts {
+				if mount.Name == "custom-volume" && mount.MountPath == "/custom" {
+					foundCustomMount = true
+					break
+				}
+			}
+			gomega.Expect(foundCustomMount).To(gomega.BeTrue(), "Custom volume mount not found in container")
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, serverWithVolumes)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 	})
 })

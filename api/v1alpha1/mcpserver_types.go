@@ -216,6 +216,21 @@ type MCPServerDeployment struct {
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
 	SecretRefs []corev1.LocalObjectReference `json:"secretRefs,omitempty"`
+
+	// ConfigMapRefs defines the list of Kubernetes configmaps to reference.
+	// These configmaps will be mounted as volumes to the MCP server container.
+	// +optional
+	ConfigMapRefs []corev1.LocalObjectReference `json:"configMapRefs,omitempty"`
+
+	// VolumeMounts defines the list of volume mounts for the MCP server container.
+	// This allows for more flexible volume mounting configurations.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Volumes defines the list of volumes that can be mounted by containers.
+	// This allows for custom volume configurations beyond just secrets and configmaps.
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 }
 
 // +kubebuilder:object:root=true
