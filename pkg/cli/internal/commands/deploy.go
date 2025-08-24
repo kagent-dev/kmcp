@@ -64,7 +64,6 @@ var (
 	deployImage       string
 	deployTransport   string
 	deployPort        int
-	deployTargetPort  int
 	deployCommand     string
 	deployArgs        []string
 	deployEnv         []string
@@ -72,6 +71,12 @@ var (
 	deployFile        string
 	deployEnvironment string
 	deployNoInspector bool
+
+	// package subcommand flags
+	packageManager string
+	packageName    string
+	packageSecrets []string
+	packageUvEnv   bool
 )
 
 func init() {
@@ -91,7 +96,6 @@ func init() {
 	deployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides build image)")
 	deployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
 	deployCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: from project config)")
-	deployCmd.Flags().IntVar(&deployTargetPort, "target-port", 0, "Target port for HTTP transport")
 	deployCmd.Flags().StringVar(&deployCommand, "command", "", "Command to run (overrides project config)")
 	deployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Command arguments")
 	deployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
@@ -104,6 +108,177 @@ func init() {
 		"staging",
 		"Target environment for deployment (e.g., staging, production)",
 	)
+
+	// Add package subcommand
+	deployCmd.AddCommand(packageDeployCmd)
+}
+
+// package subcommand - supports both npm and uvx
+var packageDeployCmd = &cobra.Command{
+	Use:   "package",
+	Short: "Deploy an MCP server using a package manager (npx, uvx)",
+	Long: `Deploy an MCP server using a package manager to run Model Context Protocol servers.
+
+This subcommand creates an MCPServer Custom Resource Definition (CRD) that runs
+an MCP server using npx (for npm packages) or uvx (for Python packages).
+
+The deployment name, manager, and args are required. The package manager must be either 'npx' or 'uvx'.
+
+Examples:
+  kmcp deploy package --deployment-name github-server --manager npx --args @modelcontextprotocol/server-github                             # Deploy GitHub MCP server
+  kmcp deploy package --deployment-name github-server --manager npx --args @modelcontextprotocol/server-github  --dry-run                  # Print YAML without deploying
+  kmcp deploy package --deployment-name my-server --manager npx --args my-package --env "KEY1=value1,KEY2=value2"                          # Set environment variables
+  kmcp deploy package --deployment-name github-server --manager npx --args @modelcontextprotocol/server-github  --secrets secret1,secret2  # Mount Kubernetes secrets
+  kmcp deploy package --deployment-name my-server --manager npx --args my-package --no-inspector                                           # Deploy without starting inspector
+  kmcp deploy package --deployment-name my-server --manager uvx --args mcp-server-git --uv-env                                             # Use UV and write managed tools and installables to /tmp directories`,
+	Args: cobra.NoArgs,
+	RunE: runPackageDeploy,
+}
+
+func init() {
+	// package subcommand flags
+	packageDeployCmd.Flags().StringVar(&packageName, "deployment-name", "", "Name for the deployment (required)")
+	packageDeployCmd.Flags().StringVar(&packageManager, "manager", "", "Package manager to use (npx or uvx) (required)")
+	packageDeployCmd.Flags().StringSliceVar(&packageSecrets, "secrets", []string{}, "List of Kubernetes secret names to mount")
+	// UV-specific flags
+	packageDeployCmd.Flags().BoolVar(&packageUvEnv, "uv-env", false, "Add UV-specific environment variables for writing managed tools and installables to /tmp directories. Useful when not using a custom image to avoid permission issues.")
+	// Add common deployment flags
+	packageDeployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Arguments to pass to the package manager (e.g., package names) (required)")
+	packageDeployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
+	packageDeployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
+	packageDeployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "", "Kubernetes namespace")
+	packageDeployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides default)")
+	packageDeployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
+	packageDeployCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: 3000)")
+	packageDeployCmd.Flags().BoolVar(&deployNoInspector, "no-inspector", false, "Do not start the MCP inspector after deployment")
+
+	// Mark required flags
+	_ = packageDeployCmd.MarkFlagRequired("deployment-name")
+	_ = packageDeployCmd.MarkFlagRequired("manager")
+	_ = packageDeployCmd.MarkFlagRequired("args")
+}
+
+func runPackageDeploy(_ *cobra.Command, args []string) error {
+	// Validate package manager
+	if packageManager != "npx" && packageManager != "uvx" {
+		return fmt.Errorf("unsupported package manager: %s (must be 'npx' or 'uvx')", packageManager)
+	}
+
+	// Validate args
+	if len(deployArgs) == 0 {
+		return fmt.Errorf("args are required (e.g., --args package-name)")
+	}
+
+	// Parse environment variables
+	envMap := parseEnvVars(deployEnv)
+	// Add UV-specific environment variables to create directories
+	// in tmp directory to avoid permission issues when not using a custom image
+	if packageManager == "uvx" {
+		envMap["UV_INSTALL_DIR"] = "/tmp/uv"
+		envMap["UV_CACHE_DIR"] = "/tmp/uv/cache"
+		envMap["UV_TOOL_DIR"] = "/tmp/uv/tools"
+		envMap["UV_TOOL_BIN_DIR"] = "/tmp/uv/tools/bin"
+	}
+
+	// Convert secret names to ObjectReferences
+	secretRefs := make([]corev1.LocalObjectReference, 0, len(packageSecrets))
+	for _, secretName := range packageSecrets {
+		secretRefs = append(secretRefs, corev1.LocalObjectReference{
+			Name: secretName,
+		})
+	}
+
+	// Set default port if none specified
+	port := 3000
+	if deployPort != 0 {
+		port = deployPort
+	}
+
+	// Create MCPServer for package deployment
+	mcpServer := &v1alpha1.MCPServer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "kagent.dev/v1alpha1",
+			Kind:       "MCPServer",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      packageName,
+			Namespace: deployNamespace,
+		},
+		Spec: v1alpha1.MCPServerSpec{
+			Deployment: v1alpha1.MCPServerDeployment{
+				Image:      deployImage,
+				Port:       uint16(port),
+				Cmd:        packageManager,
+				Args:       deployArgs,
+				Env:        envMap,
+				SecretRefs: secretRefs,
+			},
+			TransportType: getTransportType(),
+		},
+	}
+
+	// Configure transport-specific settings
+	if mcpServer.Spec.TransportType == v1alpha1.TransportTypeHTTP {
+		mcpServer.Spec.HTTPTransport = &v1alpha1.HTTPTransport{
+			TargetPort: uint32(port),
+			TargetPath: "/mcp",
+		}
+	} else {
+		mcpServer.Spec.StdioTransport = &v1alpha1.StdioTransport{}
+	}
+
+	// Convert MCPServer to YAML
+	mcpServerYAML, err := yaml.Marshal(mcpServer)
+	if err != nil {
+		return fmt.Errorf("failed to marshal MCPServer to YAML: %w", err)
+	}
+
+	// Create YAML content with header
+	yamlContent := fmt.Sprintf(
+		"# MCPServer deployment generated by kmcp deploy package\n# Deployment: %s\n# Manager: %s\n# Args: %v\n%s",
+		packageName,
+		packageManager,
+		deployArgs,
+		string(mcpServerYAML),
+	)
+
+	// Handle output
+	if deployOutput != "" {
+		// Write to file
+		if err := os.WriteFile(deployOutput, []byte(yamlContent), 0644); err != nil {
+			return fmt.Errorf("failed to write to file: %w", err)
+		}
+		fmt.Printf("✅ MCPServer manifest written to: %s\n", deployOutput)
+	}
+
+	if deployDryRun {
+		// Print to stdout
+		fmt.Print(yamlContent)
+	} else {
+		// Apply MCPServer to cluster
+		if err := applyToCluster("", yamlContent, mcpServer); err != nil {
+			return fmt.Errorf("failed to apply to cluster: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// getTransportType determines the transport type based on flags
+func getTransportType() v1alpha1.TransportType {
+	if deployTransport != "" {
+		switch deployTransport {
+		case transportHTTP:
+			return v1alpha1.TransportTypeHTTP
+		case transportStdio:
+			return v1alpha1.TransportTypeStdio
+		default:
+			// Default to stdio for package deployments
+			return v1alpha1.TransportTypeStdio
+		}
+	}
+	// Default to stdio for package deployments
+	return v1alpha1.TransportTypeStdio
 }
 
 func runDeployMCP(_ *cobra.Command, args []string) error {
@@ -226,28 +401,12 @@ func generateMCPServer(
 	}
 
 	// Determine transport type
-	transportType := v1alpha1.TransportTypeStdio
-	if deployTransport != "" {
-		switch deployTransport {
-		case transportHTTP:
-			transportType = v1alpha1.TransportTypeHTTP
-		case transportStdio:
-			transportType = v1alpha1.TransportTypeStdio
-		default:
-			return nil, fmt.Errorf("invalid transport type: %s (must be 'stdio' or 'http')", deployTransport)
-		}
-	}
+	transportType := getTransportType()
 
 	// Determine port
 	port := deployPort
 	if port == 0 {
 		port = 3000 // Default port
-	}
-
-	if transportType == v1alpha1.TransportTypeHTTP {
-		if deployTargetPort == 0 {
-			deployTargetPort = port
-		}
 	}
 
 	// Determine command and args
@@ -257,7 +416,7 @@ func generateMCPServer(
 		// Set default command based on framework
 		command = getDefaultCommand(projectManifest.Framework)
 		if len(args) == 0 {
-			args = getDefaultArgs(projectManifest.Framework, deployTargetPort)
+			args = getDefaultArgs(projectManifest.Framework, port)
 		}
 	}
 
@@ -311,12 +470,8 @@ func generateMCPServer(
 
 	// Configure transport-specific settings
 	if transportType == v1alpha1.TransportTypeHTTP {
-		targetPort := deployTargetPort
-		if targetPort == 0 {
-			targetPort = port
-		}
 		mcpServer.Spec.HTTPTransport = &v1alpha1.HTTPTransport{
-			TargetPort: uint32(targetPort),
+			TargetPort: uint32(port),
 			TargetPath: "/mcp",
 		}
 	} else {
