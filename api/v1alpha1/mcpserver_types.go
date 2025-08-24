@@ -199,7 +199,8 @@ type MCPServerDeployment struct {
 	Port uint16 `json:"port"`
 
 	// Cmd defines the command to run in the container to start the mcp server.
-	Cmd string `json:"cmd"`
+	// +optional
+	Cmd string `json:"cmd,omitempty"`
 
 	// Args defines the arguments to pass to the command.
 	// +optional
