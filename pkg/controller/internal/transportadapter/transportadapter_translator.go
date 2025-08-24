@@ -20,7 +20,6 @@ import (
 
 const (
 	transportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
-	busyboxImage                   = "busybox:1.37.0-musl"
 )
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
