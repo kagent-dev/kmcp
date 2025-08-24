@@ -86,25 +86,23 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
-		initContainers := []corev1.Container{{
-			Name:            "copy-binary",
-			Image:           transportAdapterContainerImage,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command:         []string{},
-			Args: []string{
-				"--copy-self",
-				"/adapterbin/agentgateway",
-			},
-			VolumeMounts: []corev1.VolumeMount{{
-				Name:      "binary",
-				MountPath: "/adapterbin",
-			}},
-			SecurityContext: getSecurityContext(),
-		}}
-
 		template = corev1.PodSpec{
 			ServiceAccountName: server.Name,
-			InitContainers:     initContainers,
+			InitContainers: []corev1.Container{{
+				Name:            "copy-binary",
+				Image:           transportAdapterContainerImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{},
+				Args: []string{
+					"--copy-self",
+					"/adapterbin/agentgateway",
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "binary",
+					MountPath: "/adapterbin",
+				}},
+				SecurityContext: getSecurityContext(),
+			}},
 			Containers: []corev1.Container{{
 				Name:            "mcp-server",
 				Image:           image,
