@@ -173,7 +173,7 @@ func runPackageDeploy(_ *cobra.Command, args []string) error {
 	envMap := parseEnvVars(deployEnv)
 	// Add UV-specific environment variables to create directories
 	// in tmp directory to avoid permission issues when not using a custom image
-	if packageManager == "uvx" {
+	if packageManager == "uvx" && packageUvEnv {
 		envMap["UV_INSTALL_DIR"] = "/tmp/uv"
 		envMap["UV_CACHE_DIR"] = "/tmp/uv/cache"
 		envMap["UV_TOOL_DIR"] = "/tmp/uv/tools"
