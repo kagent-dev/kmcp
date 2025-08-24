@@ -20,10 +20,13 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
 	"github.com/kagent-dev/kmcp/pkg/controller/internal/transportadapter"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -32,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // MCPServerReconciler reconciles a MCPServer object
@@ -83,6 +85,15 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	r.reconcileStatus(ctx, mcpServer, nil)
+
+	// If the deployment is not ready, requeue after a short interval to check again
+	deployment := &appsv1.Deployment{}
+	deploymentName := mcpServer.Name
+	if err := r.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: mcpServer.Namespace}, deployment); err == nil {
+		if deployment.Status.AvailableReplicas == 0 || deployment.Status.AvailableReplicas < deployment.Status.Replicas {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -223,17 +234,18 @@ func (r *MCPServerReconciler) checkReadyCondition(ctx context.Context, server *k
 	}
 
 	// Check if deployment is available
-	if deployment.Status.ReadyReplicas > 0 && deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+	// A deployment is considered ready when it has the desired number of available replicas
+	if deployment.Status.AvailableReplicas > 0 && deployment.Status.AvailableReplicas == deployment.Status.Replicas {
 		setReadyCondition(
 			server,
 			true,
-			kagentdevv1alpha1.MCPServerReasonReady,
+			kagentdevv1alpha1.MCPServerReasonAvailable,
 			"Deployment is ready and all pods are running",
 		)
 	} else {
-		message := fmt.Sprintf("Deployment not ready: %d/%d replicas ready",
-			deployment.Status.ReadyReplicas, deployment.Status.Replicas)
-		setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, message)
+		message := fmt.Sprintf("Deployment not ready: %d/%d replicas available",
+			deployment.Status.AvailableReplicas, deployment.Status.Replicas)
+		setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonNotAvailable, message)
 	}
 }
 

@@ -19,14 +19,13 @@ package controller
 import (
 	"context"
 
-	"github.com/onsi/gomega"
-
 	ginkgo "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 )
@@ -93,4 +92,143 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 
 		})
 	})
+
+	ginkgo.Context("When testing available replicas functionality", func() {
+		const testResourceName = "test-replicas-resource"
+		ctx := context.Background()
+
+		typeNamespacedName := types.NamespacedName{
+			Name:      testResourceName,
+			Namespace: "default",
+		}
+
+		ginkgo.BeforeEach(func() {
+			ginkgo.By("creating test MCPServer resource")
+			resource := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testResourceName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "docker.io/mcp/everything",
+						Port:  3000,
+						Cmd:   "npx",
+						Args:  []string{"-y", "@modelcontextprotocol/server-filesystem", "/"},
+					},
+					TransportType: "stdio",
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, resource)).To(gomega.Succeed())
+		})
+
+		ginkgo.AfterEach(func() {
+			ginkgo.By("cleaning up test resources")
+			// Clean up MCPServer
+			resource := &kagentdevv1alpha1.MCPServer{}
+			err := k8sClient.Get(ctx, typeNamespacedName, resource)
+			if err == nil {
+				gomega.Expect(k8sClient.Delete(ctx, resource)).To(gomega.Succeed())
+			}
+
+			// Clean up deployment
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, typeNamespacedName, deployment)
+			if err == nil {
+				gomega.Expect(k8sClient.Delete(ctx, deployment)).To(gomega.Succeed())
+			}
+		})
+
+		ginkgo.It("should set Available condition to false when deployment has no available replicas", func() {
+			// Setup controller and create deployment
+			controllerReconciler := setupController()
+			createDeployment(ctx, controllerReconciler, typeNamespacedName)
+
+			// Update deployment status to have no available replicas
+			updateDeploymentStatus(ctx, typeNamespacedName, 3, 0, 0)
+
+			// Reconcile and verify Ready condition is false
+			reconcileAndVerifyCondition(ctx, controllerReconciler, typeNamespacedName,
+				metav1.ConditionFalse,
+				string(kagentdevv1alpha1.MCPServerReasonNotAvailable),
+				"0/3 replicas available")
+		})
+
+		ginkgo.It("should set Available condition to true when deployment has all replicas available", func() {
+			// Setup controller and create deployment
+			controllerReconciler := setupController()
+			createDeployment(ctx, controllerReconciler, typeNamespacedName)
+
+			// Update deployment status to have all replicas available
+			updateDeploymentStatus(ctx, typeNamespacedName, 2, 2, 2)
+
+			// Reconcile and verify Ready condition is true
+			reconcileAndVerifyCondition(ctx, controllerReconciler, typeNamespacedName,
+				metav1.ConditionTrue,
+				string(kagentdevv1alpha1.MCPServerReasonAvailable),
+				"Deployment is ready and all pods are running")
+		})
+	})
 })
+
+// Helper functions to reduce code duplication
+
+func setupController() *MCPServerReconciler {
+	scheme := k8sClient.Scheme()
+	err := kagentdevv1alpha1.AddToScheme(scheme)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	return &MCPServerReconciler{
+		Client: k8sClient,
+		Scheme: scheme,
+	}
+}
+
+func createDeployment(ctx context.Context, controllerReconciler *MCPServerReconciler,
+	typeNamespacedName types.NamespacedName) {
+	ginkgo.By("reconciling to create deployment")
+	_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+		NamespacedName: typeNamespacedName,
+	})
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+func updateDeploymentStatus(ctx context.Context, typeNamespacedName types.NamespacedName,
+	replicas, availableReplicas, readyReplicas int32) {
+	ginkgo.By("updating deployment status")
+	deployment := &appsv1.Deployment{}
+	gomega.Expect(k8sClient.Get(ctx, typeNamespacedName, deployment)).To(gomega.Succeed())
+
+	deployment.Status = appsv1.DeploymentStatus{
+		Replicas:          replicas,
+		AvailableReplicas: availableReplicas,
+		ReadyReplicas:     readyReplicas,
+	}
+	gomega.Expect(k8sClient.Status().Update(ctx, deployment)).To(gomega.Succeed())
+}
+
+func reconcileAndVerifyCondition(ctx context.Context, controllerReconciler *MCPServerReconciler,
+	typeNamespacedName types.NamespacedName, expectedStatus metav1.ConditionStatus,
+	expectedReason, expectedMessageSubstring string) {
+	ginkgo.By("reconciling again to check ready condition")
+	_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+		NamespacedName: typeNamespacedName,
+	})
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	ginkgo.By("verifying Ready condition")
+	updatedMCPServer := &kagentdevv1alpha1.MCPServer{}
+	gomega.Expect(k8sClient.Get(ctx, typeNamespacedName, updatedMCPServer)).To(gomega.Succeed())
+
+	var readyCondition *metav1.Condition
+	for _, condition := range updatedMCPServer.Status.Conditions {
+		if condition.Type == string(kagentdevv1alpha1.MCPServerConditionReady) {
+			readyCondition = &condition
+			break
+		}
+	}
+	gomega.Expect(readyCondition).NotTo(gomega.BeNil())
+	gomega.Expect(readyCondition.Status).To(gomega.Equal(expectedStatus))
+	gomega.Expect(readyCondition.Reason).To(gomega.Equal(expectedReason))
+	gomega.Expect(readyCondition.Message).To(gomega.ContainSubstring(expectedMessageSubstring))
+}

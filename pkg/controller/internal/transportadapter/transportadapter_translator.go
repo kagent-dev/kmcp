@@ -1,6 +1,8 @@
 package transportadapter
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 
@@ -206,7 +208,33 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		},
 	}
 
-	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
+	// Set owner reference first
+	if err := controllerutil.SetOwnerReference(server, deployment, t.scheme); err != nil {
+		return nil, err
+	}
+
+	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
+	if err != nil {
+		return nil, err
+	}
+	// Add hash annotation based on MCPServer spec to initiate a restart on changes to the MCPServer spec
+	t.addMCPServerConfigHashAnnotation(deployment, configYaml)
+
+	return deployment, nil
+}
+
+// addMCPServerSpecHashAnnotation adds a hash annotation to the deployment's pod template
+// based on the MCPServer config yaml. This ensures pod restarts when the MCPServer configuration changes.
+func (t *transportAdapterTranslator) addMCPServerConfigHashAnnotation(
+	deployment *appsv1.Deployment,
+	mcpServerConfigYaml string,
+) {
+	hash := sha256.Sum256([]byte(mcpServerConfigYaml))
+	truncatedHash := hex.EncodeToString(hash[:])[:8]
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	deployment.Spec.Template.Annotations["kmcp.kagent.dev/mcpserver-config-hash"] = truncatedHash
 }
 
 func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
@@ -269,7 +297,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, len(env))
+	envVars := make([]corev1.EnvVar, 0, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,
@@ -315,17 +343,22 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(server *v1alpha1.MCPServer) (string, error) {
 	config, err := t.translateTransportAdapterConfig(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate MCP server config: %w", err)
-	}
-
-	if config == nil {
-		return nil, nil // No config needed
+		return "", fmt.Errorf("failed to translate MCP server config: %w", err)
 	}
 
 	configYaml, err := yaml.Marshal(config)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
+	}
+
+	return string(configYaml), nil
+}
+
+func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
 	}
@@ -340,7 +373,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		Data: map[string]string{
-			"local.yaml": string(configYaml), // Assuming ToYAML() is a method that converts LocalConfig to YAML
+			"local.yaml": configYaml,
 		},
 	}
 
