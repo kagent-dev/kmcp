@@ -277,16 +277,16 @@ func (t *transportAdapterTranslator) createSecretEnvFrom(
 	return envFrom
 }
 
-// getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
+// getSecurityContext returns a SecurityContext that runs as root
 func getSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &[]bool{false}[0],
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
 		},
-		RunAsNonRoot: &[]bool{true}[0],
-		RunAsUser:    &[]int64{1000}[0],
-		RunAsGroup:   &[]int64{1000}[0],
+		RunAsNonRoot: &[]bool{false}[0],
+		RunAsUser:    &[]int64{0}[0],
+		RunAsGroup:   &[]int64{0}[0],
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},

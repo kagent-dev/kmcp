@@ -76,7 +76,6 @@ var (
 	packageManager string
 	packageName    string
 	packageSecrets []string
-	packageUvEnv   bool
 )
 
 func init() {
@@ -130,7 +129,7 @@ Examples:
   kmcp deploy package --deployment-name my-server --manager npx --args my-package --env "KEY1=value1,KEY2=value2"                          # Set environment variables
   kmcp deploy package --deployment-name github-server --manager npx --args @modelcontextprotocol/server-github  --secrets secret1,secret2  # Mount Kubernetes secrets
   kmcp deploy package --deployment-name my-server --manager npx --args my-package --no-inspector                                           # Deploy without starting inspector
-  kmcp deploy package --deployment-name my-server --manager uvx --args mcp-server-git --uv-env                                             # Use UV and write managed tools and installables to /tmp directories`,
+  kmcp deploy package --deployment-name my-server --manager uvx --args mcp-server-git                                                      # Use UV and write managed tools and installables to /tmp directories`,
 	Args: cobra.NoArgs,
 	RunE: runPackageDeploy,
 }
@@ -140,8 +139,7 @@ func init() {
 	packageDeployCmd.Flags().StringVar(&packageName, "deployment-name", "", "Name for the deployment (required)")
 	packageDeployCmd.Flags().StringVar(&packageManager, "manager", "", "Package manager to use (npx or uvx) (required)")
 	packageDeployCmd.Flags().StringSliceVar(&packageSecrets, "secrets", []string{}, "List of Kubernetes secret names to mount")
-	// UV-specific flags
-	packageDeployCmd.Flags().BoolVar(&packageUvEnv, "uv-env", false, "Add UV-specific environment variables for writing managed tools and installables to /tmp directories. Useful when not using a custom image to avoid permission issues.")
+
 	// Add common deployment flags
 	packageDeployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Arguments to pass to the package manager (e.g., package names) (required)")
 	packageDeployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
@@ -172,14 +170,6 @@ func runPackageDeploy(_ *cobra.Command, args []string) error {
 
 	// Parse environment variables
 	envMap := parseEnvVars(deployEnv)
-	// Add UV-specific environment variables to create directories
-	// in tmp directory to avoid permission issues when not using a custom image
-	if packageManager == "uvx" && packageUvEnv {
-		envMap["UV_INSTALL_DIR"] = "/tmp/uv"
-		envMap["UV_CACHE_DIR"] = "/tmp/uv/cache"
-		envMap["UV_TOOL_DIR"] = "/tmp/uv/tools"
-		envMap["UV_TOOL_BIN_DIR"] = "/tmp/uv/tools/bin"
-	}
 
 	// Convert secret names to ObjectReferences
 	secretRefs := make([]corev1.LocalObjectReference, 0, len(packageSecrets))
