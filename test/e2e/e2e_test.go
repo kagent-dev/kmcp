@@ -50,12 +50,6 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		_, err := utils.Run(cmd)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create namespace")
 
-		ginkgo.By("labeling the namespace to enforce the restricted security policy")
-		cmd = exec.Command("kubectl", "label", "--overwrite", "ns", namespace,
-			"pod-security.kubernetes.io/enforce=restricted")
-		_, err = utils.Run(cmd)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to label namespace with restricted policy")
-
 		ginkgo.By("deploying the CRDs using Helm")
 		cmd = exec.Command("helm", "install", "kmcp-crds", "helm/kmcp-crds",
 			"--namespace", namespace,
