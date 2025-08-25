@@ -284,9 +284,8 @@ func getSecurityContext() *corev1.SecurityContext {
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
 		},
-		RunAsNonRoot: &[]bool{false}[0],
-		RunAsUser:    &[]int64{0}[0],
-		RunAsGroup:   &[]int64{0}[0],
+		RunAsUser:  &[]int64{0}[0],
+		RunAsGroup: &[]int64{0}[0],
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},
