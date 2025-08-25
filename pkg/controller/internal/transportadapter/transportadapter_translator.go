@@ -100,7 +100,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Name:      "binary",
 					MountPath: "/adapterbin",
 				}},
-				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
 				Name:            "mcp-server",
@@ -125,7 +124,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						MountPath: "/adapterbin",
 					},
 				},
-				SecurityContext: getSecurityContext(),
 			}},
 			Volumes: []corev1.Volume{
 				{
@@ -162,7 +160,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					EnvFrom:         secretEnvFrom,
-					SecurityContext: getSecurityContext(),
 				}},
 			Volumes: []corev1.Volume{
 				{
@@ -275,21 +272,6 @@ func (t *transportAdapterTranslator) createSecretEnvFrom(
 	}
 
 	return envFrom
-}
-
-// getSecurityContext returns a SecurityContext that runs as root
-func getSecurityContext() *corev1.SecurityContext {
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &[]bool{false}[0],
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
-		RunAsUser:  &[]int64{0}[0],
-		RunAsGroup: &[]int64{0}[0],
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		},
-	}
 }
 
 func convertEnvVars(env map[string]string) []corev1.EnvVar {
