@@ -196,7 +196,9 @@ type MCPServerDeployment struct {
 	Image string `json:"image,omitempty"`
 
 	// Port defines the port on which the MCP server will listen.
-	Port uint16 `json:"port"`
+	// +optional
+	// +kubebuilder:default=3000
+	Port uint16 `json:"port,omitempty"`
 
 	// Cmd defines the command to run in the container to start the mcp server.
 	// +optional

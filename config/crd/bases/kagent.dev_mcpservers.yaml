@@ -72,6 +72,7 @@ spec:
                       MCP server.
                     type: string
                   port:
+                    default: 3000
                     description: Port defines the port on which the MCP server will
                       listen.
                     type: integer
@@ -96,8 +97,6 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     type: array
-                required:
-                - port
                 type: object
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
