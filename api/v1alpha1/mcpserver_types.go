@@ -192,18 +192,24 @@ type MCPServerStatus struct {
 // MCPServerDeployment
 type MCPServerDeployment struct {
 	// Image defines the container image to to deploy the MCP server.
+	// +optional
 	Image string `json:"image,omitempty"`
 
 	// Port defines the port on which the MCP server will listen.
+	// +optional
+	// +kubebuilder:default=3000
 	Port uint16 `json:"port,omitempty"`
 
 	// Cmd defines the command to run in the container to start the mcp server.
+	// +optional
 	Cmd string `json:"cmd,omitempty"`
 
 	// Args defines the arguments to pass to the command.
+	// +optional
 	Args []string `json:"args,omitempty"`
 
 	// Env defines the environment variables to set in the container.
+	// +optional
 	Env map[string]string `json:"env,omitempty"`
 
 	// SecretRefs defines the list of Kubernetes secrets to reference.
