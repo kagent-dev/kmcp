@@ -68,8 +68,14 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	server *v1alpha1.MCPServer,
 ) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
+	if image == "" && server.Spec.Deployment.Cmd == "uvx" {
+		image = "ghcr.io/astral-sh/uv:debian"
+	}
+	if image == "" && server.Spec.Deployment.Cmd == "npx" {
+		image = "node:24-alpine3.21"
+	}
 	if image == "" {
-		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
+		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
 	}
 
 	// Create environment variables from secrets for envFrom
@@ -94,7 +100,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Name:      "binary",
 					MountPath: "/adapterbin",
 				}},
-				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
 				Name:            "mcp-server",
@@ -119,7 +124,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						MountPath: "/adapterbin",
 					},
 				},
-				SecurityContext: getSecurityContext(),
 			}},
 			Volumes: []corev1.Volume{
 				{
@@ -146,6 +150,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			cmd = []string{server.Spec.Deployment.Cmd}
 		}
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			Containers: []corev1.Container{
 				{
 					Name:            "mcp-server",
@@ -155,7 +160,6 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					EnvFrom:         secretEnvFrom,
-					SecurityContext: getSecurityContext(),
 				}},
 			Volumes: []corev1.Volume{
 				{
@@ -268,22 +272,6 @@ func (t *transportAdapterTranslator) createSecretEnvFrom(
 	}
 
 	return envFrom
-}
-
-// getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
-func getSecurityContext() *corev1.SecurityContext {
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &[]bool{false}[0],
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
-		RunAsNonRoot: &[]bool{true}[0],
-		RunAsUser:    &[]int64{1000}[0],
-		RunAsGroup:   &[]int64{1000}[0],
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		},
-	}
 }
 
 func convertEnvVars(env map[string]string) []corev1.EnvVar {
