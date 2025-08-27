@@ -333,7 +333,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, len(env))
+	envVars := make([]corev1.EnvVar, 0, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,
