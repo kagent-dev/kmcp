@@ -1,16 +1,17 @@
 {{/*
-Expand the name of the chart.
-*/}}
-{{- define "kmcp.name" -}}
-{{- .Chart.Name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "kmcp.fullname" -}}
-{{- printf "%s-%s" .Release.Name .Chart.Name | trunc 63 | trimSuffix "-" }}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- if not .Values.nameOverride }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -36,7 +37,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels
 */}}
 {{- define "kmcp.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kmcp.name" . }}
+app.kubernetes.io/name: {{ default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 control-plane: controller-manager
 {{- end }}
@@ -53,10 +54,11 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Create the namespace to use
+Expand the namespace of the release.
+Allows overriding it for multi-namespace deployments in combined charts.
 */}}
 {{- define "kmcp.namespace" -}}
-{{- .Release.Namespace }}
+{{- default .Release.Namespace .Values.namespaceOverride | trunc 63 | trimSuffix "-" -}}
 {{- end }}
 
 {{/*
