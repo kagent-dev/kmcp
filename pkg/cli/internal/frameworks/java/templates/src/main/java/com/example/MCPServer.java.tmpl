@@ -1,0 +1,370 @@
+package com.example;
+
+import com.example.tools.Tool;
+import io.modelcontextprotocol.server.McpServer;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.io.BufferedReader;
+import java.io.IOException;
+
+/**
+ * MCP Server implementation using the official MCP Java SDK.
+ *
+ * Supports stdio and basic HTTP transport protocols without session management.
+ */
+public class MCPServer {
+    private static final Logger logger = LoggerFactory.getLogger(MCPServer.class);
+
+    private final String serverName;
+    private final ServerConfig config;
+    private final Map<String, Tool> tools;
+    private McpSyncServer server;
+    private org.eclipse.jetty.server.Server jettyServer;
+
+    public MCPServer(String serverName, ServerConfig config) {
+        this.serverName = serverName;
+        this.config = config;
+        this.tools = new HashMap<>();
+    }
+
+    /**
+     * Register a tool with the server.
+     */
+    public void registerTool(Tool tool) {
+        tools.put(tool.getName(), tool);
+        logger.info("Registered tool: {}", tool.getName());
+    }
+
+    /**
+     * Start the MCP server.
+     */
+    public void start() {
+        logger.info("Starting MCP server: {}", serverName);
+        logger.info("Transport: {}", config.getTransport());
+        logger.info("Registered {} tools: {}", tools.size(), tools.keySet());
+
+        if ("http".equals(config.getTransport())) {
+            startHttpServer();
+        } else {
+            startStdioServer();
+        }
+    }
+
+    /**
+     * Start basic HTTP server without session management.
+     */
+    private void startHttpServer() {
+        logger.info("🚀 Starting basic HTTP MCP Server on http://{}:{}", config.getHost(), config.getPort());
+        
+        try {
+            // Create Jetty server
+            jettyServer = new org.eclipse.jetty.server.Server(config.getPort());
+            
+            // Create servlet context
+            org.eclipse.jetty.servlet.ServletContextHandler context =
+                new org.eclipse.jetty.servlet.ServletContextHandler(jettyServer, "/");
+            
+            // Health check endpoint
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(new jakarta.servlet.http.HttpServlet() {
+                @Override
+                protected void doGet(jakarta.servlet.http.HttpServletRequest req,
+                                     jakarta.servlet.http.HttpServletResponse resp)
+                        throws jakarta.servlet.ServletException, IOException {
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    resp.getWriter().write("{\"status\":\"ok\",\"server\":\"" + serverName + "\",\"tools\":" + tools.size() + "}");
+                }
+            }), "/health");
+            
+            // Tools endpoint - list available tools
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(new jakarta.servlet.http.HttpServlet() {
+                @Override
+                protected void doGet(jakarta.servlet.http.HttpServletRequest req,
+                                     jakarta.servlet.http.HttpServletResponse resp)
+                        throws jakarta.servlet.ServletException, IOException {
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    
+                    StringBuilder json = new StringBuilder();
+                    json.append("{\"tools\":[");
+                    boolean first = true;
+                    for (Tool tool : tools.values()) {
+                        if (!first) json.append(",");
+                        json.append("{\"name\":\"").append(tool.getName())
+                            .append("\",\"description\":\"").append(escapeJson(tool.getDescription())).append("\"}");
+                        first = false;
+                    }
+                    json.append("]}");
+                    
+                    resp.getWriter().write(json.toString());
+                }
+            }), "/tools");
+            
+            // Tool execution endpoint - execute tools via POST
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(new jakarta.servlet.http.HttpServlet() {
+                @Override
+                protected void doPost(jakarta.servlet.http.HttpServletRequest req,
+                                      jakarta.servlet.http.HttpServletResponse resp)
+                        throws jakarta.servlet.ServletException, IOException {
+                    resp.setContentType("application/json");
+                    
+                    try {
+                        // Read request body
+                        String body = readRequestBody(req);
+                        
+                        // Simple JSON parsing
+                        String toolName = extractJsonValue(body, "tool");
+                        String argsJson = extractJsonValue(body, "args");
+                        
+                        if (toolName == null || !tools.containsKey(toolName)) {
+                            resp.setStatus(404);
+                            resp.getWriter().write("{\"error\":\"Tool not found: " + (toolName != null ? toolName : "null") + "\",\"success\":false}");
+                            return;
+                        }
+                        
+                        Tool tool = tools.get(toolName);
+                        
+                        // Convert JSON args to Map
+                        Map<String, Object> args = parseSimpleJsonArgs(argsJson);
+                        
+                        // Execute tool
+                        Object result = tool.execute(args);
+                        
+                        resp.setStatus(200);
+                        resp.getWriter().write("{\"result\":\"" + escapeJson(result.toString()) + "\",\"success\":true}");
+                        
+                    } catch (Exception e) {
+                        logger.error("Error executing tool", e);
+                        resp.setStatus(500);
+                        resp.getWriter().write("{\"error\":\"" + escapeJson(e.getMessage()) + "\",\"success\":false}");
+                    }
+                }
+                
+                private String readRequestBody(jakarta.servlet.http.HttpServletRequest req) throws IOException {
+                    StringBuilder sb = new StringBuilder();
+                    try (BufferedReader reader = req.getReader()) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            sb.append(line);
+                        }
+                    }
+                    return sb.toString();
+                }
+                
+                private String extractJsonValue(String json, String key) {
+                    if (json == null) return null;
+                    
+                    String searchKey = "\"" + key + "\":";
+                    int start = json.indexOf(searchKey);
+                    if (start == -1) return null;
+                    start += searchKey.length();
+                    
+                    // Skip whitespace
+                    while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
+                    
+                    if (start >= json.length()) return null;
+                    
+                    if (json.charAt(start) == '"') {
+                        // String value
+                        start++;
+                        int end = json.indexOf('"', start);
+                        return end != -1 ? json.substring(start, end) : null;
+                    } else if (json.charAt(start) == '{') {
+                        // Object value
+                        int braceCount = 1;
+                        int pos = start + 1;
+                        while (pos < json.length() && braceCount > 0) {
+                            if (json.charAt(pos) == '{') braceCount++;
+                            else if (json.charAt(pos) == '}') braceCount--;
+                            pos++;
+                        }
+                        return json.substring(start, pos);
+                    }
+                    return null;
+                }
+                
+                private Map<String, Object> parseSimpleJsonArgs(String argsJson) {
+                    Map<String, Object> args = new HashMap<>();
+                    if (argsJson == null || argsJson.trim().equals("{}") || argsJson.trim().equals("null")) {
+                        return args;
+                    }
+                    
+                    argsJson = argsJson.trim();
+                    if (argsJson.startsWith("{") && argsJson.endsWith("}")) {
+                        argsJson = argsJson.substring(1, argsJson.length() - 1);
+                        
+                        // Simple parsing - split by comma but handle quoted strings
+                        String[] pairs = splitJsonPairs(argsJson);
+                        for (String pair : pairs) {
+                            String[] keyValue = pair.split(":", 2);
+                            if (keyValue.length == 2) {
+                                String key = keyValue[0].trim().replaceAll("^\"|\"$", "");
+                                String value = keyValue[1].trim().replaceAll("^\"|\"$", "");
+                                args.put(key, value);
+                            }
+                        }
+                    }
+                    return args;
+                }
+                
+                private String[] splitJsonPairs(String json) {
+                    java.util.List<String> pairs = new java.util.ArrayList<>();
+                    boolean inQuotes = false;
+                    int start = 0;
+                    
+                    for (int i = 0; i < json.length(); i++) {
+                        char c = json.charAt(i);
+                        if (c == '"' && (i == 0 || json.charAt(i-1) != '\\')) {
+                            inQuotes = !inQuotes;
+                        } else if (c == ',' && !inQuotes) {
+                            pairs.add(json.substring(start, i));
+                            start = i + 1;
+                        }
+                    }
+                    
+                    if (start < json.length()) {
+                        pairs.add(json.substring(start));
+                    }
+                    
+                    return pairs.toArray(new String[0]);
+                }
+            }), "/execute");
+            
+            // Root endpoint with server info
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(new jakarta.servlet.http.HttpServlet() {
+                @Override
+                protected void doGet(jakarta.servlet.http.HttpServletRequest req,
+                                     jakarta.servlet.http.HttpServletResponse resp)
+                        throws jakarta.servlet.ServletException, IOException {
+                    resp.setContentType("text/html");
+                    resp.setStatus(200);
+                    String html = String.format("""
+                        <html>
+                        <head><title>Basic MCP Server</title></head>
+                        <body>
+                        <h1>MCP Server: %s</h1>
+                        <p>Status: Running</p>
+                        <p>Tools: %d</p>
+                        <p>Endpoints:</p>
+                        <ul>
+                        <li><a href="/health">Health Check</a> - GET</li>
+                        <li><a href="/tools">List Tools</a> - GET</li>
+                        <li>/execute - POST (Execute tools)</li>
+                        </ul>
+                        <h3>Usage:</h3>
+                        <pre>
+POST /execute
+Content-Type: application/json
+
+{
+  "tool": "tool_name",
+  "args": {"param1": "value1"}
+}
+                        </pre>
+                        </body>
+                        </html>
+                        """, serverName, tools.size());
+                    resp.getWriter().write(html);
+                }
+            }), "/");
+            
+            // Start Jetty
+            jettyServer.start();
+            logger.info("✅ Basic HTTP MCP Server started successfully");
+            logger.info("🔗 Server URL: http://{}:{}", config.getHost(), config.getPort());
+            logger.info("🛠️  Available tools: {}", tools.keySet());
+            logger.info("📋 Endpoints:");
+            logger.info("   GET  /         - Server info");
+            logger.info("   GET  /health   - Health check");
+            logger.info("   GET  /tools    - List tools");
+            logger.info("   POST /execute  - Execute tools");
+            
+            // Keep running
+            jettyServer.join();
+            
+        } catch (Exception e) {
+            logger.error("Failed to start basic HTTP server", e);
+            throw new RuntimeException("Failed to start basic HTTP server", e);
+        }
+    }
+
+    /**
+     * Start stdio transport server.
+     */
+    private void startStdioServer() {
+        logger.info("Starting stdio transport server");
+        logger.info("Available tools: {}", tools.keySet());
+
+        try {
+            StdioServerTransportProvider transportProvider = new StdioServerTransportProvider();
+
+            var serverBuilder = McpServer.sync(transportProvider)
+                .serverInfo(serverName, "1.0.0");
+
+            for (Tool tool : tools.values()) {
+                serverBuilder = serverBuilder.tool(
+                    McpSchema.Tool.builder()
+                        .name(tool.getName())
+                        .description(tool.getDescription())
+                        .inputSchema(tool.getInputSchema())
+                        .build(),
+                    (exchange, args) -> {
+                        try {
+                            Object result = tool.execute(args);
+                            return new McpSchema.CallToolResult(result.toString(), false);
+                        } catch (Exception e) {
+                            logger.error("Error executing tool {}: {}", tool.getName(), e.getMessage());
+                            return new McpSchema.CallToolResult("Error: " + e.getMessage(), true);
+                        }
+                    }
+                );
+            }
+
+            server = serverBuilder.build();
+
+            logger.info("🚀 MCP Server started successfully");
+            logger.info("📊 Available tools: {}", tools.keySet());
+            logger.info("🔌 Using stdio transport");
+            logger.info("Server is ready to handle requests...");
+
+        } catch (Exception e) {
+            logger.error("Failed to start stdio transport", e);
+            throw new RuntimeException("Failed to start stdio transport", e);
+        }
+    }
+
+    /**
+     * Stop the MCP server.
+     */
+    public void stop() {
+        if (server != null) {
+            server.close();
+        }
+        if (jettyServer != null && jettyServer.isRunning()) {
+            try {
+                jettyServer.stop();
+            } catch (Exception e) {
+                logger.error("Error stopping Jetty server", e);
+            }
+        }
+        logger.info("MCP server stopped");
+    }
+    
+    /**
+     * Escape JSON special characters.
+     */
+    private String escapeJson(String str) {
+        if (str == null) return "null";
+        return str.replace("\\", "\\\\")
+                 .replace("\"", "\\\"")
+                 .replace("\n", "\\n")
+                 .replace("\r", "\\r")
+                 .replace("\t", "\\t");
+    }
+}
