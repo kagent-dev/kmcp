@@ -10,10 +10,10 @@ import (
 	"text/template"
 
 	"github.com/stoewer/go-strcase"
-
-	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
 )
 
 // Base Generator for MCP projects
@@ -128,13 +128,15 @@ func (g *BaseGenerator) GenerateTool(projectRoot string, config templates.ToolCo
 func (g *BaseGenerator) GenerateToolFile(filePath string, config templates.ToolConfig) error {
 	// Prepare template data
 	toolName := config.ToolName
+	toolNamePascalCase := cases.Title(language.English).String(toolName)
 	data := map[string]interface{}{
-		"ToolName":      toolName,
-		"ToolNameTitle": cases.Title(language.English).String(toolName),
-		"ToolNameUpper": strings.ToUpper(toolName),
-		"ToolNameLower": strings.ToLower(toolName),
-		"ClassName":     cases.Title(language.English).String(toolName) + "Tool",
-		"Description":   config.Description,
+		"ToolName":           toolName,
+		"ToolNameTitle":      cases.Title(language.English).String(toolName),
+		"ToolNameUpper":      strings.ToUpper(toolName),
+		"ToolNameLower":      strings.ToLower(toolName),
+		"ToolNamePascalCase": toolNamePascalCase,
+		"ClassName":          cases.Title(language.English).String(toolName) + "Tool",
+		"Description":        config.Description,
 	}
 
 	// Create the directory if it doesn't exist

@@ -1,0 +1,199 @@
+package com.example;
+
+import com.example.tools.Tool;
+import io.modelcontextprotocol.server.McpServer;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
+import io.modelcontextprotocol.server.transport.HttpServletSseServerTransportProvider;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.HashMap;
+
+/**
+ * MCP Server implementation using the official MCP Java SDK.
+ *
+ * Supports stdio and HTTP transport protocols.
+ */
+public class MCPServer {
+    private static final Logger logger = LoggerFactory.getLogger(MCPServer.class);
+
+    private final String serverName;
+    private final ServerConfig config;
+    private final Map<String, Tool> tools;
+    private McpSyncServer server;
+    private org.eclipse.jetty.server.Server jettyServer;
+
+    public MCPServer(String serverName, ServerConfig config) {
+        this.serverName = serverName;
+        this.config = config;
+        this.tools = new HashMap<>();
+    }
+
+    /**
+     * Register a tool with the server.
+     */
+    public void registerTool(Tool tool) {
+        tools.put(tool.getName(), tool);
+        logger.info("Registered tool: {}", tool.getName());
+    }
+
+    /**
+     * Start the MCP server.
+     */
+    public void start() {
+        logger.info("Starting MCP server: {}", serverName);
+        logger.info("Transport: {}", config.getTransport());
+        logger.info("Registered {} tools: {}", tools.size(), tools.keySet());
+
+        if ("http".equals(config.getTransport())) {
+            startHttpServer();
+        } else {
+            startStdioServer();
+        }
+    }
+
+    /**
+     * Start HTTP transport server.
+     */
+    private void startHttpServer() {
+        logger.info("🚀 MCP Server running on http://{}:{}", config.getHost(), config.getPort());
+        logger.info("📊 Health check available at http://{}:{}/health", config.getHost(), config.getPort());
+        logger.info("🔌 MCP/SSE endpoint available at http://{}:{}", config.getHost(), config.getPort());
+
+        try {
+            // Create Jetty server
+            jettyServer = new org.eclipse.jetty.server.Server(config.getPort());
+
+            // Create servlet context
+            org.eclipse.jetty.servlet.ServletContextHandler context =
+                new org.eclipse.jetty.servlet.ServletContextHandler(jettyServer, "/");
+
+            // Create MCP transport provider
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            HttpServletSseServerTransportProvider transportProvider =
+                HttpServletSseServerTransportProvider.builder()
+                    .objectMapper(objectMapper)
+                    .messageEndpoint("/mcp")
+                    .sseEndpoint("/sse")
+                    .build();
+
+            // Build server with tools
+            var serverBuilder = McpServer.sync(transportProvider)
+                .serverInfo(serverName, "{{.Version}}");
+
+            for (Tool tool : tools.values()) {
+                serverBuilder = serverBuilder.tool(
+                    McpSchema.Tool.builder()
+                        .name(tool.getName())
+                        .description(tool.getDescription())
+                        .inputSchema(tool.getInputSchema())
+                        .build(),
+                    (exchange, args) -> {
+                        try {
+                            Object result = tool.execute(args);
+                            return new McpSchema.CallToolResult(result.toString(), false);
+                        } catch (Exception e) {
+                            logger.error("Error executing tool {}: {}", tool.getName(), e.getMessage());
+                            return new McpSchema.CallToolResult("Error: " + e.getMessage(), true);
+                        }
+                    }
+                );
+            }
+
+            // Build the MCP server
+            server = serverBuilder.build();
+
+            // Register the provider itself as a servlet (no messageServlet()/sseServlet() needed)
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(transportProvider), "/mcp/*");
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(transportProvider), "/sse/*");
+
+            // Health check endpoint
+            context.addServlet(new org.eclipse.jetty.servlet.ServletHolder(new jakarta.servlet.http.HttpServlet() {
+                @Override
+                protected void doGet(jakarta.servlet.http.HttpServletRequest req,
+                                     jakarta.servlet.http.HttpServletResponse resp)
+                        throws jakarta.servlet.ServletException, java.io.IOException {
+                    resp.setContentType("text/plain");
+                    resp.setStatus(200);
+                    resp.getWriter().write("OK");
+                }
+            }), "/health");
+
+            // Start Jetty
+            jettyServer.start();
+            logger.info("HTTP server started successfully");
+
+            // Keep running
+            jettyServer.join();
+
+        } catch (Exception e) {
+            logger.error("Failed to start HTTP server", e);
+            throw new RuntimeException("Failed to start HTTP server", e);
+        }
+    }
+
+    /**
+     * Start stdio transport server.
+     */
+    private void startStdioServer() {
+        logger.info("Starting stdio transport server");
+        logger.info("Available tools: {}", tools.keySet());
+
+        try {
+            StdioServerTransportProvider transportProvider = new StdioServerTransportProvider();
+
+            var serverBuilder = McpServer.sync(transportProvider)
+                .serverInfo(serverName, "{{.Version}}");
+
+            for (Tool tool : tools.values()) {
+                serverBuilder = serverBuilder.tool(
+                    McpSchema.Tool.builder()
+                        .name(tool.getName())
+                        .description(tool.getDescription())
+                        .inputSchema(tool.getInputSchema())
+                        .build(),
+                    (exchange, args) -> {
+                        try {
+                            Object result = tool.execute(args);
+                            return new McpSchema.CallToolResult(result.toString(), false);
+                        } catch (Exception e) {
+                            logger.error("Error executing tool {}: {}", tool.getName(), e.getMessage());
+                            return new McpSchema.CallToolResult("Error: " + e.getMessage(), true);
+                        }
+                    }
+                );
+            }
+
+            server = serverBuilder.build();
+
+            logger.info("🚀 MCP Server started successfully");
+            logger.info("📊 Available tools: {}", tools.keySet());
+            logger.info("🔌 Using stdio transport");
+            logger.info("Server is ready to handle requests...");
+
+        } catch (Exception e) {
+            logger.error("Failed to start stdio transport", e);
+            throw new RuntimeException("Failed to start stdio transport", e);
+        }
+    }
+
+    /**
+     * Stop the MCP server.
+     */
+    public void stop() {
+        if (server != null) {
+            server.close();
+        }
+        if (jettyServer != null && jettyServer.isRunning()) {
+            try {
+                jettyServer.stop();
+            } catch (Exception e) {
+                logger.error("Error stopping Jetty server", e);
+            }
+        }
+        logger.info("MCP server stopped");
+    }
+}

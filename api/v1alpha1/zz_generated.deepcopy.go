@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -87,6 +87,25 @@ func (in *MCPServerDeployment) DeepCopyInto(out *MCPServerDeployment) {
 		in, out := &in.SecretRefs, &out.SecretRefs
 		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
+	}
+	if in.ConfigMapRefs != nil {
+		in, out := &in.ConfigMapRefs, &out.ConfigMapRefs
+		*out = make([]corev1.LocalObjectReference, len(*in))
+		copy(*out, *in)
+	}
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]corev1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
+		*out = make([]corev1.Volume, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

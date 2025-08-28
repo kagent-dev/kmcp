@@ -205,6 +205,7 @@ func isValidFramework(framework string) bool {
 		FrameworkFastMCPPython,
 		FrameworkMCPGo,
 		FrameworkTypeScript,
+		FrameworkJava,
 	}
 
 	for _, valid := range validFrameworks {

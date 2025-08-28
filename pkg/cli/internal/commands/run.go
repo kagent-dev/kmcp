@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/spf13/cobra"
+
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 )
 
 var runCmd = &cobra.Command{
@@ -29,13 +30,15 @@ Supported frameworks:
 
 Examples:
   kmcp run --project-dir ./my-project     # Run with inspector (default)
-  kmcp run --no-inspector                 # Run server directly without inspector`,
+  kmcp run --no-inspector                 # Run server directly without inspector
+  kmcp run --transport http               # Run with HTTP transport`,
 	RunE: executeRun,
 }
 
 var (
-	projectDir  string
-	noInspector bool
+	projectDir   string
+	noInspector  bool
+	runTransport string
 )
 
 func init() {
@@ -53,6 +56,12 @@ func init() {
 		"no-inspector",
 		false,
 		"Run the server directly without launching the MCP inspector",
+	)
+	runCmd.Flags().StringVar(
+		&runTransport,
+		"transport",
+		"stdio",
+		"Transport mode (stdio or http)",
 	)
 }
 
@@ -82,6 +91,8 @@ func executeRun(_ *cobra.Command, _ []string) error {
 		return runMCPGo(projectDir, manifest)
 	case "typescript":
 		return runTypeScript(projectDir, manifest)
+	case "java":
+		return runJava(projectDir, manifest)
 	default:
 		return fmt.Errorf("unsupported framework: %s", manifest.Framework)
 	}
@@ -268,6 +279,76 @@ func runTypeScript(projectDir string, manifest *manifest.ProjectManifest) error 
 	serverConfig := map[string]interface{}{
 		"command": "npx",
 		"args":    []string{"tsx", "src/index.ts"},
+	}
+
+	// Create MCP inspector config
+	configPath := filepath.Join(projectDir, "mcp-server-config.json")
+	if err := createMCPInspectorConfig(manifest.Name, serverConfig, configPath); err != nil {
+		return err
+	}
+
+	// Run the inspector
+	return runMCPInspector(configPath, manifest.Name, projectDir)
+}
+
+func runJava(projectDir string, manifest *manifest.ProjectManifest) error {
+	// Check if mvn is available
+	if _, err := exec.LookPath("mvn"); err != nil {
+		mvnInstallURL := "https://maven.apache.org/install.html"
+		return fmt.Errorf("mvn is required to run Java projects locally. Please install Maven: %s", mvnInstallURL)
+	}
+
+	// Run mvn clean install first to ensure dependencies are up to date
+	if Verbose {
+		fmt.Printf("Running mvn clean install in: %s\n", projectDir)
+	}
+	installCmd := exec.Command("mvn", "clean", "install", "-DskipTests")
+	installCmd.Dir = projectDir
+	installCmd.Stdout = os.Stdout
+	installCmd.Stderr = os.Stderr
+	if err := installCmd.Run(); err != nil {
+		return fmt.Errorf("failed to run mvn clean install: %w", err)
+	}
+
+	// Prepare Maven arguments based on transport mode
+	mavenArgs := []string{"-q", "exec:java", "-Dexec.mainClass=com.example.Main"}
+	if runTransport == transportHTTP {
+		mavenArgs = append(mavenArgs, "-Dexec.args=--transport http --host 0.0.0.0 --port 3000")
+	}
+
+	if noInspector {
+		// Run the server directly
+		if runTransport == transportHTTP {
+			fmt.Printf("Running server directly: mvn exec:java -Dexec.mainClass=\"com.example.Main\" --transport http --host 0.0.0.0 --port 3000\n")
+			fmt.Printf("Server is running on http://localhost:3000\n")
+			fmt.Printf("Health check: http://localhost:3000/health\n")
+			fmt.Printf("MCP endpoint: http://localhost:3000/mcp\n")
+		} else {
+			fmt.Printf("Running server directly: mvn exec:java -Dexec.mainClass=\"com.example.Main\"\n")
+			fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
+		}
+		fmt.Printf("Press Ctrl+C to stop the server\n")
+
+		serverCmd := exec.Command("mvn", mavenArgs...)
+		serverCmd.Dir = projectDir
+		serverCmd.Stdout = os.Stdout
+		serverCmd.Stderr = os.Stderr
+		serverCmd.Stdin = os.Stdin
+		return serverCmd.Run()
+	}
+
+	// Create server configuration for inspector
+	var serverConfig map[string]interface{}
+	if runTransport == transportHTTP {
+		serverConfig = map[string]interface{}{
+			"type": "streamable-http",
+			"url":  "http://localhost:3000/mcp",
+		}
+	} else {
+		serverConfig = map[string]interface{}{
+			"command": "mvn",
+			"args":    mavenArgs,
+		}
 	}
 
 	// Create MCP inspector config
