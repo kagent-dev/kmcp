@@ -22,7 +22,7 @@ import (
 
 	"time"
 
-	"github.com/kagent-dev/kmcp/pkg/controller/internal/transportadapter"
+	"github.com/kagent-dev/kmcp/pkg/controller/transportadapter"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,7 +40,8 @@ import (
 // MCPServerReconciler reconciles a MCPServer object
 type MCPServerReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme  *runtime.Scheme
+	Plugins []transportadapter.TranslatorPlugin
 }
 
 // +kubebuilder:rbac:groups=kagent.dev,resources=mcpservers,verbs=get;list;watch;create;update;patch;delete
@@ -69,8 +70,8 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	t := transportadapter.NewTransportAdapterTranslator(r.Scheme)
-	outputs, err := t.TranslateTransportAdapterOutputs(mcpServer)
+	t := transportadapter.NewTransportAdapterTranslator(r.Scheme, r.Plugins)
+	outputs, err := t.TranslateTransportAdapterOutputs(ctx, mcpServer)
 	if err != nil {
 		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")
 		r.reconcileStatus(ctx, mcpServer, err)

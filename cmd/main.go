@@ -203,8 +203,9 @@ func main() {
 	}
 
 	if err = (&controller.MCPServerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Plugins: nil, // Plugins are for 3rd party extensions to open source.
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MCPServer")
 		os.Exit(1)
