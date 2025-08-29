@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/golang"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/java"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/python"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks/typescript"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
@@ -25,6 +26,8 @@ func GetGenerator(framework string) (Generator, error) {
 		return golang.NewGenerator(), nil
 	case "typescript":
 		return typescript.NewGenerator(), nil
+	case "java":
+		return java.NewGenerator(), nil
 	default:
 		return nil, fmt.Errorf("unsupported framework: %s", framework)
 	}

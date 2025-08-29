@@ -81,6 +81,7 @@ const (
 	FrameworkFastMCPPython = "fastmcp-python"
 	FrameworkMCPGo         = "mcp-go"
 	FrameworkTypeScript    = "typescript"
+	FrameworkJava          = "java"
 )
 
 // Supported secret providers
