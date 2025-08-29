@@ -38,12 +38,7 @@
 
 2.  **The Kubernetes Controller**: The `kmcp` controller runs in your Kubernetes cluster and manages the lifecycle of your MCP server deployments. It uses a Custom Resource Definition (CRD) to define MCP servers as native Kubernetes objects, allowing you to manage them with familiar `kubectl` commands.
 
-3.  **The Agent Gateway**: In a Kubernetes environment, `kmcp` deploys your MCP server behind a dedicated [Agent Gateway](https://www.solo.io/press-releases/solo-io-launches-agent-gateway-and-introduces-agent-mesh/). `kmcp` acts as a control plane for this gateway, configuring it to provide enterprise-grade features for your MCP server without requiring any changes to your code. These features include:
-    -   Rate limiting
-    -   Authorization and Authentication (AuthZ/N)
-    -   Observability (tracing, logging, and metrics)
-    -   Health checks
-    -   TLS Termination
+3.  **The Transport Adapter**: In a Kubernetes environment, `kmcp` deploys your MCP server behind a dedicated Transport Adapter. `kmcp` acts as a control plane for this adapter, configuring it to provide  features such as external traffic routing for your MCP server with support for multiple transport protocols without requiring any changes to your code.
 
 ## Features (CLI Command Overview)
 
@@ -54,7 +49,7 @@ The `kmcp` CLI provides a set of commands to manage the entire lifecycle of your
 -   `kmcp run`: Runs the MCP server in a local development environment.
 -   `kmcp build`: Builds a Docker image for your MCP server.
 -   `kmcp install`: Installs the `kmcp` controller and CRDs on a Kubernetes cluster.
--   `kmcp deploy`: Deploys your MCP server to a Kubernetes cluster, placing it behind a pre-configured Agent Gateway.
+-   `kmcp deploy`: Deploys your MCP server to a Kubernetes cluster, placing it behind a pre-configured Transport Adapter.
 -   `kmcp secrets`: Manages secrets for your MCP server deployment in Kubernetes.
 
 ## Architecture
@@ -77,7 +72,7 @@ graph TD
 
     subgraph Kubernetes Cluster
         F[kmcp Controller] -- Manages --> G(MCP Server CRD);
-        G -- Deploys --> H[Agent Gateway];
+        G -- Deploys --> H[Transport Adapter];
         H -- Proxies Traffic --> I[MCP Server Pod];
     end
 

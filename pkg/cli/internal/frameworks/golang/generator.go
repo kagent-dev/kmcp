@@ -23,7 +23,7 @@ func NewGenerator() *Generator {
 	return &Generator{
 		BaseGenerator: common.BaseGenerator{
 			TemplateFiles:    templateFiles,
-			ToolTemplateName: "tools/tool.go.tmpl",
+			ToolTemplateName: "internal/tools/tool.go.tmpl",
 		},
 	}
 }
@@ -56,10 +56,10 @@ func (g *Generator) GenerateTool(projectroot string, config templates.ToolConfig
 	toolNameSnakeCase := strcase.SnakeCase(config.ToolName)
 
 	fmt.Printf("✅ Successfully created tool: %s\n", config.ToolName)
-	fmt.Printf("📁 Generated file: tools/%s.go\n", toolNameSnakeCase)
+	fmt.Printf("📁 Generated file: internal/tools/%s.go\n", toolNameSnakeCase)
 
 	fmt.Printf("\nNext steps:\n")
-	fmt.Printf("1. Edit tools/%s.go to implement your tool logic\n", toolNameSnakeCase)
+	fmt.Printf("1. Edit internal/tools/%s.go to implement your tool logic\n", toolNameSnakeCase)
 	fmt.Printf("2. Configure any required environment variables in kmcp.yaml\n")
 	fmt.Printf("3. Run 'go run main.go' to start the server\n")
 

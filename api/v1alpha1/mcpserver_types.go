@@ -130,6 +130,8 @@ const (
 	// Ready condition reasons
 	MCPServerReasonReady        MCPServerConditionReason = "Ready"
 	MCPServerReasonPodsNotReady MCPServerConditionReason = "PodsNotReady"
+	MCPServerReasonAvailable    MCPServerConditionReason = "Available"
+	MCPServerReasonNotAvailable MCPServerConditionReason = "NotAvailable"
 )
 
 // MCPServerSpec defines the desired state of MCPServer.
@@ -190,24 +192,45 @@ type MCPServerStatus struct {
 // MCPServerDeployment
 type MCPServerDeployment struct {
 	// Image defines the container image to to deploy the MCP server.
+	// +optional
 	Image string `json:"image,omitempty"`
 
 	// Port defines the port on which the MCP server will listen.
+	// +optional
+	// +kubebuilder:default=3000
 	Port uint16 `json:"port,omitempty"`
 
 	// Cmd defines the command to run in the container to start the mcp server.
+	// +optional
 	Cmd string `json:"cmd,omitempty"`
 
 	// Args defines the arguments to pass to the command.
+	// +optional
 	Args []string `json:"args,omitempty"`
 
 	// Env defines the environment variables to set in the container.
+	// +optional
 	Env map[string]string `json:"env,omitempty"`
 
 	// SecretRefs defines the list of Kubernetes secrets to reference.
 	// These secrets will be mounted as volumes to the MCP server container.
 	// +optional
 	SecretRefs []corev1.LocalObjectReference `json:"secretRefs,omitempty"`
+
+	// ConfigMapRefs defines the list of Kubernetes configmaps to reference.
+	// These configmaps will be mounted as volumes to the MCP server container.
+	// +optional
+	ConfigMapRefs []corev1.LocalObjectReference `json:"configMapRefs,omitempty"`
+
+	// VolumeMounts defines the list of volume mounts for the MCP server container.
+	// This allows for more flexible volume mounting configurations.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Volumes defines the list of volumes that can be mounted by containers.
+	// This allows for custom volume configurations beyond just secrets and configmaps.
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 }
 
 // +kubebuilder:object:root=true

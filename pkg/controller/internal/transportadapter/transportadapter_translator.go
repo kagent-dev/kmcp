@@ -1,85 +1,99 @@
-package agentgateway
+package transportadapter
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 
 	"go.uber.org/multierr"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/kagent-dev/kmcp/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	klog "k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kagent-dev/kmcp/api/v1alpha1"
 )
 
 const (
-	agentGatewayContainerImage = "howardjohn/agentgateway:1752179558"
+	transportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.7.4-musl"
 )
 
-// Translator is the interface for translating MCPServer objects to AgentGateway objects.
+// Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
-	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
+	TranslateTransportAdapterOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
 type TranslatorPlugin interface {
 	ProcessMCPServer(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
 }
 
-type agentGatewayTranslator struct {
+type transportAdapterTranslator struct {
 	scheme  *runtime.Scheme
 	plugins []TranslatorPlugin
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme, plugins []TranslatorPlugin) Translator {
-	return &agentGatewayTranslator{
+func NewTransportAdapterTranslator(scheme *runtime.Scheme, plugins []TranslatorPlugin) Translator {
+	return &transportAdapterTranslator{
 		scheme:  scheme,
 		plugins: plugins,
 	}
 }
 
-func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
+func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
-	deployment, err := t.translateAgentGatewayDeployment(server)
+	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway deployment: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
 	}
-	service, err := t.translateAgentGatewayService(server)
+	deployment, err := t.translateTransportAdapterDeployment(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway service: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter deployment: %w", err)
 	}
-	configMap, err := t.translateAgentGatewayConfigMap(server)
+	service, err := t.translateTransportAdapterService(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway config map: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter service: %w", err)
 	}
-	serviceAccount, err := t.translateAgentGatewayServiceAccount(server)
+	configMap, err := t.translateTransportAdapterConfigMap(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
+		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
 	}
-
 	return t.runPlugins(server, []client.Object{
+		serviceAccount,
 		deployment,
 		service,
 		configMap,
-		serviceAccount,
 	})
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
+func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	server *v1alpha1.MCPServer,
 ) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
+	if image == "" && server.Spec.Deployment.Cmd == "uvx" {
+		image = "ghcr.io/astral-sh/uv:debian"
+	}
+	if image == "" && server.Spec.Deployment.Cmd == "npx" {
+		image = "node:24-alpine3.21"
+	}
 	if image == "" {
-		return nil, fmt.Errorf("deployment image must be specified for MCPServer %s", server.Name)
+		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
 	}
 
 	// Create environment variables from secrets for envFrom
 	secretEnvFrom := t.createSecretEnvFrom(server.Spec.Deployment.SecretRefs)
+
+	// Create volumes from the MCPServer spec
+	volumes := t.createVolumes(server.Spec.Deployment)
+
+	// Create volume mounts from the MCPServer spec
+	volumeMounts := t.createVolumeMounts(server.Spec.Deployment)
 
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
@@ -89,45 +103,43 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 			ServiceAccountName: server.Name,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
-				Image:           agentGatewayContainerImage,
+				Image:           transportAdapterContainerImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"sh"},
+				Command:         []string{},
 				Args: []string{
-					"-c",
-					"cp /usr/bin/agentgateway /agentbin/agentgateway",
+					"--copy-self",
+					"/adapterbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "binary",
-					MountPath: "/agentbin",
+					MountPath: "/adapterbin",
 				}},
-				SecurityContext: getSecurityContext(),
 			}},
 			Containers: []corev1.Container{{
 				Name:            "mcp-server",
 				Image:           image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: []string{
-					"sh",
+					"/adapterbin/agentgateway",
 				},
 				Args: []string{
-					"-c",
-					"/agentbin/agentgateway -f /config/local.yaml",
+					"-f",
+					"/config/local.yaml",
 				},
 				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
-				VolumeMounts: []corev1.VolumeMount{
+				VolumeMounts: append([]corev1.VolumeMount{
 					{
 						Name:      "config",
 						MountPath: "/config",
 					},
 					{
 						Name:      "binary",
-						MountPath: "/agentbin",
+						MountPath: "/adapterbin",
 					},
-				},
-				SecurityContext: getSecurityContext(),
+				}, volumeMounts...),
 			}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -144,31 +156,16 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
 					},
 				},
-			},
+			}, volumes...),
 		}
 	case v1alpha1.TransportTypeHTTP:
-		// run the gateway as a sidecar when running with HTTP transport
 		var cmd []string
 		if server.Spec.Deployment.Cmd != "" {
 			cmd = []string{server.Spec.Deployment.Cmd}
 		}
 		template = corev1.PodSpec{
+			ServiceAccountName: server.Name,
 			Containers: []corev1.Container{
-				{
-					Name:            "agent-gateway",
-					Image:           agentGatewayContainerImage,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"sh"},
-					Args: []string{
-						"-c",
-						"/usr/bin/agentgateway -f /config/local.yaml",
-					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "config",
-						MountPath: "/config",
-					}},
-					SecurityContext: getSecurityContext(),
-				},
 				{
 					Name:            "mcp-server",
 					Image:           image,
@@ -177,9 +174,14 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					EnvFrom:         secretEnvFrom,
-					SecurityContext: getSecurityContext(),
+					VolumeMounts: append([]corev1.VolumeMount{
+						{
+							Name:      "config",
+							MountPath: "/config",
+						},
+					}, volumeMounts...),
 				}},
-			Volumes: []corev1.Volume{
+			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
@@ -190,7 +192,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 						},
 					},
 				},
-			},
+			}, volumes...),
 		}
 	}
 
@@ -223,10 +225,36 @@ func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
 		},
 	}
 
-	return deployment, controllerutil.SetOwnerReference(server, deployment, t.scheme)
+	// Set owner reference first
+	if err := controllerutil.SetOwnerReference(server, deployment, t.scheme); err != nil {
+		return nil, err
+	}
+
+	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
+	if err != nil {
+		return nil, err
+	}
+	// Add hash annotation based on MCPServer spec to initiate a restart on changes to the MCPServer spec
+	t.addMCPServerConfigHashAnnotation(deployment, configYaml)
+
+	return deployment, nil
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
+// addMCPServerSpecHashAnnotation adds a hash annotation to the deployment's pod template
+// based on the MCPServer config yaml. This ensures pod restarts when the MCPServer configuration changes.
+func (t *transportAdapterTranslator) addMCPServerConfigHashAnnotation(
+	deployment *appsv1.Deployment,
+	mcpServerConfigYaml string,
+) {
+	hash := sha256.Sum256([]byte(mcpServerConfigYaml))
+	truncatedHash := hex.EncodeToString(hash[:])[:8]
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	deployment.Spec.Template.Annotations["kmcp.kagent.dev/mcpserver-config-hash"] = truncatedHash
+}
+
+func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
 	server *v1alpha1.MCPServer,
 ) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
@@ -243,7 +271,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayServiceAccount(
 }
 
 // createSecretEnvFrom creates envFrom references from secret references
-func (t *agentGatewayTranslator) createSecretEnvFrom(
+func (t *transportAdapterTranslator) createSecretEnvFrom(
 	secretRefs []corev1.LocalObjectReference,
 ) []corev1.EnvFromSource {
 	envFrom := make([]corev1.EnvFromSource, 0, len(secretRefs))
@@ -266,27 +294,66 @@ func (t *agentGatewayTranslator) createSecretEnvFrom(
 	return envFrom
 }
 
-// getSecurityContext returns a SecurityContext that meets Pod Security Standards "restricted" policy
-func getSecurityContext() *corev1.SecurityContext {
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: &[]bool{false}[0],
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
-		RunAsNonRoot: &[]bool{true}[0],
-		RunAsUser:    &[]int64{1000}[0],
-		RunAsGroup:   &[]int64{1000}[0],
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		},
+// createVolumes creates volumes from the MCPServer deployment spec
+func (t *transportAdapterTranslator) createVolumes(
+	deployment v1alpha1.MCPServerDeployment,
+) []corev1.Volume {
+	volumes := make([]corev1.Volume, 0)
+
+	// Add volumes from ConfigMapRefs
+	for _, configMapRef := range deployment.ConfigMapRefs {
+		if configMapRef.Name == "" {
+			klog.NewKlogr().WithName("translator").V(4).Info("Skipping ConfigMapRef with empty name")
+			continue
+		}
+		volumes = append(volumes, corev1.Volume{
+			Name: fmt.Sprintf("cm-%s", configMapRef.Name),
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapRef.Name,
+					},
+				},
+			},
+		})
 	}
+
+	// Add custom volumes
+	volumes = append(volumes, deployment.Volumes...)
+
+	return volumes
+}
+
+// createVolumeMounts creates volume mounts from the MCPServer deployment spec
+func (t *transportAdapterTranslator) createVolumeMounts(
+	deployment v1alpha1.MCPServerDeployment,
+) []corev1.VolumeMount {
+	volumeMounts := make([]corev1.VolumeMount, 0)
+
+	// Add volume mounts from ConfigMapRefs
+	for _, configMapRef := range deployment.ConfigMapRefs {
+		if configMapRef.Name == "" {
+			klog.NewKlogr().WithName("translator").V(4).Info("Skipping ConfigMapRef with empty name")
+			continue
+		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      fmt.Sprintf("cm-%s", configMapRef.Name),
+			MountPath: fmt.Sprintf("/configmaps/%s", configMapRef.Name),
+			ReadOnly:  true,
+		})
+	}
+
+	// Add custom volume mounts
+	volumeMounts = append(volumeMounts, deployment.VolumeMounts...)
+
+	return volumeMounts
 }
 
 func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	if env == nil {
 		return nil
 	}
-	envVars := make([]corev1.EnvVar, len(env))
+	envVars := make([]corev1.EnvVar, 0, len(env))
 	for key, value := range env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  key,
@@ -299,7 +366,7 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
 	port := server.Spec.Deployment.Port
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
@@ -332,17 +399,22 @@ func (t *agentGatewayTranslator) translateAgentGatewayService(server *v1alpha1.M
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
-	config, err := t.translateAgentGatewayConfig(server)
+func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(server *v1alpha1.MCPServer) (string, error) {
+	config, err := t.translateTransportAdapterConfig(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate MCP server config: %w", err)
-	}
-
-	if config == nil {
-		return nil, nil // No config needed
+		return "", fmt.Errorf("failed to translate MCP server config: %w", err)
 	}
 
 	configYaml, err := yaml.Marshal(config)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
+	}
+
+	return string(configYaml), nil
+}
+
+func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
 	}
@@ -357,18 +429,14 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfigMap(server *v1alpha1
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		Data: map[string]string{
-			"local.yaml": string(configYaml), // Assuming ToYAML() is a method that converts LocalConfig to YAML
+			"local.yaml": configYaml,
 		},
 	}
 
 	return configMap, controllerutil.SetOwnerReference(server, configMap, t.scheme)
 }
 
-func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
-	if server.Spec.TransportType != v1alpha1.TransportTypeStdio {
-		return nil, nil // Only Stdio transport is supported for now
-	}
-
+func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1alpha1.MCPServer) (*LocalConfig, error) {
 	mcpTarget := MCPTarget{
 		Name: server.Name,
 	}
@@ -425,7 +493,6 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 							Backends: []RouteBackend{{
 								Weight: 100,
 								MCP: &MCPBackend{
-									Name:    mcpTarget.Name,
 									Targets: []MCPTarget{mcpTarget},
 								},
 							}},
@@ -439,7 +506,7 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 	return config, nil
 }
 
-func (t *agentGatewayTranslator) runPlugins(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
+func (t *transportAdapterTranslator) runPlugins(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
 	var errs error
 	if len(t.plugins) > 0 {
 		for _, plugin := range t.plugins {

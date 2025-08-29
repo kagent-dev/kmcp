@@ -37,10 +37,29 @@ tests/                  # Generated tests
 
 2. **Run the Server**:
    ```bash
+   # Stdio mode (default MCP transport)
    uv run python src/main.py
+   
+   # HTTP mode with WebSocket MCP endpoint
+   uv run python src/main.py --http
+   
+   # HTTP mode with custom host/port
+   uv run python src/main.py --http --host 0.0.0.0 --port 8080
    ```
 
-3. **Add New Tools**:
+3. **Using uv Scripts**:
+   ```bash
+   # Development mode (HTTP on port 3000)
+   uv run dev
+   
+   # HTTP mode
+   uv run dev-http
+   
+   # Stdio mode
+   uv run start
+   ```
+
+4. **Add New Tools**:
    ```bash
    # Create a new tool (no tool types needed!)
    kmcp add-tool weather
@@ -74,6 +93,23 @@ tests/                  # Generated tests
    # Edit the tool file, then rebuild
    kmcp build
    ```
+
+## HTTP Transport Mode
+
+The server supports running in HTTP mode for development and integration purposes.
+
+### Starting in HTTP Mode
+
+```bash
+# Command line flag
+python src/main.py --http
+
+# Environment variable
+MCP_TRANSPORT_MODE=http python src/main.py
+
+# Custom host and port
+python src/main.py --http --host localhost --port 8080
+```
 
 ## Creating Tools
 
