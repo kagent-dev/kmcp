@@ -22,7 +22,7 @@ import (
 
 	"time"
 
-	"github.com/kagent-dev/kmcp/pkg/controller/internal/transportadapter"
+	"github.com/kagent-dev/kmcp/pkg/controller/transportadapter"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
