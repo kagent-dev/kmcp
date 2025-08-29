@@ -29,9 +29,7 @@ type Translator interface {
 	TranslateTransportAdapterOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
-type TranslatorPlugin interface {
-	ProcessMCPServer(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
-}
+type TranslatorPlugin func(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
 
 type transportAdapterTranslator struct {
 	scheme  *runtime.Scheme
@@ -510,7 +508,7 @@ func (t *transportAdapterTranslator) runPlugins(server *v1alpha1.MCPServer, obje
 	var errs error
 	if len(t.plugins) > 0 {
 		for _, plugin := range t.plugins {
-			out, err := plugin.ProcessMCPServer(server, objects)
+			out, err := plugin(server, objects)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf("plugin %T failed: %w", plugin, err))
 			}
