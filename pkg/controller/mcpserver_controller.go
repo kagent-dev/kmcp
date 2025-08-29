@@ -38,7 +38,8 @@ import (
 // MCPServerReconciler reconciles a MCPServer object
 type MCPServerReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme  *runtime.Scheme
+	Plugins []agentgateway.TranslatorPlugin
 }
 
 // +kubebuilder:rbac:groups=kagent.dev,resources=mcpservers,verbs=get;list;watch;create;update;patch;delete
@@ -67,7 +68,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	t := agentgateway.NewAgentGatewayTranslator(r.Scheme)
+	t := agentgateway.NewAgentGatewayTranslator(r.Scheme, r.Plugins)
 	outputs, err := t.TranslateAgentGatewayOutputs(mcpServer)
 	if err != nil {
 		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")

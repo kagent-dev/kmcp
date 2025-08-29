@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"go.uber.org/multierr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -25,13 +26,19 @@ type Translator interface {
 	TranslateAgentGatewayOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
 }
 
-type agentGatewayTranslator struct {
-	scheme *runtime.Scheme
+type TranslatorPlugin interface {
+	ProcessMCPServer(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
 }
 
-func NewAgentGatewayTranslator(scheme *runtime.Scheme) Translator {
+type agentGatewayTranslator struct {
+	scheme  *runtime.Scheme
+	plugins []TranslatorPlugin
+}
+
+func NewAgentGatewayTranslator(scheme *runtime.Scheme, plugins []TranslatorPlugin) Translator {
 	return &agentGatewayTranslator{
-		scheme: scheme,
+		scheme:  scheme,
+		plugins: plugins,
 	}
 }
 
@@ -54,12 +61,13 @@ func (t *agentGatewayTranslator) TranslateAgentGatewayOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate AgentGateway service account: %w", err)
 	}
-	return []client.Object{
+
+	return t.runPlugins(server, []client.Object{
 		deployment,
 		service,
 		configMap,
 		serviceAccount,
-	}, nil
+	})
 }
 
 func (t *agentGatewayTranslator) translateAgentGatewayDeployment(
@@ -429,4 +437,19 @@ func (t *agentGatewayTranslator) translateAgentGatewayConfig(server *v1alpha1.MC
 	}
 
 	return config, nil
+}
+
+func (t *agentGatewayTranslator) runPlugins(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
+	var errs error
+	if len(t.plugins) > 0 {
+		for _, plugin := range t.plugins {
+			out, err := plugin.ProcessMCPServer(server, objects)
+			if err != nil {
+				errs = multierr.Append(errs, fmt.Errorf("plugin %T failed: %w", plugin, err))
+			}
+			objects = out
+		}
+	}
+
+	return objects, errs
 }
