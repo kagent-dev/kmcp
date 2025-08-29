@@ -1,6 +1,7 @@
 package transportadapter
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -26,10 +27,13 @@ const (
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
-	TranslateTransportAdapterOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
+	TranslateTransportAdapterOutputs(
+		ctx context.Context,
+		server *v1alpha1.MCPServer,
+	) ([]client.Object, error)
 }
 
-type TranslatorPlugin func(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
+type TranslatorPlugin func(ctx context.Context, server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
 
 type transportAdapterTranslator struct {
 	scheme  *runtime.Scheme
@@ -44,6 +48,7 @@ func NewTransportAdapterTranslator(scheme *runtime.Scheme, plugins []TranslatorP
 }
 
 func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
+	ctx context.Context,
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
 	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
@@ -62,7 +67,7 @@ func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
 	}
-	return t.runPlugins(server, []client.Object{
+	return t.runPlugins(ctx, server, []client.Object{
 		serviceAccount,
 		deployment,
 		service,
@@ -504,11 +509,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1a
 	return config, nil
 }
 
-func (t *transportAdapterTranslator) runPlugins(server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
+func (t *transportAdapterTranslator) runPlugins(ctx context.Context, server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
 	var errs error
 	if len(t.plugins) > 0 {
 		for _, plugin := range t.plugins {
-			out, err := plugin(server, objects)
+			out, err := plugin(ctx, server, objects)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf("plugin %T failed: %w", plugin, err))
 			}

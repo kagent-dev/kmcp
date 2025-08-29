@@ -71,7 +71,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	t := transportadapter.NewTransportAdapterTranslator(r.Scheme, r.Plugins)
-	outputs, err := t.TranslateTransportAdapterOutputs(mcpServer)
+	outputs, err := t.TranslateTransportAdapterOutputs(ctx, mcpServer)
 	if err != nil {
 		log.FromContext(ctx).Error(err, "Failed to translate MCPServer outputs")
 		r.reconcileStatus(ctx, mcpServer, err)
