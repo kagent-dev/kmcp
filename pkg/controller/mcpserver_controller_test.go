@@ -90,6 +90,10 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 			})
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+			ginkgo.By("verifying the deployment")
+			deployment := &appsv1.Deployment{}
+			gomega.Expect(k8sClient.Get(ctx, typeNamespacedName, deployment)).To(gomega.Succeed())
+			gomega.Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(gomega.HaveExactElements("-f", "/config/local.yaml", "-y", "@modelcontextprotocol/server-filesystem", "/"))
 		})
 	})
 

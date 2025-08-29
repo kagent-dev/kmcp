@@ -84,6 +84,14 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
+		args := []string{
+			"-f",
+			"/config/local.yaml",
+		}
+		if server.Spec.Deployment.Args != nil {
+			args = append(args, server.Spec.Deployment.Args...)
+		}
+
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
 			ServiceAccountName: server.Name,
@@ -108,10 +116,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				Command: []string{
 					"/adapterbin/agentgateway",
 				},
-				Args: []string{
-					"-f",
-					"/config/local.yaml",
-				},
+				Args:    args,
 				Env:     convertEnvVars(server.Spec.Deployment.Env),
 				EnvFrom: secretEnvFrom,
 				VolumeMounts: []corev1.VolumeMount{
