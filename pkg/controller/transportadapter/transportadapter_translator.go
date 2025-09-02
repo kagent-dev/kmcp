@@ -33,7 +33,11 @@ type Translator interface {
 	) ([]client.Object, error)
 }
 
-type TranslatorPlugin func(ctx context.Context, server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error)
+type TranslatorPlugin func(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+	objects []client.Object,
+) ([]client.Object, error)
 
 type transportAdapterTranslator struct {
 	scheme  *runtime.Scheme
@@ -369,7 +373,9 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterService(
+	server *v1alpha1.MCPServer,
+) (*corev1.Service, error) {
 	port := server.Spec.Deployment.Port
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
@@ -402,7 +408,9 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(server *v1alpha1.MCPServer) (string, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(
+	server *v1alpha1.MCPServer,
+) (string, error) {
 	config, err := t.translateTransportAdapterConfig(server)
 	if err != nil {
 		return "", fmt.Errorf("failed to translate MCP server config: %w", err)
@@ -416,7 +424,9 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(serve
 	return string(configYaml), nil
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(
+	server *v1alpha1.MCPServer,
+) (*corev1.ConfigMap, error) {
 	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
@@ -509,7 +519,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1a
 	return config, nil
 }
 
-func (t *transportAdapterTranslator) runPlugins(ctx context.Context, server *v1alpha1.MCPServer, objects []client.Object) ([]client.Object, error) {
+func (t *transportAdapterTranslator) runPlugins(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+	objects []client.Object,
+) ([]client.Object, error) {
 	var errs error
 	if len(t.plugins) > 0 {
 		for _, plugin := range t.plugins {
