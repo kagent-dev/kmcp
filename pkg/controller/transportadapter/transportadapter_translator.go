@@ -1,11 +1,13 @@
 package transportadapter
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"sort"
 
+	"go.uber.org/multierr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,20 +27,32 @@ const (
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
-	TranslateTransportAdapterOutputs(server *v1alpha1.MCPServer) ([]client.Object, error)
+	TranslateTransportAdapterOutputs(
+		ctx context.Context,
+		server *v1alpha1.MCPServer,
+	) ([]client.Object, error)
 }
+
+type TranslatorPlugin func(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+	objects []client.Object,
+) ([]client.Object, error)
 
 type transportAdapterTranslator struct {
-	scheme *runtime.Scheme
+	scheme  *runtime.Scheme
+	plugins []TranslatorPlugin
 }
 
-func NewTransportAdapterTranslator(scheme *runtime.Scheme) Translator {
+func NewTransportAdapterTranslator(scheme *runtime.Scheme, plugins []TranslatorPlugin) Translator {
 	return &transportAdapterTranslator{
-		scheme: scheme,
+		scheme:  scheme,
+		plugins: plugins,
 	}
 }
 
 func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
+	ctx context.Context,
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
 	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
@@ -57,12 +71,12 @@ func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
 	}
-	return []client.Object{
+	return t.runPlugins(ctx, server, []client.Object{
 		serviceAccount,
 		deployment,
 		service,
 		configMap,
-	}, nil
+	})
 }
 
 func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
@@ -359,7 +373,9 @@ func convertEnvVars(env map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1alpha1.MCPServer) (*corev1.Service, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterService(
+	server *v1alpha1.MCPServer,
+) (*corev1.Service, error) {
 	port := server.Spec.Deployment.Port
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
@@ -392,7 +408,9 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(server *v1
 	return service, controllerutil.SetOwnerReference(server, service, t.scheme)
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(server *v1alpha1.MCPServer) (string, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(
+	server *v1alpha1.MCPServer,
+) (string, error) {
 	config, err := t.translateTransportAdapterConfig(server)
 	if err != nil {
 		return "", fmt.Errorf("failed to translate MCP server config: %w", err)
@@ -406,7 +424,9 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfigAsYAML(serve
 	return string(configYaml), nil
 }
 
-func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(server *v1alpha1.MCPServer) (*corev1.ConfigMap, error) {
+func (t *transportAdapterTranslator) translateTransportAdapterConfigMap(
+	server *v1alpha1.MCPServer,
+) (*corev1.ConfigMap, error) {
 	configYaml, err := t.translateTransportAdapterConfigAsYAML(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
@@ -497,4 +517,23 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1a
 	}
 
 	return config, nil
+}
+
+func (t *transportAdapterTranslator) runPlugins(
+	ctx context.Context,
+	server *v1alpha1.MCPServer,
+	objects []client.Object,
+) ([]client.Object, error) {
+	var errs error
+	if len(t.plugins) > 0 {
+		for _, plugin := range t.plugins {
+			out, err := plugin(ctx, server, objects)
+			if err != nil {
+				errs = multierr.Append(errs, fmt.Errorf("plugin %T failed: %w", plugin, err))
+			}
+			objects = out
+		}
+	}
+
+	return objects, errs
 }
