@@ -46,6 +46,7 @@ This project uses the official MCP Java SDK from Maven Central (version 0.11.3) 
 - **Comprehensive Testing**: Full test suite for all functionality
 
 ### Protocol Support:
+- **MCP Protocol**: Full JSON-RPC implementation over HTTP at `/mcp` endpoint
 - **tools/list**: List all available tools with their schemas
 - **tools/call**: Execute tools with proper parameter validation
 - **Error Handling**: Proper JSON-RPC error responses
@@ -92,6 +93,27 @@ This project uses the official MCP Java SDK from Maven Central (version 0.11.3) 
    # HTTP mode
    docker run -p 3000:3000 {{.ProjectName}}:{{.Version}} --transport http
    ```
+
+## MCP Inspector Compatibility
+
+This server is fully compatible with the MCP Inspector and other MCP clients:
+
+1. **Start the server in HTTP mode**:
+   ```bash
+   mvn exec:java -Dexec.mainClass="com.example.Main" -Dexec.args="--transport http"
+   ```
+
+2. **Connect with MCP Inspector**:
+   - Open the MCP Inspector
+   - Connect to: `http://localhost:3000/mcp`
+   - The inspector will automatically discover and list available tools
+   - You can test tool execution directly from the inspector
+
+3. **Available endpoints**:
+   - `POST /mcp` - MCP protocol (JSON-RPC) for MCP clients
+   - `GET /health` - Health check
+   - `GET /tools` - List tools (custom API)
+   - `POST /execute` - Execute tools (custom API)
 
 ## Project Structure
 
