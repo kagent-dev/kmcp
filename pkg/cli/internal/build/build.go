@@ -52,6 +52,8 @@ func (b *Builder) Build(opts Options) error {
 		return b.buildDockerImage(opts, "node")
 	case "go":
 		return b.buildDockerImage(opts, "go")
+	case "java":
+		return b.buildDockerImage(opts, "java")
 	default:
 		return fmt.Errorf("unsupported project type: %s", projectType)
 	}
@@ -75,6 +77,11 @@ func (b *Builder) detectProjectType(dir string) (string, error) {
 	// Check for Go project
 	if b.fileExists(filepath.Join(dir, "go.mod")) {
 		return "go", nil
+	}
+
+	// Check for Java project
+	if b.fileExists(filepath.Join(dir, "pom.xml")) {
+		return "java", nil
 	}
 
 	return "", fmt.Errorf("unknown project type")

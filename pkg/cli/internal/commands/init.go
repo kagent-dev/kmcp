@@ -8,17 +8,18 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/frameworks"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/templates"
-
-	"github.com/spf13/cobra"
 )
 
 const (
 	frameworkFastMCPPython = "fastmcp-python"
 	frameworkMCPGo         = "mcp-go"
 	frameworkTypeScript    = "typescript"
+	frameworkJava          = "java"
 )
 
 var initCmd = &cobra.Command{

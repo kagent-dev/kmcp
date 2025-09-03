@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kagent-dev/kmcp/api/v1alpha1"
-	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kagent-dev/kmcp/api/v1alpha1"
+	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 )
 
 const (
@@ -511,6 +512,8 @@ func getDefaultCommand(framework string) string {
 		return "./server"
 	case manifest.FrameworkTypeScript:
 		return "node"
+	case manifest.FrameworkJava:
+		return "java"
 	default:
 		return "python"
 	}
@@ -527,6 +530,11 @@ func getDefaultArgs(framework string, targetPort int) []string {
 		return []string{}
 	case manifest.FrameworkTypeScript:
 		return []string{"dist/index.js"}
+	case manifest.FrameworkJava:
+		if deployTransport == transportHTTP {
+			return []string{"-jar", "app.jar", "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
+		}
+		return []string{"-jar", "app.jar"}
 	default:
 		return []string{"src/main.py"}
 	}
