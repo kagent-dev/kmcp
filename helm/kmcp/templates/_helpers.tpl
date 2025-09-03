@@ -18,7 +18,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Create chart name and version as used by the chart label.
 */}}
 {{- define "kmcp.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- .Chart.Name }}
 {{- end }}
 
 {{/*
@@ -27,9 +27,6 @@ Common labels
 {{- define "kmcp.labels" -}}
 helm.sh/chart: {{ include "kmcp.chart" . }}
 {{ include "kmcp.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
@@ -65,10 +62,7 @@ Allows overriding it for multi-namespace deployments in combined charts.
 Create the image reference
 */}}
 {{- define "kmcp.image" -}}
-{{- $tag := .Values.image.tag | default .Chart.Version }}
-{{- if eq $tag "" }}
-{{- $tag = .Chart.Version }}
-{{- end }}
+{{- $tag := .Values.image.tag | default "latest" }}
 {{- printf "%s:%s" .Values.image.repository $tag }}
 {{- end }}
 
