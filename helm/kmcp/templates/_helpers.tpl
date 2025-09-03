@@ -66,6 +66,9 @@ Create the image reference
 */}}
 {{- define "kmcp.image" -}}
 {{- $tag := .Values.image.tag | default .Chart.Version }}
+{{- if eq $tag "" }}
+{{- $tag = .Chart.Version }}
+{{- end }}
 {{- printf "%s:%s" .Values.image.repository $tag }}
 {{- end }}
 
