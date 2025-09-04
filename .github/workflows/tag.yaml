@@ -51,6 +51,10 @@ jobs:
         fi
         echo "Building Docker image with version: ${VERSION}"
         make docker-build VERSION=${VERSION}
+        
+        # Also tag and push as 'latest'
+        echo "Tagging and pushing as 'latest'..."
+        make docker-tag-latest VERSION=${VERSION}
   push-helm-chart:
     needs:
     - push-images
