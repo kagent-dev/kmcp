@@ -129,8 +129,10 @@ func (g *BaseGenerator) GenerateToolFile(filePath string, config templates.ToolC
 	// Prepare template data
 	toolName := config.ToolName
 	toolNamePascalCase := cases.Title(language.English).String(toolName)
+	toolNameCamelCase := strcase.LowerCamelCase(toolName)
 	data := map[string]interface{}{
 		"ToolName":           toolName,
+		"ToolNameCamelCase":  toolNameCamelCase,
 		"ToolNameTitle":      cases.Title(language.English).String(toolName),
 		"ToolNameUpper":      strings.ToUpper(toolName),
 		"ToolNameLower":      strings.ToLower(toolName),

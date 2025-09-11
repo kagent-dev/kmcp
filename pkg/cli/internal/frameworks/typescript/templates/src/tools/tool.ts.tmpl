@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
-const {{.ToolName}}Schema = z.object({
+const {{.ToolNameCamelCase}}Schema = z.object({
   // Define your tool parameters here
   // Example:
   // input: z.string().describe('Input parameter description'),
 });
 
-const {{.ToolName}} = {
+const {{.ToolNameCamelCase}} = {
   name: '{{.ToolName}}',
   description: '{{.Description}}',
-  inputSchema: {{.ToolName}}Schema,
-  handler: async (params: z.infer<typeof {{.ToolName}}Schema>) => {
+  inputSchema: {{.ToolNameCamelCase}}Schema,
+  handler: async (params: z.infer<typeof {{.ToolNameCamelCase}}Schema>) => {
     // Implement your tool logic here
     // Example:
     // const { input } = params;
@@ -22,4 +22,4 @@ const {{.ToolName}} = {
   },
 };
 
-export { {{.ToolName}} };
+export { {{.ToolNameCamelCase}} };
