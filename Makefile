@@ -85,15 +85,12 @@ helm-package: manifests
 	mkdir -p $(DIST_FOLDER)
 	@echo "Packaging Helm chart with version $(VERSION)..."
 	@cp helm/kmcp/Chart.yaml helm/kmcp/Chart.yaml.bak
-	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
+	@awk '/^version:/ { print; print "appVersion: \"$(VERSION)\""; next } { print }' helm/kmcp/Chart.yaml.bak > helm/kmcp/Chart.yaml
 	@helm package helm/kmcp --version $(VERSION) -d $(DIST_FOLDER)
 	@mv helm/kmcp/Chart.yaml.bak helm/kmcp/Chart.yaml
 	@echo "Helm package created: $(DIST_FOLDER)/kmcp-$(VERSION).tgz"
 	@cp config/crd/bases/kagent.dev_mcpservers.yaml helm/kmcp-crds/templates/mcpserver-crd.yaml
-	@cp helm/kmcp-crds/Chart.yaml helm/kmcp-crds/Chart.yaml.bak
-	@sed "s/^version: .*/version: $(VERSION)/" helm/kmcp-crds/Chart.yaml.bak > helm/kmcp-crds/Chart.yaml
 	@helm package helm/kmcp-crds --version $(VERSION) -d $(DIST_FOLDER)
-	@mv helm/kmcp-crds/Chart.yaml.bak helm/kmcp-crds/Chart.yaml
 	@echo "Helm package created: $(DIST_FOLDER)/kmcp-crds-$(VERSION).tgz"
 
 .PHONY: helm-cleanup
