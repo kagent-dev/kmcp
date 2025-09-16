@@ -2,7 +2,7 @@ apiVersion: v2
 name: kmcp-crds
 description: CRDs for KMCP (Kubernetes MCP Server Controller)
 type: application
-version: 0.1.0
+version: 1.0.0
 home: https://github.com/kagent-dev/kmcp
 sources:
   - https://github.com/kagent-dev/kmcp

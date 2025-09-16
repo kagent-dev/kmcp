@@ -65,7 +65,7 @@ Allows overriding it for multi-namespace deployments in combined charts.
 Create the image reference
 */}}
 {{- define "kmcp.image" -}}
-{{- $tag := .Values.image.tag | default .Chart.Version }}
+{{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" }}
 {{- printf "%s:%s" .Values.image.repository $tag }}
 {{- end }}
 

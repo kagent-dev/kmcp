@@ -13,8 +13,9 @@ namespaceOverride: ""
 image:
   repository: ghcr.io/kagent-dev/kmcp/controller
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.1.0"
+  # Overrides the image tag whose default is the chart's appVersion.
+  # Set to a specific version (e.g., "v0.1.7") to pin to that version.
+  # tag: ""
 
 # Image pull secrets for private registries
 imagePullSecrets: []
