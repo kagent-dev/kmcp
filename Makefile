@@ -240,10 +240,8 @@ docker-build: ## Build docker image with the manager.
 .PHONY: docker-tag-latest
 docker-tag-latest: ## Tag the built image as 'latest' and push it
 	@echo "Tagging image as 'latest'..."
-	@docker tag ${CONTROLLER_IMG} $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):latest
-	@echo "Pushing 'latest' tag..."
-	@docker push $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):latest
-	@echo "Latest tag pushed successfully"
+	@$(DOCKER_BUILDER) imagetools create --tag $(DOCKER_REGISTRY)/$(DOCKER_REPO)/$(CONTROLLER_IMAGE_NAME):latest $(CONTROLLER_IMG)
+	@echo "Latest tag created successfully"
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
