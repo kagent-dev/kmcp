@@ -131,6 +131,7 @@ func (r *MCPServerReconciler) reconcileStatus(
 
 	// Set Accepted condition based on validation
 	if err := r.validateMCPServer(server); err != nil {
+		log.FromContext(ctx).Info("MCPServer validation failed", "name", server.Name, "error", err.Error())
 		setAcceptedCondition(server, false, kagentdevv1alpha1.MCPServerReasonInvalidConfig, err.Error())
 		// If validation fails, set other conditions as unknown/false
 		setResolvedRefsCondition(
@@ -152,6 +153,7 @@ func (r *MCPServerReconciler) reconcileStatus(
 			"Configuration validation failed",
 		)
 	} else {
+		log.FromContext(ctx).Info("MCPServer validation passed", "name", server.Name)
 		setAcceptedCondition(
 			server,
 			true,
@@ -169,6 +171,7 @@ func (r *MCPServerReconciler) reconcileStatus(
 
 		// Set Programmed condition based on reconcile result
 		if reconcileErr != nil {
+			log.FromContext(ctx).Error(reconcileErr, "MCPServer reconcile failed", "name", server.Name)
 			setProgrammedCondition(
 				server,
 				false,
@@ -181,6 +184,7 @@ func (r *MCPServerReconciler) reconcileStatus(
 				"Resources failed to be created",
 			)
 		} else {
+			log.FromContext(ctx).Info("MCPServer reconcile succeeded", "name", server.Name)
 			setProgrammedCondition(server,
 				true,
 				kagentdevv1alpha1.MCPServerReasonProgrammed,
@@ -207,8 +211,11 @@ func (r *MCPServerReconciler) validateMCPServer(server *kagentdevv1alpha1.MCPSer
 	}
 
 	// Check if required fields are present
+	// Allow empty image if command is npx or uvx (default images will be injected)
 	if server.Spec.Deployment.Image == "" {
-		return fmt.Errorf("deployment.image is required")
+		if server.Spec.Deployment.Cmd != "npx" && server.Spec.Deployment.Cmd != "uvx" {
+			return fmt.Errorf("deployment.image is required when command is not 'npx' or 'uvx'")
+		}
 	}
 
 	// Additional validation could be added here
@@ -222,8 +229,10 @@ func (r *MCPServerReconciler) checkReadyCondition(ctx context.Context, server *k
 	deploymentName := server.Name
 	if err := r.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: server.Namespace}, deployment); err != nil {
 		if client.IgnoreNotFound(err) == nil {
+			log.FromContext(ctx).Info("MCPServer deployment not found", "name", server.Name)
 			setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonPodsNotReady, "Deployment not found")
 		} else {
+			log.FromContext(ctx).Error(err, "Error getting MCPServer deployment", "name", server.Name)
 			setReadyCondition(
 				server,
 				false,
@@ -237,6 +246,10 @@ func (r *MCPServerReconciler) checkReadyCondition(ctx context.Context, server *k
 	// Check if deployment is available
 	// A deployment is considered ready when it has the desired number of available replicas
 	if deployment.Status.AvailableReplicas > 0 && deployment.Status.AvailableReplicas == deployment.Status.Replicas {
+		log.FromContext(ctx).Info("MCPServer status transitioned to Healthy",
+			"name", server.Name,
+			"availableReplicas", deployment.Status.AvailableReplicas,
+			"totalReplicas", deployment.Status.Replicas)
 		setReadyCondition(
 			server,
 			true,
@@ -246,6 +259,10 @@ func (r *MCPServerReconciler) checkReadyCondition(ctx context.Context, server *k
 	} else {
 		message := fmt.Sprintf("Deployment not ready: %d/%d replicas available",
 			deployment.Status.AvailableReplicas, deployment.Status.Replicas)
+		log.FromContext(ctx).Info("MCPServer deployment not ready",
+			"name", server.Name,
+			"availableReplicas", deployment.Status.AvailableReplicas,
+			"totalReplicas", deployment.Status.Replicas)
 		setReadyCondition(server, false, kagentdevv1alpha1.MCPServerReasonNotAvailable, message)
 	}
 }
