@@ -96,7 +96,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
 	}
 	if originalImage == "" {
-		klog.Infof("MCPServer %s: Using default image injection - original: '%s', injected: '%s'", server.Name, originalImage, image)
+		klog.Infof("MCPServer %s: default image injected: %s", server.Name, image)
 	}
 
 	// Create environment variables from secrets for envFrom
