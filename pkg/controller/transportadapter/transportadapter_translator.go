@@ -85,9 +85,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	image := server.Spec.Deployment.Image
 	if image == "" && server.Spec.Deployment.Cmd == "uvx" {
 		image = "ghcr.io/astral-sh/uv:debian"
+		klog.Infof("MCPServer %s: Injected default image for uvx command: %s", server.Name, image)
 	}
 	if image == "" && server.Spec.Deployment.Cmd == "npx" {
 		image = "node:24-alpine3.21"
+		klog.Infof("MCPServer %s: Injected default image for npx command: %s", server.Name, image)
 	}
 	if image == "" {
 		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
