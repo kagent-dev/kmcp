@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"sort"
 
 	"go.uber.org/multierr"
@@ -22,7 +23,7 @@ import (
 )
 
 const (
-	transportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.9.0-musl"
+	defaultTransportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.9.0-musl"
 )
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
@@ -101,6 +102,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 
 	// Create volume mounts from the MCPServer spec
 	volumeMounts := t.createVolumeMounts(server.Spec.Deployment)
+
+	transportAdapterContainerImage := defaultTransportAdapterContainerImage
+	transportAdapterVersion := os.Getenv("TRANSPORT_ADAPTER_VERSION")
+	if transportAdapterVersion != "" {
+		transportAdapterContainerImage = fmt.Sprintf("ghcr.io/agentgateway/agentgateway:%s-musl", transportAdapterVersion)
+	}
 
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
