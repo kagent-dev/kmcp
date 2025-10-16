@@ -44,6 +44,8 @@ controller:
     enabled: true
     bindAddress: ":8443"
     secureServing: true
+  
+  env: []
 
 # Pod annotations
 podAnnotations: {}
