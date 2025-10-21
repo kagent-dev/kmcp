@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 
 	"go.uber.org/multierr"
@@ -23,8 +24,13 @@ import (
 )
 
 const (
-	defaultTransportAdapterContainerImage = "ghcr.io/agentgateway/agentgateway:0.9.0-musl"
+	transportAdapterRepository     = "ghcr.io/agentgateway/agentgateway"
+	defaultTransportAdapterVersion = "0.9.0"
 )
+
+// versionRegex validates that version strings contain only allowed characters
+// (alphanumeric, dots, hyphens) to prevent potential image injection attacks
+var versionRegex = regexp.MustCompile(`^[a-zA-Z0-9.\-]+$`)
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
@@ -103,10 +109,19 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	// Create volume mounts from the MCPServer spec
 	volumeMounts := t.createVolumeMounts(server.Spec.Deployment)
 
-	transportAdapterContainerImage := defaultTransportAdapterContainerImage
-	transportAdapterVersion := os.Getenv("TRANSPORT_ADAPTER_VERSION")
-	if transportAdapterVersion != "" {
-		transportAdapterContainerImage = fmt.Sprintf("ghcr.io/agentgateway/agentgateway:%s-musl", transportAdapterVersion)
+	// Determine the init container image and pull policy to use
+	// Start with the default transport adapter image
+	transportAdapterContainerImage := getTransportAdapterImage()
+
+	initContainerPullPolicy := corev1.PullIfNotPresent
+
+	// Override with custom image if specified in the MCPServer spec
+	if server.Spec.Deployment.InitContainer != nil && server.Spec.Deployment.InitContainer.Image != "" {
+		transportAdapterContainerImage = server.Spec.Deployment.InitContainer.Image
+		initContainerPullPolicy = server.Spec.Deployment.InitContainer.ImagePullPolicy
+		if initContainerPullPolicy == "" {
+			initContainerPullPolicy = corev1.PullIfNotPresent
+		}
 	}
 
 	var template corev1.PodSpec
@@ -118,7 +133,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           transportAdapterContainerImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
+				ImagePullPolicy: initContainerPullPolicy,
 				Command:         []string{},
 				Args: []string{
 					"--copy-self",
@@ -543,4 +558,29 @@ func (t *transportAdapterTranslator) runPlugins(
 	}
 
 	return objects, errs
+}
+
+// validateVersion validates that a version string contains only allowed characters
+// to prevent potential image injection attacks
+func validateVersion(version string) error {
+	if !versionRegex.MatchString(version) {
+		return fmt.Errorf("invalid version format: %s (only alphanumeric characters, dots, and hyphens are allowed)", version)
+	}
+	return nil
+}
+
+// getTransportAdapterImage returns the transport adapter container image,
+// using the environment variable if provided and valid, otherwise using the default
+func getTransportAdapterImage() string {
+	transportAdapterVersion := os.Getenv("TRANSPORT_ADAPTER_VERSION")
+	if transportAdapterVersion == "" {
+		return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, defaultTransportAdapterVersion)
+	}
+
+	if err := validateVersion(transportAdapterVersion); err != nil {
+		klog.Warningf("Invalid TRANSPORT_ADAPTER_VERSION: %v, fallback to %s", err, defaultTransportAdapterVersion)
+		return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, defaultTransportAdapterVersion)
+	}
+
+	return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, transportAdapterVersion)
 }
