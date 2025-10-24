@@ -90,14 +90,20 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	server *v1alpha1.MCPServer,
 ) (*appsv1.Deployment, error) {
 	image := server.Spec.Deployment.Image
+	originalImage := image
 	if image == "" && server.Spec.Deployment.Cmd == "uvx" {
 		image = "ghcr.io/astral-sh/uv:debian"
+		klog.Infof("MCPServer %s: Injected default image for uvx command: %s", server.Name, image)
 	}
 	if image == "" && server.Spec.Deployment.Cmd == "npx" {
 		image = "node:24-alpine3.21"
+		klog.Infof("MCPServer %s: Injected default image for npx command: %s", server.Name, image)
 	}
 	if image == "" {
 		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
+	}
+	if originalImage == "" {
+		klog.Infof("MCPServer %s: default image injected: %s", server.Name, image)
 	}
 
 	// Create environment variables from secrets for envFrom
