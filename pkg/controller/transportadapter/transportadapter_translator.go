@@ -286,15 +286,27 @@ func (t *transportAdapterTranslator) addMCPServerConfigHashAnnotation(
 func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
 	server *v1alpha1.MCPServer,
 ) (*corev1.ServiceAccount, error) {
+	objectMeta := metav1.ObjectMeta{
+		Name:      server.Name,
+		Namespace: server.Namespace,
+	}
+
+	// Apply custom annotations and labels if provided
+	if server.Spec.Deployment.ServiceAccount != nil {
+		if server.Spec.Deployment.ServiceAccount.Annotations != nil {
+			objectMeta.Annotations = server.Spec.Deployment.ServiceAccount.Annotations
+		}
+		if server.Spec.Deployment.ServiceAccount.Labels != nil {
+			objectMeta.Labels = server.Spec.Deployment.ServiceAccount.Labels
+		}
+	}
+
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      server.Name,
-			Namespace: server.Namespace,
-		},
+		ObjectMeta: objectMeta,
 	}
 	return serviceAccount, controllerutil.SetOwnerReference(server, serviceAccount, t.scheme)
 }
