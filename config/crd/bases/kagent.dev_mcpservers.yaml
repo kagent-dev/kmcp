@@ -138,6 +138,25 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     type: array
+                  serviceAccount:
+                    description: ServiceAccount defines the configuration for the
+                      ServiceAccount.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations to add to the ServiceAccount.
+                          This is useful for configuring AWS IRSA (IAM Roles for Service Accounts)
+                          or other cloud provider integrations.
+                          Example: {"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role"}
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceAccount.
+                        type: object
+                    type: object
                   volumeMounts:
                     description: |-
                       VolumeMounts defines the list of volume mounts for the MCP server container.

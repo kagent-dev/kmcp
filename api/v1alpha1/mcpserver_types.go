@@ -236,6 +236,10 @@ type MCPServerDeployment struct {
 	// the transport adapter binary. This is used for stdio transport type.
 	// +optional
 	InitContainer *InitContainerConfig `json:"initContainer,omitempty"`
+
+	// ServiceAccount defines the configuration for the ServiceAccount.
+	// +optional
+	ServiceAccount *ServiceAccountConfig `json:"serviceAccount,omitempty"`
 }
 
 // InitContainerConfig defines the configuration for the init container.
@@ -250,6 +254,20 @@ type InitContainerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+}
+
+// ServiceAccountConfig defines the configuration for the ServiceAccount.
+type ServiceAccountConfig struct {
+	// Annotations to add to the ServiceAccount.
+	// This is useful for configuring AWS IRSA (IAM Roles for Service Accounts)
+	// or other cloud provider integrations.
+	// Example: {"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role"}
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels to add to the ServiceAccount.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // +kubebuilder:object:root=true
