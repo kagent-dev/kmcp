@@ -39,21 +39,11 @@ This command reads a .env file and the project's kmcp.yaml file to determine
 the correct secret name and namespace for the specified environment. It then
 creates or updates the Kubernetes secret directly in the cluster.
 
-The command will look for a ".env" file in the project root by default.
-
-Examples:
-  # Sync secrets to the "staging" environment defined in kmcp.yaml
-  kmcp secrets sync staging
-
-  # Sync secrets from a custom .env file
-  kmcp secrets sync staging --from-file .env.staging
-
-  # Sync secrets from a specific project directory
-  kmcp secrets sync staging --project-dir ./my-project
-
-  # Perform a dry run to see the generated secret without applying it
-  kmcp secrets sync production --dry-run
-`,
+The command will look for a ".env" file in the project root by default.`,
+	Example: `  kmcp secrets sync staging                  # Sync secrets to the "staging" environment
+  kmcp secrets sync staging --from-file .env.staging  # Sync secrets from a custom .env file
+  kmcp secrets sync staging --project-dir ./my-project # Sync secrets from a specific project directory
+  kmcp secrets sync production --dry-run              # Perform a dry run to see the generated secret without applying it`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSync,
 }

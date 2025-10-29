@@ -41,10 +41,8 @@ The generated MCPServer will include:
 The command can also apply Kubernetes secret YAML files to the cluster before deploying the MCPServer.
 The secrets will be referenced in the MCPServer CRD for mounting as volumes to the MCP server container.
 Secret namespace will be overridden with the deployment namespace to avoid the need for reference grants
-to enable cross-namespace references.
-
-Examples:
-  kmcp deploy                          # Deploy with project name to cluster
+to enable cross-namespace references.`,
+	Example: `  kmcp deploy                          # Deploy with project name to cluster
   kmcp deploy my-server                # Deploy with custom name
   kmcp deploy --namespace staging      # Deploy to staging namespace
   kmcp deploy --dry-run                # Generate manifest without applying to cluster

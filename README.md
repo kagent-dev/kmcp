@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 -->
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/kagent-dev/kmcp/main/img/kmcp-logo-dark.svg" alt="kmcp" width="400">
@@ -22,30 +23,90 @@
     </a>
   </div>
   <h3>A development platform and control plane for the Model Context Protocol (MCP)</h3>
-  <p>Build, deploy, and manage MCP servers with a seamless workflow from development to production</p>
+  <p><i>MCP connectivity simplified, bring MCP service prototypes into production</i></p>
 </div>
+<!-- markdownlint-enable MD033 -->
+
+---
+<!-- markdownlint-disable MD033 -->
+<table align="center">
+  <tr>
+    <td>
+      <a href="#getting-started"><b><i>Getting Started</i></b></a>
+    </td>
+    <td>
+      <a href="#from-prototype-to-production"><b><i>Prototype to Production</i><b></a>
+    </td>
+    <td>
+      <a href="#technical-details"><b><i>Technical Details</i></b></a>
+    </td>
+    <td>
+      <a href="#get-involved"><b><i>Get Involved</i></b></a>
+    </td>
+    <td>
+      <a href="#reference"><b><i>Reference</i></b></a>
+    </td>
+  </tr>
+</table>
+<!-- markdownlint-disable MD033 -->
 
 ---
 
-## Overview
+## Why kMCP?
 
-`kmcp` is a comprehensive toolkit for building, deploying, and managing Model Context Protocol (MCP) servers. It provides a command-line interface (CLI) for local development and a Kubernetes controller for production deployments, enabling a seamless transition from development to production.
+Prototyping MPC services in isolation is quick and fun, but but production adoption introduces many challenges:
 
-Whether you're building AI agent tools, deploying production MCP infrastructure, or managing multiple MCP servers at scale, `kmcp` streamlines the entire lifecycle with familiar tooling and cloud-native deployment patterns.
+- **Ad-hoc scaffolding** - Cnfiguring the MCP server, integrating it in Kubernetes, and operating it at Enterprise scale
+- **Transport fragmentation** – Supporting multiple protocols (HTTP, WebSocket, SSE, etc.) requires custom maintenance.
+- **Disconnected context** - Enforcing consistent security, observability, and governance for agent-to-tool communication
+
+**_We believe teams who have build MCP services should not experience friction when bringing those services to production. kMCP is designed to make MCP connectivity simple._**
+
+<!-- 
+  KMCP LOGO SHOULD GO HERE
+
+  TODO: sam-heilbron to follow-up
+-->
+
+## Getting Started
+
+Install the kmcp CLI on your local machine.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kagent-dev/kmcp/refs/heads/main/scripts/get-kmcp.sh | bash
+```
+
+Verify that the kmcp CLI is installed.
+
+```bash
+kmcp --help
+```
+
+<img src="img/cli-help-nov-25.png" alt="kmcp cli help text" width="800">
+
+_You're ready to go! Continue on to [From Prototype to Production](#from-prototype-to-production) or explore our docs at [kagent.dev/docs/kmcp](https://kagent.dev/docs/kmcp)_
+
+## From Prototype to Production
 
 <img src="img/kmcp.png" alt="kmcp architecture" width="800">
 
-## Why kmcp?
+MCP connectivity affects everyone in an organization. Below are some common quickstart journeys that you may experience:
 
-Building and deploying MCP servers today involves several challenges:
+- [Your first MCP service prototype](/devel/quickstart/first-prototype.md)
+- [AI/ML Engineer packaging an existing prototype](/devel/quickstart/package-existing-service.md)
+- [DevOps engineer building MCP infrastructure in Kubernetes](/devel/quickstart/scaling-mcp-infrastructure.md)
 
-- **Manual scaffolding**: Setting up project structure, dependencies, and boilerplate code for each new MCP server
-- **Inconsistent deployment**: No standardized way to deploy MCP servers to production environments
-- **Transport complexity**: Handling different transport protocols (HTTP, WebSocket, SSE) requires custom implementation
-- **Kubernetes integration**: Manually creating deployments, services, and configurations for each MCP server
-- **Dev-prod parity**: Different setups for local development versus production deployment
+## Technical Details
 
-`kmcp` solves these problems by providing:
+`kmcp` is a comprehensive toolkit for building, deploying, and managing Model Context Protocol (MCP) servers. For a more detailed breakdown of using kmcp in your workflow, check out our [achitecture overview](/devel/architecture/workflow.md).
+
+### Core Components
+
+- **[CLI](/pkg/cli/README.md)** is your primary tool for development. It allows you to scaffold new MCP projects, manage tools, build container images, and run your MCP server locally for testing and development.
+- **Controller**: Manages the lifecycle of your MCP server deployments in your Kubernetes cluster. It uses a Custom Resource Definition (CRD) to define MCP servers as native Kubernetes objects, allowing you to manage them with familiar `kubectl` commands.
+- **Transport Adapater** - Fronts the MCP server and provides features such as external traffic routing for your MCP server with support for multiple transport protocols without requiring any changes to your code.
+
+### Core Principles
 
 - ✨ **Rapid scaffolding** with support for FastMCP (Python) and MCP Go SDK
 - 🚀 **One-command deployment** to Kubernetes with pre-configured Transport Adapters
@@ -54,170 +115,35 @@ Building and deploying MCP servers today involves several challenges:
 - ☸️ **Kubernetes-native** using Custom Resource Definitions (CRDs)
 - 🔐 **Secrets management** integrated with Kubernetes secrets
 
-## Quick Start
+## 🤝 Get Involved
 
-Get started with `kmcp` in under a minute:
+_We welcome contributions! Contributors are expected to [respect the kagent Code of Conduct](https://github.com/kagent-dev/community/blob/main/CODE-OF-CONDUCT.md)_
 
-```bash
-# Install kmcp CLI
-curl -fsSL https://raw.githubusercontent.com/kagent-dev/kmcp/refs/heads/main/scripts/get-kmcp.sh | bash
+There are many ways to get involved:
 
-# Create a new MCP server
-kmcp init python my-weather-server
-
-# Navigate to your project
-cd my-weather-server
-
-# Add a tool
-kmcp add-tool get_weather --description "Get current weather for a location"
-
-# Run locally for testing
-kmcp run
-
-# Build and deploy to Kubernetes (requires cluster access)
-kmcp build
-kmcp install  # Install controller (one-time setup)
-kmcp deploy
-```
-
-Your MCP server is now running locally! Edit the generated tool in `src/tools/get_weather.py` to implement your logic.
-
-## Core Concepts
-
-`kmcp` is composed of three primary components that work together to provide a complete MCP server-management solution:
-
-### 1. The `kmcp` CLI
-
-The CLI is your primary tool for local development. It allows you to scaffold new MCP projects, manage tools, build container images, and run your MCP server locally for testing and development.
-
-### 2.  The Kubernetes Controller
-
-The `kmcp` controller runs in your Kubernetes cluster and manages the lifecycle of your MCP server deployments. It uses a Custom Resource Definition (CRD) to define MCP servers as native Kubernetes objects, allowing you to manage them with familiar `kubectl` commands.
-
-### 3. The Transport Adapter
-
-In a Kubernetes environment, `kmcp` deploys your MCP server behind a dedicated Transport Adapter. `kmcp` acts as a control plane for this adapter, configuring it to provide  features such as external traffic routing for your MCP server with support for multiple transport protocols without requiring any changes to your code.
-
-## Features
-
-The `kmcp` CLI provides a set of commands to manage the entire lifecycle of your MCP server:
-
-| Command | Description |
-|---------|-------------|
-| `kmcp init` | Scaffolds a new MCP server project with FastMCP (Python) or MCP Go SDK |
-| `kmcp add-tool` | Adds a new tool to your project with automatic boilerplate and registration |
-| `kmcp run` | Runs the MCP server locally for development and testing |
-| `kmcp build` | Builds a Docker image for your MCP server |
-| `kmcp install` | Installs the `kmcp` controller and CRDs on a Kubernetes cluster (one-time setup) |
-| `kmcp deploy` | Deploys your MCP server to Kubernetes behind a pre-configured Transport Adapter |
-| `kmcp secrets` | Manages secrets for your MCP server deployment in Kubernetes |
-
-
-## Architecture
-
-The following diagram illustrates the `kmcp` workflow, from local development to a production deployment in Kubernetes:
-
-```mermaid
-graph TD
-    subgraph Local Development
-        A[Developer] -- kmcp init --> B(MCP Project);
-        B -- kmcp add-tool --> B;
-        B -- kmcp run --> C{Local MCP Server};
-        A -- Edits Code --> B;
-    end
-
-    subgraph Production Deployment
-        B -- kmcp build --> D[Docker Image];
-        D -- kmcp deploy --> E(Kubernetes Cluster);
-    end
-
-    subgraph Kubernetes Cluster
-        F[kmcp Controller] -- Manages --> G(MCP Server CRD);
-        G -- Deploys --> H[Transport Adapter];
-        H -- Proxies Traffic --> I[MCP Server Pod];
-    end
-
-    A -- Interacts with --> C;
-    E -- Contains --> F;
-    E -- Contains --> G;
-    E -- Contains --> H;
-    E -- Contains --> I;
-```
-
-### How It Works
-
-1. **Local Development**: Developers use `kmcp init` to scaffold a new project and `kmcp add-tool` to add tools. The server runs locally with `kmcp run` for rapid iteration.
-
-2. **Build Phase**: `kmcp build` packages your MCP server into a Docker image, handling all dependencies and configuration automatically.
-
-3. **Deployment**: `kmcp deploy` creates a Kubernetes custom resource that the controller watches. The controller then:
-   - Deploys your MCP server as a pod
-   - Configures and deploys a Transport Adapter as a sidecar or separate service
-   - Sets up networking and ingress rules
-   - Manages secrets and environment variables
-
-4. **Production Runtime**: The Transport Adapter receives external requests, handles protocol translation, and routes them to your MCP server. The controller continuously monitors and manages the deployment.
-
-## Use Cases
-
-`kmcp` is designed for:
-
-- **AI/ML Engineers**: Building custom tools and integrations for AI agents with rapid iteration and testing
-- **Platform Teams**: Managing multiple MCP servers across development, staging, and production environments
-- **DevOps Engineers**: Deploying and scaling MCP infrastructure using familiar Kubernetes patterns
-- **Enterprise Organizations**: Standardizing MCP server development and deployment across teams
-- **Startups**: Quickly prototyping and deploying AI-powered features without infrastructure overhead
-
-## Documentation
-
-The kmcp documentation is available at [kagent.dev/docs/kmcp](https://kagent.dev/docs/kmcp).
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Ways to Contribute
-
-- 🐛 Report bugs and issues
-- 💡 Suggest new features
-- 📖 Improve documentation
-- 🔧 Submit pull requests
+- 🐛 [Report bugs and issues](https://github.com/kagent-dev/kmcp/issues/)
+- 💡 [Suggest new features](https://github.com/kagent-dev/kmcp/issues/)
+- 📖 [Improve documentation](https://github.com/kagent-dev/website/)
+- 🔧 [Submit pull requests](/CONTRIBUTING.md)
 - ⭐ Star the repository
-- 💬 Help others in Discord
+- 💬 [Help others in Discord](https://discord.gg/Fu3k65f2k3)
+- 💬 [Join the kagent community meetings](https://calendar.google.com/calendar/u/0?cid=Y183OTI0OTdhNGU1N2NiNzVhNzE0Mjg0NWFkMzVkNTVmMTkxYTAwOWVhN2ZiN2E3ZTc5NDA5Yjk5NGJhOTRhMmVhQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20)
+- 💬 [Share tips in the CNCF #kagent slack channel](https://cloud-native.slack.com/archives/C08ETST0076)
+- 🔒 [Report security concerns](SECURITY.md)
 
 Thanks to all contributors!
 
 <a href="https://github.com/kagent-dev/kmcp/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=kagent-dev/kmcp" />
+  <img alt="kmcp contributors" src="https://contrib.rocks/image?repo=kagent-dev/kmcp" />
 </a>
 
-## 📈 Star History
+## Reference
 
-<a href="https://www.star-history.com/#kagent-dev/kmcp&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date" />
-   <img alt="Star history of kagent-dev/kmcp over time" src="https://api.star-history.com/svg?repos=kagent-dev/kmcp&type=Date" />
- </picture>
-</a>
+### Resources
 
-## 📄 License
+- [kMCP documentation](https://kagent.dev/docs/kmcp)
 
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-## 🔗 Resources
+### Ecosystem Resources
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [MCP Documentation](https://modelcontextprotocol.io/)
@@ -225,7 +151,11 @@ limitations under the License.
 - [FastMCP Python Documentation](https://github.com/jlowin/fastmcp)
 - [MCP Go SDK](https://github.com/mark3labs/mcp-go)
 
---- 
+### License
+
+This project is licensed under the [Apache 2.0 License.](/LICENSE)
+
+---
 
 <div align="center">
   <p>Built with ❤️ by the kagent team</p>
