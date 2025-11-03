@@ -63,7 +63,7 @@ Get started with `kmcp` in under a minute:
 curl -fsSL https://raw.githubusercontent.com/kagent-dev/kmcp/refs/heads/main/scripts/get-kmcp.sh | bash
 
 # Create a new MCP server
-kmcp init pytohn my-weather-server
+kmcp init python my-weather-server
 
 # Navigate to your project
 cd my-weather-server
