@@ -62,12 +62,6 @@ Prototyping MPC services in isolation is quick and fun, but but production adopt
 
 **_We believe teams who have build MCP services should not experience friction when bringing those services to production. kMCP is designed to make MCP connectivity simple._**
 
-<!-- 
-  KMCP LOGO SHOULD GO HERE
-
-  TODO: sam-heilbron to follow-up
--->
-
 ## Getting Started
 
 Install the kmcp CLI on your local machine.
@@ -92,9 +86,9 @@ _You're ready to go! Continue on to [From Prototype to Production](#from-prototy
 
 MCP connectivity affects everyone in an organization. Below are some common quickstart journeys that you may experience:
 
-- [Your first MCP service prototype](/devel/quickstart/first-prototype.md)
-- [AI/ML Engineer packaging an existing prototype](/devel/quickstart/package-existing-service.md)
-- [DevOps engineer building MCP infrastructure in Kubernetes](/devel/quickstart/scaling-mcp-infrastructure.md)
+- [Your first MCP service prototype](https://kagent.dev/docs/kmcp/develop)
+- [AI/ML Engineer packaging an existing prototype](https://kagent.dev/docs/kmcp/deploy/server#option-1-deploy-an-mcp-server-with-npx-or-uvx)
+- [DevOps engineer building MCP infrastructure in Kubernetes](https://kagent.dev/docs/kmcp/deploy/server#option-2-build-and-deploy-an-mcp-server)
 
 ## Technical Details
 
@@ -158,11 +152,5 @@ This project is licensed under the [Apache 2.0 License.](/LICENSE)
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the kagent team</p>
-  <p>
-    <a href="https://kagent.dev">Website</a> •
-    <a href="https://kagent.dev/docs/kmcp">Documentation</a> •
-    <a href="https://discord.gg/Fu3k65f2k3">Discord</a> •
-    <a href="https://github.com/kagent-dev/kmcp">GitHub</a>
-  </p>
+  <p>Built with ❤️ by the <a href="https://github.com/kagent-dev">kagent team</a> </p>
 </div>
