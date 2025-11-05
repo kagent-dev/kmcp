@@ -56,7 +56,7 @@
 
 Prototyping MPC services in isolation is quick and fun, but but production adoption introduces many challenges:
 
-- **Ad-hoc scaffolding** - Cnfiguring the MCP server, integrating it in Kubernetes, and operating it at Enterprise scale
+- **Ad-hoc scaffolding** - Configuring the MCP server, integrating it in Kubernetes, and operating it at Enterprise scale
 - **Transport fragmentation** – Supporting multiple protocols (HTTP, WebSocket, SSE, etc.) requires custom maintenance.
 - **Disconnected context** - Enforcing consistent security, observability, and governance for agent-to-tool communication
 
