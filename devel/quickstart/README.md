@@ -8,4 +8,4 @@
 - **Enterprise Organizations**: Standardizing MCP server development and deployment across teams
 - **Startups**: Quickly prototyping and deploying AI-powered features without infrastructure overhead
 
-Due to the varitaion of personas that benefit from kmcp, we define quickstart journeys. Please choose thoe ones that are most relevant to you, and [feel free to add more](/CONTRIBUTING.md)!
+Due to the variety of personas that benefit from kmcp, we define quickstart journeys. Please choose the ones that are most relevant to you, and [feel free to add more](/CONTRIBUTING.md)!
