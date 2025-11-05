@@ -115,7 +115,7 @@ MCP connectivity affects everyone in an organization. Below are some common quic
 - ☸️ **Kubernetes-native** using Custom Resource Definitions (CRDs)
 - 🔐 **Secrets management** integrated with Kubernetes secrets
 
-## 🤝 Get Involved
+## Get Involved
 
 _We welcome contributions! Contributors are expected to [respect the kagent Code of Conduct](https://github.com/kagent-dev/community/blob/main/CODE-OF-CONDUCT.md)_
 
@@ -128,7 +128,7 @@ There are many ways to get involved:
 - ⭐ Star the repository
 - 💬 [Help others in Discord](https://discord.gg/Fu3k65f2k3)
 - 💬 [Join the kagent community meetings](https://calendar.google.com/calendar/u/0?cid=Y183OTI0OTdhNGU1N2NiNzVhNzE0Mjg0NWFkMzVkNTVmMTkxYTAwOWVhN2ZiN2E3ZTc5NDA5Yjk5NGJhOTRhMmVhQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20)
-- 💬 [Share tips in the CNCF #kagent slack channel](https://cloud-native.slack.com/archives/C08ETST0076)
+- 🤝 [Share tips in the CNCF #kagent slack channel](https://cloud-native.slack.com/archives/C08ETST0076)
 - 🔒 [Report security concerns](SECURITY.md)
 
 Thanks to all contributors!
