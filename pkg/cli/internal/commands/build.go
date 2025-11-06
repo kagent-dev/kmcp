@@ -19,12 +19,10 @@ var buildCmd = &cobra.Command{
 	Long: `Build an MCP server from the current project.
 	
 This command will detect the project type and build the appropriate
-MCP server Docker image.
-
-Examples:
-  kmcp build                    # Build Docker image from current directory
-  kmcp build --project-dir ./my-project  # Build Docker image from specific directory`,
+MCP server Docker image.`,
 	RunE: runBuild,
+	Example: `  kmcp build                              # Build Docker image from current directory
+  kmcp build --project-dir ./my-project   # Build Docker image from specific directory`,
 }
 
 var (

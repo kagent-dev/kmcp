@@ -26,10 +26,8 @@ This will execute the server directly using the appropriate framework command.
 
 Supported frameworks:
 - fastmcp-python: Requires uv to be installed
-- mcp-go: Requires Go to be installed
-
-Examples:
-  kmcp run --project-dir ./my-project     # Run with inspector (default)
+- mcp-go: Requires Go to be installed`,
+	Example: `  kmcp run --project-dir ./my-project     # Run with inspector (default)
   kmcp run --no-inspector                 # Run server directly without inspector
   kmcp run --transport http               # Run with HTTP transport`,
 	RunE: executeRun,
