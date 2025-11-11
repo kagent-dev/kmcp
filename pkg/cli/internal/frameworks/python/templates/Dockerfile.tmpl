@@ -1,5 +1,5 @@
 # Multi-stage build for {{.ProjectName}} MCP server using uv
-FROM python:3.11-slim as builder
+FROM python:3.13.8-slim as builder
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -26,7 +26,7 @@ COPY src/ ./src/
 COPY kmcp.yaml ./
 
 # Production stage
-FROM python:3.11-slim
+FROM python:3.13.8-slim
 
 # Install uv in production
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
