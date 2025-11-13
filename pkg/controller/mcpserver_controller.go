@@ -207,8 +207,11 @@ func (r *MCPServerReconciler) validateMCPServer(server *kagentdevv1alpha1.MCPSer
 	}
 
 	// Check if required fields are present
+	// Allow empty image if command is npx or uvx (default images will be injected)
 	if server.Spec.Deployment.Image == "" {
-		return fmt.Errorf("deployment.image is required")
+		if server.Spec.Deployment.Cmd != "npx" && server.Spec.Deployment.Cmd != "uvx" {
+			return fmt.Errorf("deployment.image is required when command is not 'npx' or 'uvx'")
+		}
 	}
 
 	// Additional validation could be added here
