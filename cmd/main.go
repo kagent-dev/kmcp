@@ -28,7 +28,7 @@ import (
 func main() {
 	app.Start(func() (*app.ExtensionConfig, error) {
 		return &app.ExtensionConfig{
-			Plugins:         nil,
+			PluginFactories: nil,
 			RegisterSchemes: nil,
 		}, nil
 	})

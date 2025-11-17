@@ -31,6 +31,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -110,9 +111,15 @@ func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 }
 
+// PluginFactory creates a TranslatorPlugin when provided with the client and scheme.
+// This allows plugins to be initialized after the manager is created, giving them access to
+// the Kubernetes client and scheme. Plugins should create their own logger.
+type PluginFactory func(client.Client, *runtime.Scheme) transportadapter.TranslatorPlugin
+
 type ExtensionConfig struct {
-	// Plugins are translator plugins for extending MCPServer translation behavior
-	Plugins []transportadapter.TranslatorPlugin
+	// PluginFactories are factories that create translator plugins for extending MCPServer translation behavior.
+	// These factories are called after the manager is created, allowing plugins to access the client and scheme.
+	PluginFactories []PluginFactory
 	// RegisterSchemes is an optional function to register additional API types to the runtime scheme.
 	// This is called before the manager is created, allowing extensions to add their own CRDs.
 	RegisterSchemes func(*runtime.Scheme) error
@@ -265,10 +272,16 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		os.Exit(1)
 	}
 
+	var plugins []transportadapter.TranslatorPlugin
+	for _, factory := range extensionCfg.PluginFactories {
+		plugin := factory(mgr.GetClient(), mgr.GetScheme())
+		plugins = append(plugins, plugin)
+	}
+
 	if err = (&controller.MCPServerReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
-		Plugins: extensionCfg.Plugins,
+		Plugins: plugins,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MCPServer")
 		os.Exit(1)
