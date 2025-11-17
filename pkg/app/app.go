@@ -272,7 +272,7 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		os.Exit(1)
 	}
 
-	var plugins []transportadapter.TranslatorPlugin
+	plugins := make([]transportadapter.TranslatorPlugin, 0, len(extensionCfg.PluginFactories))
 	for _, factory := range extensionCfg.PluginFactories {
 		plugin := factory(mgr.GetClient(), mgr.GetScheme())
 		plugins = append(plugins, plugin)
