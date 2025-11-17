@@ -17,7 +17,6 @@ limitations under the License.
 package app
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -34,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -112,24 +110,20 @@ func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 }
 
-type BootstrapConfig struct {
-	Ctx     context.Context
-	Manager manager.Manager
-}
-
 type ExtensionConfig struct {
+	// Plugins are translator plugins for extending MCPServer translation behavior
 	Plugins []transportadapter.TranslatorPlugin
+	// RegisterSchemes is an optional function to register additional API types to the runtime scheme.
+	// This is called before the manager is created, allowing extensions to add their own CRDs.
+	RegisterSchemes func(*runtime.Scheme) error
 }
 
-type GetExtensionConfig func(bootstrap BootstrapConfig) (*ExtensionConfig, error)
+type GetExtensionConfig func() (*ExtensionConfig, error)
 
 // nolint:gocyclo
 func Start(getExtensionConfig GetExtensionConfig) {
 	var cfg Config
 	var tlsOpts []func(*tls.Config)
-
-	// TODO setup signal handlers
-	ctx := context.Background()
 
 	cfg.SetFlags(flag.CommandLine)
 	opts := zap.Options{
@@ -231,6 +225,22 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		})
 	}
 
+	// Get extension config before creating the manager
+	// Schemes must be registered before the manager is created
+	extensionCfg, err := getExtensionConfig()
+	if err != nil {
+		setupLog.Error(err, "unable to get extension config")
+		os.Exit(1)
+	}
+
+	// Register extension schemes if provided
+	if extensionCfg.RegisterSchemes != nil {
+		if err := extensionCfg.RegisterSchemes(scheme); err != nil {
+			setupLog.Error(err, "unable to register extension schemes")
+			os.Exit(1)
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -252,15 +262,6 @@ func Start(getExtensionConfig GetExtensionConfig) {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	extensionCfg, err := getExtensionConfig(BootstrapConfig{
-		Ctx:     ctx,
-		Manager: mgr,
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to get extension config")
 		os.Exit(1)
 	}
 

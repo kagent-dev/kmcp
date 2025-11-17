@@ -26,9 +26,10 @@ import (
 )
 
 func main() {
-	app.Start(func(_ app.BootstrapConfig) (*app.ExtensionConfig, error) {
+	app.Start(func() (*app.ExtensionConfig, error) {
 		return &app.ExtensionConfig{
-			Plugins: nil,
+			Plugins:         nil,
+			RegisterSchemes: nil,
 		}, nil
 	})
 }
