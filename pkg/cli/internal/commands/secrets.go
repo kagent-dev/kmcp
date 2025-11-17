@@ -30,6 +30,8 @@ var (
 )
 
 // syncCmd creates or updates a Kubernetes secret from an environment file
+//
+//nolint:lll // Long example lines in command description
 var syncCmd = &cobra.Command{
 	Use:   "sync [environment]",
 	Short: "Sync secrets to a Kubernetes environment from a local .env file",
