@@ -112,6 +112,8 @@ func init() {
 }
 
 // package subcommand - supports both npm and uvx
+//
+//nolint:lll // Long example lines in command description
 var packageDeployCmd = &cobra.Command{
 	Use:   "package",
 	Short: "Deploy an MCP server using a package manager (npx, uvx)",
@@ -137,17 +139,32 @@ func init() {
 	// package subcommand flags
 	packageDeployCmd.Flags().StringVar(&packageName, "deployment-name", "", "Name for the deployment (required)")
 	packageDeployCmd.Flags().StringVar(&packageManager, "manager", "", "Package manager to use (npx or uvx) (required)")
-	packageDeployCmd.Flags().StringSliceVar(&packageSecrets, "secrets", []string{}, "List of Kubernetes secret names to mount")
+	packageDeployCmd.Flags().StringSliceVar(
+		&packageSecrets,
+		"secrets",
+		[]string{},
+		"List of Kubernetes secret names to mount",
+	)
 
 	// Add common deployment flags
-	packageDeployCmd.Flags().StringSliceVar(&deployArgs, "args", []string{}, "Arguments to pass to the package manager (e.g., package names) (required)")
+	packageDeployCmd.Flags().StringSliceVar(
+		&deployArgs,
+		"args",
+		[]string{},
+		"Arguments to pass to the package manager (e.g., package names) (required)",
+	)
 	packageDeployCmd.Flags().StringSliceVar(&deployEnv, "env", []string{}, "Environment variables (KEY=VALUE)")
 	packageDeployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Generate manifest without applying to cluster")
 	packageDeployCmd.Flags().StringVarP(&deployNamespace, "namespace", "n", "", "Kubernetes namespace")
 	packageDeployCmd.Flags().StringVar(&deployImage, "image", "", "Docker image to deploy (overrides default)")
 	packageDeployCmd.Flags().StringVar(&deployTransport, "transport", "", "Transport type (stdio, http)")
 	packageDeployCmd.Flags().IntVar(&deployPort, "port", 0, "Container port (default: 3000)")
-	packageDeployCmd.Flags().BoolVar(&deployNoInspector, "no-inspector", false, "Do not start the MCP inspector after deployment")
+	packageDeployCmd.Flags().BoolVar(
+		&deployNoInspector,
+		"no-inspector",
+		false,
+		"Do not start the MCP inspector after deployment",
+	)
 	packageDeployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file for the generated YAML")
 
 	// Mark required flags
@@ -156,7 +173,7 @@ func init() {
 	_ = packageDeployCmd.MarkFlagRequired("args")
 }
 
-func runPackageDeploy(_ *cobra.Command, args []string) error {
+func runPackageDeploy(_ *cobra.Command, _ []string) error {
 	// Validate package manager
 	if packageManager != "npx" && packageManager != "uvx" {
 		return fmt.Errorf("unsupported package manager: %s (must be 'npx' or 'uvx')", packageManager)
@@ -530,7 +547,12 @@ func getDefaultArgs(framework string, targetPort int) []string {
 		return []string{"dist/index.js"}
 	case manifest.FrameworkJava:
 		if deployTransport == transportHTTP {
-			return []string{"-jar", "app.jar", "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
+			return []string{
+				"-jar", "app.jar",
+				"--transport", "http",
+				"--host", "0.0.0.0",
+				"--port", fmt.Sprintf("%d", targetPort),
+			}
 		}
 		return []string{"-jar", "app.jar"}
 	default:

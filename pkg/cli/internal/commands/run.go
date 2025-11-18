@@ -244,7 +244,10 @@ func runTypeScript(projectDir string, manifest *manifest.ProjectManifest) error 
 	// Check if npm is available
 	if _, err := exec.LookPath("npm"); err != nil {
 		npmInstallURL := "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm"
-		return fmt.Errorf("npm is required to run TypeScript projects locally. Please install Node.js and npm: %s", npmInstallURL)
+		return fmt.Errorf(
+			"npm is required to run TypeScript projects locally. Please install Node.js and npm: %s",
+			npmInstallURL,
+		)
 	}
 
 	// Install dependencies first
@@ -317,7 +320,10 @@ func runJava(projectDir string, manifest *manifest.ProjectManifest) error {
 	if noInspector {
 		// Run the server directly
 		if runTransport == transportHTTP {
-			fmt.Printf("Running server directly: mvn exec:java -Dexec.mainClass=\"com.example.Main\" --transport http --host 0.0.0.0 --port 3000\n")
+			fmt.Printf(
+				"Running server directly: mvn exec:java -Dexec.mainClass=\"com.example.Main\" " +
+					"--transport http --host 0.0.0.0 --port 3000\n",
+			)
 			fmt.Printf("Server is running on http://localhost:3000\n")
 			fmt.Printf("Health check: http://localhost:3000/health\n")
 			fmt.Printf("MCP endpoint: http://localhost:3000/mcp\n")

@@ -7,10 +7,10 @@ import (
 )
 
 //go:embed kmcp-ascii.txt
-var kmcpLogoAscii string
+var kmcpLogoASCII string
 
 func KmcpLogo() string {
-	return kmcpLogoAscii
+	return kmcpLogoASCII
 }
 
 func ColoredKmcpLogo() string {

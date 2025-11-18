@@ -27,7 +27,7 @@ KMCP is a CLI tool for building and managing Model Context Protocol (MCP) server
 It provides a unified development experience for creating, building, and deploying
 MCP servers locally and to Kubernetes clusters.`, themes.ColoredKmcpLogo()),
 		Version: version,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}
