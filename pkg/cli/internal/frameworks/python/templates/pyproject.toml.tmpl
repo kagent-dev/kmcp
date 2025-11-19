@@ -29,6 +29,9 @@ packages = ["src"]
 
 [project.scripts]
 "{{.ProjectName}}-server" = "src.main:main"
+dev = "src.main:dev"
+dev-http = "src.main:dev"
+start = "src.main:start"
 
 [tool.uv]
 dev-dependencies = [

@@ -41,10 +41,10 @@ tests/                  # Generated tests
    uv run python src/main.py
    
    # HTTP mode with WebSocket MCP endpoint
-   uv run python src/main.py --http
+   uv run python src/main.py --transport http
    
    # HTTP mode with custom host/port
-   uv run python src/main.py --http --host 0.0.0.0 --port 8080
+   uv run python src/main.py --transport http --host 0.0.0.0 --port 8080
    ```
 
 3. **Using uv Scripts**:
@@ -102,13 +102,13 @@ The server supports running in HTTP mode for development and integration purpose
 
 ```bash
 # Command line flag
-python src/main.py --http
+python src/main.py --transport http
 
 # Environment variable
 MCP_TRANSPORT_MODE=http python src/main.py
 
 # Custom host and port
-python src/main.py --http --host localhost --port 8080
+python src/main.py --transport http --host localhost --port 8080
 ```
 
 ## Creating Tools
