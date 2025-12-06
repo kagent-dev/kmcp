@@ -262,6 +262,202 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 	})
+
+	ginkgo.Context("ImagePullPolicy", func() {
+		ctx := context.Background()
+
+		ginkgo.It("should set ImagePullPolicy to Always when specified for stdio transport", func() {
+			ginkgo.By("Creating MCPServer with ImagePullPolicy Always for stdio transport")
+			serverName := "test-stdio-imagepullpolicy"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image:           "test-image:latest",
+						Port:            3000,
+						ImagePullPolicy: corev1.PullAlways,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has ImagePullPolicy set to Always")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			container := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(container.ImagePullPolicy).To(gomega.Equal(corev1.PullAlways))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should set ImagePullPolicy to Always when specified for HTTP transport", func() {
+			ginkgo.By("Creating MCPServer with ImagePullPolicy Always for HTTP transport")
+			serverName := "test-http-imagepullpolicy"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeHTTP,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image:           "test-image:latest",
+						Port:            3000,
+						ImagePullPolicy: corev1.PullAlways,
+					},
+					HTTPTransport: &kagentdevv1alpha1.HTTPTransport{
+						TargetPort: 8080,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has ImagePullPolicy set to Always")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			container := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(container.ImagePullPolicy).To(gomega.Equal(corev1.PullAlways))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should default ImagePullPolicy to IfNotPresent when not specified for stdio transport", func() {
+			ginkgo.By("Creating MCPServer without ImagePullPolicy for stdio transport")
+			serverName := "test-stdio-default-imagepullpolicy"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  3000,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has ImagePullPolicy defaulted to IfNotPresent")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			container := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(container.ImagePullPolicy).To(gomega.Equal(corev1.PullIfNotPresent))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should default ImagePullPolicy to IfNotPresent when not specified for HTTP transport", func() {
+			ginkgo.By("Creating MCPServer without ImagePullPolicy for HTTP transport")
+			serverName := "test-http-default-imagepullpolicy"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeHTTP,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  3000,
+					},
+					HTTPTransport: &kagentdevv1alpha1.HTTPTransport{
+						TargetPort: 8080,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has ImagePullPolicy defaulted to IfNotPresent")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			container := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(container.ImagePullPolicy).To(gomega.Equal(corev1.PullIfNotPresent))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+	})
 })
 
 // Helper functions to reduce code duplication

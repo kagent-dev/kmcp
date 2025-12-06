@@ -92,6 +92,14 @@ spec:
                     description: Image defines the container image to to deploy the
                       MCP server.
                     type: string
+                  imagePullPolicy:
+                    description: ImagePullPolicy defines the pull policy for the container
+                      image.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
                   initContainer:
                     description: |-
                       InitContainer defines the configuration for the init container that copies

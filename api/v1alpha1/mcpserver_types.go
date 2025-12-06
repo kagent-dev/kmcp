@@ -195,6 +195,11 @@ type MCPServerDeployment struct {
 	// +optional
 	Image string `json:"image,omitempty"`
 
+	// ImagePullPolicy defines the pull policy for the container image.
+	// +optional
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
 	// Port defines the port on which the MCP server will listen.
 	// +optional
 	// +kubebuilder:default=3000
