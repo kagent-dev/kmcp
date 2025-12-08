@@ -168,11 +168,11 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 
 	if noInspector {
 		// Run the server directly
-		fmt.Printf("Running server directly: go run main.go\n")
+		fmt.Printf("Running server directly: go run cmd/server/main.go\n")
 		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
 		fmt.Printf("Press Ctrl+C to stop the server\n")
 
-		serverCmd := exec.Command("go", "run", "main.go")
+		serverCmd := exec.Command("go", "run", "cmd/server/main.go")
 		serverCmd.Dir = projectDir
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -183,7 +183,7 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
 		"command": "go",
-		"args":    []string{"run", "main.go"},
+		"args":    []string{"run", "cmd/server/main.go"},
 	}
 
 	// Create MCP inspector config
