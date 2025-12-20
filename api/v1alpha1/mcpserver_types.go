@@ -215,7 +215,7 @@ type MCPServerDeployment struct {
 
 	// Env defines the environment variables to set in the container.
 	// +optional
-	Env map[string]string `json:"env,omitempty"`
+	Env map[string]EnvVarCfg `json:"env,omitempty"`
 
 	// SecretRefs defines the list of Kubernetes secrets to reference.
 	// These secrets will be mounted as volumes to the MCP server container.
@@ -245,6 +245,18 @@ type MCPServerDeployment struct {
 	// ServiceAccount defines the configuration for the ServiceAccount.
 	// +optional
 	ServiceAccount *ServiceAccountConfig `json:"serviceAccount,omitempty"`
+}
+
+// EnvVarCfg allows specifying either a literal value or a reference to a source for the environment variable.
+type EnvVarCfg struct {
+	// Value contains the value for the environment variable.
+	// Defaults to "" if not set.
+	// +optional
+	Value string `json:"value,omitempty"`
+
+	// ValueFrom specifies a source the value of this EnvVar to come from.
+	// +optional
+	ValueFrom *corev1.EnvVarSource `json:"valueFrom,omitempty"`
 }
 
 // InitContainerConfig defines the configuration for the init container.

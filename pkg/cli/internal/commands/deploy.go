@@ -217,7 +217,7 @@ func runPackageDeploy(_ *cobra.Command, _ []string) error {
 				Port:       uint16(port),
 				Cmd:        packageManager,
 				Args:       deployArgs,
-				Env:        envMap,
+				Env:        toEnvVarCfgMap(envMap),
 				SecretRefs: secretRefs,
 			},
 			TransportType: getTransportType(),
@@ -468,7 +468,7 @@ func generateMCPServer(
 				Port:       uint16(port),
 				Cmd:        command,
 				Args:       args,
-				Env:        envVars,
+				Env:        toEnvVarCfgMap(envVars),
 				SecretRefs: secretRefs,
 			},
 			TransportType: transportType,
@@ -567,6 +567,15 @@ func parseEnvVars(envVars []string) map[string]string {
 		if len(parts) == 2 {
 			result[parts[0]] = parts[1]
 		}
+	}
+	return result
+}
+
+// toEnvVarCfgMap converts a map[string]string to a map[string]v1alpha1.EnvVarCfg
+func toEnvVarCfgMap(envMapString map[string]string) map[string]v1alpha1.EnvVarCfg {
+	result := make(map[string]v1alpha1.EnvVarCfg)
+	for k, v := range envMapString {
+		result[k] = v1alpha1.EnvVarCfg{Value: v}
 	}
 	return result
 }

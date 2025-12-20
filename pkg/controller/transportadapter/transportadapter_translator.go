@@ -102,6 +102,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		return nil, fmt.Errorf("image must be specified for MCPServer %s or the command must be 'uvx' or 'npx'", server.Name)
 	}
 
+	// Convert EnvVarCfg to corev1.EnvVar for deployment
+	envVars, err := convertEnvVars(server.Spec.Deployment.Env)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create environment variables from secrets for envFrom
 	secretEnvFrom := t.createSecretEnvFrom(server.Spec.Deployment.SecretRefs)
 
@@ -163,7 +169,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					"-f",
 					"/config/local.yaml",
 				},
-				Env:     convertEnvVars(server.Spec.Deployment.Env),
+				Env:     envVars,
 				EnvFrom: secretEnvFrom,
 				VolumeMounts: append([]corev1.VolumeMount{
 					{
@@ -209,7 +215,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					ImagePullPolicy: mainContainerPullPolicy,
 					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
-					Env:             convertEnvVars(server.Spec.Deployment.Env),
+					Env:             envVars,
 					EnvFrom:         secretEnvFrom,
 					VolumeMounts: append([]corev1.VolumeMount{
 						{
@@ -398,21 +404,50 @@ func (t *transportAdapterTranslator) createVolumeMounts(
 	return volumeMounts
 }
 
-func convertEnvVars(env map[string]string) []corev1.EnvVar {
+func convertEnvVars(env map[string]v1alpha1.EnvVarCfg) ([]corev1.EnvVar, error) {
 	if env == nil {
-		return nil
+		return nil, nil
 	}
 	envVars := make([]corev1.EnvVar, 0, len(env))
-	for key, value := range env {
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  key,
-			Value: value,
-		})
+	for key, cfg := range env {
+		if cfg.Value != "" && cfg.ValueFrom != nil {
+			return nil, fmt.Errorf("environment variable %s cannot specify both value and valueFrom", key)
+		}
+		if cfg.Value != "" {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  key,
+				Value: cfg.Value,
+			})
+		} else if cfg.ValueFrom != nil {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:      key,
+				ValueFrom: cfg.ValueFrom,
+			})
+		}
 	}
 	sort.Slice(envVars, func(i, j int) bool {
 		return envVars[i].Name < envVars[j].Name
 	})
-	return envVars
+	return envVars, nil
+}
+
+// createStdioEnvConfig creates the environment variable configuration for the StdioTargetSpec.
+// It includes all EnvVarCfg entries, including those with ValueFrom.
+// Note: The underlying transport adapter (agentgateway) may not support ValueFrom in its config.
+func createStdioEnvConfig(env map[string]v1alpha1.EnvVarCfg) map[string]v1alpha1.EnvVarCfg {
+	if env == nil {
+		return nil
+	}
+	stdioEnvConfig := make(map[string]v1alpha1.EnvVarCfg)
+	for key, cfg := range env {
+		// Basic validation - this should ideally be handled by CRD validation
+		if cfg.Value != "" && cfg.ValueFrom != nil {
+			klog.Warningf("Environment variable %s in MCPServer.Spec.Deployment.Env specifies both value and valueFrom. Prioritizing valueFrom for Kubernetes Deployment, and including both for internal config. This may lead to unexpected behavior.", key)
+		}
+		// Pass through the EnvVarCfg as is, the generated struct expects this type
+		stdioEnvConfig[key] = cfg
+	}
+	return stdioEnvConfig
 }
 
 func (t *transportAdapterTranslator) translateTransportAdapterService(
@@ -506,7 +541,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterConfig(server *v1a
 		mcpTarget.Stdio = &StdioTargetSpec{
 			Cmd:  server.Spec.Deployment.Cmd,
 			Args: server.Spec.Deployment.Args,
-			Env:  server.Spec.Deployment.Env,
+			Env:  createStdioEnvConfig(server.Spec.Deployment.Env),
 		}
 	case v1alpha1.TransportTypeHTTP:
 		httpTransportConfig := server.Spec.HTTPTransport
