@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -257,6 +259,27 @@ type EnvVarCfg struct {
 	// ValueFrom specifies a source the value of this EnvVar to come from.
 	// +optional
 	ValueFrom *corev1.EnvVarSource `json:"valueFrom,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler for EnvVarCfg.
+// It allows unmarshalling a plain string into the Value field, or an object into Value/ValueFrom.
+func (e *EnvVarCfg) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as a string
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		e.Value = str
+		return nil
+	}
+
+	// If not a string, try to unmarshal as an object
+	type rawEnvVarCfg EnvVarCfg // Use a new type to avoid infinite recursion
+	var raw rawEnvVarCfg
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	e.Value = raw.Value
+	e.ValueFrom = raw.ValueFrom
+	return nil
 }
 
 // InitContainerConfig defines the configuration for the init container.
