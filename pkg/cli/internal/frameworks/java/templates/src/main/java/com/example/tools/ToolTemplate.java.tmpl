@@ -1,5 +1,6 @@
 package com.example.tools;
 
+import io.modelcontextprotocol.spec.McpSchema;
 import java.util.Map;
 import java.util.List;
 import com.example.tools.ToolConfig;
@@ -8,23 +9,29 @@ import com.example.tools.ToolConfig;
  * {{if .ToolNameTitle}}{{.ToolNameTitle}} tool{{else}}Example tool{{end}} for MCP server.{{if .Description}}
 
 {{.Description}}{{end}}
- * 
+ *
  * This is a template tool. Replace this implementation with your tool logic.
  */
 public class {{if .ToolNamePascalCase}}{{.ToolNamePascalCase}}{{else}}Tool{{end}} implements Tool {
-    
+
     @Override
     public String getName() {
         return "{{if .ToolName}}{{.ToolName}}{{else}}tool{{end}}";
     }
-    
+
     @Override
     public String getDescription() {
         return "{{if .ToolNameTitle}}{{.ToolNameTitle}}{{else}}Example{{end}} tool implementation";
     }
-    
+
     @Override
-    public io.modelcontextprotocol.spec.McpSchema.JsonSchema getInputSchema() {
+    public McpSchema.ToolAnnotations getAnnotations() {
+        // Set readOnlyHint to false if this tool modifies state
+        return new McpSchema.ToolAnnotations("{{if .ToolNameTitle}}{{.ToolNameTitle}}{{else}}Tool{{end}}", true, null, null, null);
+    }
+
+    @Override
+    public McpSchema.JsonSchema getInputSchema() {
         return new io.modelcontextprotocol.spec.McpSchema.JsonSchema(
             "object",
             java.util.Map.of(

@@ -15,12 +15,13 @@ var toolsToAdd []func(server *mcp.Server)
 
 func registerTool[I, O any](tool MCPTool[I, O]) {
     toolsToAdd = append(toolsToAdd, func(server *mcp.Server) {
-        mcp.AddTool(server, &mcp.Tool{Name: tool.Name, Description: tool.Description}, tool.Handler)
+        mcp.AddTool(server, &mcp.Tool{Name: tool.Name, Description: tool.Description, Annotations: tool.Annotations}, tool.Handler)
     })
 }
 
 type MCPTool[I, O any] struct {
     Name        string
     Description string
+    Annotations *mcp.ToolAnnotations
     Handler     func(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[I]) (*mcp.CallToolResultFor[O], error)
 }
