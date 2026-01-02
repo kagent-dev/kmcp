@@ -8,6 +8,10 @@ const echo = {
   name: 'echo',
   description: 'Echo back the provided message',
   inputSchema: echoSchema,
+  annotations: {
+    title: 'Echo Message',
+    readOnlyHint: true,
+  },
   handler: async (params: z.infer<typeof echoSchema>) => {
     return {
       message: `Echo: ${params.message}`,

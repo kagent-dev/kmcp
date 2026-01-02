@@ -21,6 +21,10 @@ func Echo() MCPTool[EchoParams, EchoResult] {
 	return MCPTool[EchoParams, EchoResult]{
 		Name:        "echo",
 		Description: "Echoes a message back to the user.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:        "Echo Message",
+			ReadOnlyHint: true,
+		},
 		Handler: func(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[EchoParams]) (*mcp.CallToolResultFor[EchoResult], error) {
 			echoMessage := "Echo: " + params.Arguments.Message
 			result := &mcp.CallToolResultFor[EchoResult]{

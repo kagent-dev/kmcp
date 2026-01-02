@@ -393,6 +393,29 @@ public class MCPServer {
                         toolNode.put("name", tool.getName());
                         toolNode.put("description", tool.getDescription());
                         toolNode.set("inputSchema", convertToJsonSchema(tool.getInputSchema()));
+
+                        // Add tool annotations if available
+                        McpSchema.ToolAnnotations annotations = tool.getAnnotations();
+                        if (annotations != null) {
+                            ObjectNode annotationsNode = objectMapper.createObjectNode();
+                            if (annotations.title() != null) {
+                                annotationsNode.put("title", annotations.title());
+                            }
+                            if (annotations.readOnlyHint() != null) {
+                                annotationsNode.put("readOnlyHint", annotations.readOnlyHint());
+                            }
+                            if (annotations.destructiveHint() != null) {
+                                annotationsNode.put("destructiveHint", annotations.destructiveHint());
+                            }
+                            if (annotations.idempotentHint() != null) {
+                                annotationsNode.put("idempotentHint", annotations.idempotentHint());
+                            }
+                            if (annotations.openWorldHint() != null) {
+                                annotationsNode.put("openWorldHint", annotations.openWorldHint());
+                            }
+                            toolNode.set("annotations", annotationsNode);
+                        }
+
                         toolsArray.add(toolNode);
                     }
 
@@ -576,12 +599,18 @@ Content-Type: application/json
                 .serverInfo(serverName, "1.0.0");
 
             for (Tool tool : tools.values()) {
+                McpSchema.Tool.Builder toolBuilder = McpSchema.Tool.builder()
+                    .name(tool.getName())
+                    .description(tool.getDescription())
+                    .inputSchema(tool.getInputSchema());
+
+                // Add tool annotations if available
+                if (tool.getAnnotations() != null) {
+                    toolBuilder.annotations(tool.getAnnotations());
+                }
+
                 serverBuilder = serverBuilder.tool(
-                    McpSchema.Tool.builder()
-                        .name(tool.getName())
-                        .description(tool.getDescription())
-                        .inputSchema(tool.getInputSchema())
-                        .build(),
+                    toolBuilder.build(),
                     (exchange, args) -> {
                         try {
                             Object result = tool.execute(args);

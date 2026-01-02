@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Common type definitions for the MCP server.
@@ -8,6 +9,7 @@ export interface Tool {
   name: string;
   description: string;
   inputSchema: z.ZodSchema<any>;
+  annotations?: ToolAnnotations;
   handler: (params: any) => Promise<any>;
 }
 

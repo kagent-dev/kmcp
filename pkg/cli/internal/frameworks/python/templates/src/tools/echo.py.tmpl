@@ -4,11 +4,18 @@ This is an example tool showing the basic structure for FastMCP tools.
 Each tool file should contain a function decorated with @mcp.tool().
 """
 
+from mcp.types import ToolAnnotations
+
 from core.server import mcp
 from core.utils import get_tool_config
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="Echo Message",
+        readOnlyHint=True,
+    ),
+)
 def echo(message: str) -> str:
     """Echo a message back to the client.
 
