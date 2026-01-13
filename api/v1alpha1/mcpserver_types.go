@@ -250,6 +250,74 @@ type MCPServerDeployment struct {
 	// These containers will share the same pod and can share volumes with the main container.
 	// +optional
 	Sidecars []corev1.Container `json:"sidecars,omitempty"`
+
+	// Labels defines additional labels to add to the pod template.
+	// These labels will be merged with the default labels.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations defines additional annotations to add to the pod template.
+	// These annotations will be merged with the default annotations.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Resources defines the compute resource requirements for the main MCP server container.
+	// Use this to specify CPU and memory requests and limits.
+	// Example:
+	//   resources:
+	//     requests:
+	//       cpu: "100m"
+	//       memory: "128Mi"
+	//     limits:
+	//       cpu: "500m"
+	//       memory: "512Mi"
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// SecurityContext defines the security context for the main MCP server container.
+	// Use this to configure container-level security settings such as:
+	// - runAsUser/runAsGroup: Run as specific user/group
+	// - runAsNonRoot: Ensure container doesn't run as root
+	// - readOnlyRootFilesystem: Make root filesystem read-only
+	// - allowPrivilegeEscalation: Prevent privilege escalation
+	// - capabilities: Add or drop Linux capabilities
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// PodSecurityContext defines the security context for the entire pod.
+	// Use this to configure pod-level security settings such as:
+	// - runAsUser/runAsGroup: Default user/group for all containers
+	// - fsGroup: Group ownership of mounted volumes
+	// - seccompProfile: Seccomp profile for the pod
+	// - sysctls: Kernel parameters to set
+	// +optional
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+
+	// Tolerations defines the tolerations for the pod.
+	// Use this to schedule pods on nodes with matching taints.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// Affinity defines the affinity rules for the pod.
+	// Use this to control pod placement based on node labels, pod labels,
+	// or other scheduling constraints.
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// NodeSelector defines the node selector for the pod.
+	// Use this to constrain pods to nodes with specific labels.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Replicas defines the number of desired pod replicas.
+	// Defaults to 1 if not specified.
+	// +optional
+	// +kubebuilder:default=1
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// ImagePullSecrets defines the list of secrets to use for pulling container images.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 
 // InitContainerConfig defines the configuration for the init container.
@@ -264,6 +332,16 @@ type InitContainerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	// Resources defines the compute resource requirements for the init container.
+	// Use this to specify CPU and memory requests and limits for the init container.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// SecurityContext defines the security context for the init container.
+	// If not specified, the main container's security context will be used.
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 }
 
 // ServiceAccountConfig defines the configuration for the ServiceAccount.
