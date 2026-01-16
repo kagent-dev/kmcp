@@ -160,6 +160,27 @@ type HTTPTransport struct {
 
 	// the target path where MCP is served
 	TargetPath string `json:"path,omitempty"`
+
+	// TLS defines the TLS configuration for HTTPS access to the MCP server.
+	// +optional
+	TLS *HTTPTransportTLS `json:"tls,omitempty"`
+}
+
+// HTTPTransportTLS defines the TLS configuration for HTTP transport.
+type HTTPTransportTLS struct {
+	// SecretRef is a reference to a Kubernetes Secret containing
+	// the client certificate (tls.crt), key (tls.key), and optionally
+	// the CA certificate (ca.crt) for mTLS authentication.
+	// The Secret must be in the same namespace as the MCPServer.
+	// +optional
+	SecretRef string `json:"secretRef,omitempty"`
+
+	// InsecureSkipVerify disables SSL certificate verification.
+	// WARNING: This should ONLY be used in development/testing environments.
+	// Production deployments MUST use proper certificates.
+	// +optional
+	// +kubebuilder:default=false
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // MCPServerStatus defines the observed state of MCPServer.

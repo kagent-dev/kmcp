@@ -3471,6 +3471,25 @@ spec:
                       server.over HTTP
                     format: int32
                     type: integer
+                  tls:
+                    description: TLS defines the TLS configuration for HTTPS access
+                      to the MCP server.
+                    properties:
+                      insecureSkipVerify:
+                        default: false
+                        description: |-
+                          InsecureSkipVerify disables SSL certificate verification.
+                          WARNING: This should ONLY be used in development/testing environments.
+                          Production deployments MUST use proper certificates.
+                        type: boolean
+                      secretRef:
+                        description: |-
+                          SecretRef is a reference to a Kubernetes Secret containing
+                          the client certificate (tls.crt), key (tls.key), and optionally
+                          the CA certificate (ca.crt) for mTLS authentication.
+                          The Secret must be in the same namespace as the MCPServer.
+                        type: string
+                    type: object
                 type: object
               stdioTransport:
                 description: StdioTransport defines the configuration for a standard
