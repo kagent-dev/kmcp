@@ -152,7 +152,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					MountPath: "/adapterbin",
 				}},
 			}},
-			Containers: []corev1.Container{{
+			Containers: append([]corev1.Container{{
 				Name:            "mcp-server",
 				Image:           image,
 				ImagePullPolicy: mainContainerPullPolicy,
@@ -175,7 +175,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						MountPath: "/adapterbin",
 					},
 				}, volumeMounts...),
-			}},
+			}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
@@ -202,7 +202,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		}
 		template = corev1.PodSpec{
 			ServiceAccountName: server.Name,
-			Containers: []corev1.Container{
+			Containers: append([]corev1.Container{
 				{
 					Name:            "mcp-server",
 					Image:           image,
@@ -217,7 +217,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 							MountPath: "/config",
 						},
 					}, volumeMounts...),
-				}},
+				}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
 					Name: "config",
