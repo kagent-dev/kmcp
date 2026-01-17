@@ -262,6 +262,253 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 	})
+
+	ginkgo.Context("Sidecar Containers", func() {
+		ginkgo.It("should create deployment with sidecar containers for stdio transport", func() {
+			ginkgo.By("Creating MCPServer with sidecar containers")
+			serverWithSidecars := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-server-with-sidecars-stdio",
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  8080,
+						Sidecars: []corev1.Container{
+							{
+								Name:  "logging-sidecar",
+								Image: "logging-agent:latest",
+								Env: []corev1.EnvVar{
+									{
+										Name:  "LOG_LEVEL",
+										Value: "info",
+									},
+								},
+							},
+							{
+								Name:  "monitoring-sidecar",
+								Image: "prometheus-exporter:latest",
+								Ports: []corev1.ContainerPort{
+									{
+										ContainerPort: 9090,
+										Protocol:      corev1.ProtocolTCP,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, serverWithSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer with sidecars")
+			scheme := k8sClient.Scheme()
+			err = kagentdevv1alpha1.AddToScheme(scheme)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			controllerReconciler := &MCPServerReconciler{
+				Client: k8sClient,
+				Scheme: scheme,
+			}
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-server-with-sidecars-stdio",
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment was created with sidecar containers")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-server-with-sidecars-stdio",
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Check that the deployment has the expected containers: main + 2 sidecars
+			gomega.Expect(deployment.Spec.Template.Spec.Containers).To(gomega.HaveLen(3))
+
+			// Verify main container exists
+			mainContainer := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(mainContainer.Name).To(gomega.Equal("mcp-server"))
+
+			// Verify sidecar containers exist and are correctly configured
+			foundLoggingSidecar := false
+			foundMonitoringSidecar := false
+			for _, container := range deployment.Spec.Template.Spec.Containers[1:] {
+				if container.Name == "logging-sidecar" {
+					foundLoggingSidecar = true
+					gomega.Expect(container.Image).To(gomega.Equal("logging-agent:latest"))
+					gomega.Expect(container.Env).To(gomega.HaveLen(1))
+					gomega.Expect(container.Env[0].Name).To(gomega.Equal("LOG_LEVEL"))
+					gomega.Expect(container.Env[0].Value).To(gomega.Equal("info"))
+				}
+				if container.Name == "monitoring-sidecar" {
+					foundMonitoringSidecar = true
+					gomega.Expect(container.Image).To(gomega.Equal("prometheus-exporter:latest"))
+					gomega.Expect(container.Ports).To(gomega.HaveLen(1))
+					gomega.Expect(container.Ports[0].ContainerPort).To(gomega.Equal(int32(9090)))
+				}
+			}
+			gomega.Expect(foundLoggingSidecar).To(gomega.BeTrue(), "Logging sidecar not found in deployment")
+			gomega.Expect(foundMonitoringSidecar).To(gomega.BeTrue(), "Monitoring sidecar not found in deployment")
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, serverWithSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should create deployment with sidecar containers for http transport", func() {
+			ginkgo.By("Creating MCPServer with sidecar containers")
+			serverWithSidecars := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-server-with-sidecars-http",
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeHTTP,
+					HTTPTransport: &kagentdevv1alpha1.HTTPTransport{
+						TargetPort: 8080,
+						TargetPath: "/mcp",
+					},
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  3000,
+						Cmd:   "node",
+						Args:  []string{"server.js"},
+						Sidecars: []corev1.Container{
+							{
+								Name:  "proxy-sidecar",
+								Image: "nginx:alpine",
+								Ports: []corev1.ContainerPort{
+									{
+										ContainerPort: 80,
+										Protocol:      corev1.ProtocolTCP,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, serverWithSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer with sidecars")
+			scheme := k8sClient.Scheme()
+			err = kagentdevv1alpha1.AddToScheme(scheme)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			controllerReconciler := &MCPServerReconciler{
+				Client: k8sClient,
+				Scheme: scheme,
+			}
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-server-with-sidecars-http",
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment was created with sidecar containers")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-server-with-sidecars-http",
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Check that the deployment has the expected containers: main + 1 sidecar
+			gomega.Expect(deployment.Spec.Template.Spec.Containers).To(gomega.HaveLen(2))
+
+			// Verify main container exists
+			mainContainer := deployment.Spec.Template.Spec.Containers[0]
+			gomega.Expect(mainContainer.Name).To(gomega.Equal("mcp-server"))
+
+			// Verify sidecar container exists
+			foundProxySidecar := false
+			for _, container := range deployment.Spec.Template.Spec.Containers[1:] {
+				if container.Name == "proxy-sidecar" {
+					foundProxySidecar = true
+					gomega.Expect(container.Image).To(gomega.Equal("nginx:alpine"))
+					gomega.Expect(container.Ports).To(gomega.HaveLen(1))
+					gomega.Expect(container.Ports[0].ContainerPort).To(gomega.Equal(int32(80)))
+				}
+			}
+			gomega.Expect(foundProxySidecar).To(gomega.BeTrue(), "Proxy sidecar not found in deployment")
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, serverWithSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should create deployment without sidecars when none are specified", func() {
+			ginkgo.By("Creating MCPServer without sidecar containers")
+			serverWithoutSidecars := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-server-without-sidecars",
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeHTTP,
+					HTTPTransport: &kagentdevv1alpha1.HTTPTransport{
+						TargetPort: 8080,
+						TargetPath: "/mcp",
+					},
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  3000,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, serverWithoutSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer without sidecars")
+			scheme := k8sClient.Scheme()
+			err = kagentdevv1alpha1.AddToScheme(scheme)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			controllerReconciler := &MCPServerReconciler{
+				Client: k8sClient,
+				Scheme: scheme,
+			}
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-server-without-sidecars",
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment was created with only the main container")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-server-without-sidecars",
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Check that the deployment has only the main container
+			gomega.Expect(deployment.Spec.Template.Spec.Containers).To(gomega.HaveLen(1))
+			gomega.Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(gomega.Equal("mcp-server"))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, serverWithoutSidecars)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+	})
 })
 
 // Helper functions to reduce code duplication

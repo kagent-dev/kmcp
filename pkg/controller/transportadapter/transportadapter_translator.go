@@ -189,6 +189,10 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				},
 			}, volumes...),
 		}
+		// Append sidecar containers if defined
+		if len(server.Spec.Deployment.Sidecars) > 0 {
+			template.Containers = append(template.Containers, server.Spec.Deployment.Sidecars...)
+		}
 	case v1alpha1.TransportTypeHTTP:
 		var cmd []string
 		if server.Spec.Deployment.Cmd != "" {
@@ -224,6 +228,10 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					},
 				},
 			}, volumes...),
+		}
+		// Append sidecar containers if defined
+		if len(server.Spec.Deployment.Sidecars) > 0 {
+			template.Containers = append(template.Containers, server.Spec.Deployment.Sidecars...)
 		}
 	}
 
