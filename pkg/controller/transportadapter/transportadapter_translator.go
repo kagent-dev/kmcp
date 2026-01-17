@@ -126,6 +126,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		}
 	}
 
+	// Determine the main container pull policy to use
+	mainContainerPullPolicy := server.Spec.Deployment.ImagePullPolicy
+	if mainContainerPullPolicy == "" {
+		mainContainerPullPolicy = corev1.PullIfNotPresent
+	}
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
@@ -149,7 +155,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			Containers: []corev1.Container{{
 				Name:            "mcp-server",
 				Image:           image,
-				ImagePullPolicy: corev1.PullIfNotPresent,
+				ImagePullPolicy: mainContainerPullPolicy,
 				Command: []string{
 					"/adapterbin/agentgateway",
 				},
@@ -204,7 +210,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				{
 					Name:            "mcp-server",
 					Image:           image,
-					ImagePullPolicy: corev1.PullIfNotPresent,
+					ImagePullPolicy: mainContainerPullPolicy,
 					Command:         cmd,
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),

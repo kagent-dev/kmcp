@@ -20,7 +20,7 @@ This project was generated with [`kmcp`](https://github.com/kagent-dev/kmcp).
 
 2.  **Run the server:**
     ```bash
-    go run main.go
+    go run cmd/server/main.go
     ```
 
 ### Building the Docker Image
@@ -51,4 +51,4 @@ To add a new tool to your project, use the `kmcp add-tool` command:
 kmcp add-tool <tool-name>
 ```
 
-This will generate a new Go file in the `tools/` directory with a template for your new tool. You will need to add the new tool to the `main.go` file. 
+This will generate a new Go file in the `internal/tools/` directory with a template for your new tool. You will need to add the new tool to the `main.go` file.
