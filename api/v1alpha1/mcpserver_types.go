@@ -245,6 +245,11 @@ type MCPServerDeployment struct {
 	// ServiceAccount defines the configuration for the ServiceAccount.
 	// +optional
 	ServiceAccount *ServiceAccountConfig `json:"serviceAccount,omitempty"`
+
+	// Sidecars defines additional containers to run alongside the MCP server container.
+	// These containers will share the same pod and can share volumes with the main container.
+	// +optional
+	Sidecars []corev1.Container `json:"sidecars,omitempty"`
 }
 
 // InitContainerConfig defines the configuration for the init container.
