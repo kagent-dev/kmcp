@@ -4,6 +4,8 @@ package transportadapter
 import (
 	"net"
 	"time"
+
+	"github.com/kagent-dev/kmcp/api/v1alpha1"
 )
 
 // ============================================================================
@@ -227,9 +229,9 @@ type SSETargetSpec struct {
 
 // StdioTargetSpec represents stdio target specification
 type StdioTargetSpec struct {
-	Cmd  string            `json:"cmd" yaml:"cmd"`
-	Args []string          `json:"args,omitempty" yaml:"args,omitempty"`
-	Env  map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
+	Cmd  string                        `json:"cmd" yaml:"cmd"`
+	Args []string                      `json:"args,omitempty" yaml:"args,omitempty"`
+	Env  map[string]v1alpha1.EnvVarCfg `json:"env,omitempty" yaml:"env,omitempty"`
 }
 
 // OpenAPITargetSpec represents OpenAPI target specification
