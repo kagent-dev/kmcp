@@ -32,6 +32,7 @@ const (
 // versionRegex validates that version strings contain only allowed characters
 // (alphanumeric, dots, hyphens) to prevent potential image injection attacks
 var versionRegex = regexp.MustCompile(`^[a-zA-Z0-9.\-]+$`)
+var disableKgatewayMcpAppProtocol = os.Getenv("DISABLE_KGATEWAY_MCP_APP_PROTOCOL")
 
 // Translator is the interface for translating MCPServer objects to TransportAdapter objects.
 type Translator interface {
@@ -482,6 +483,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(
 	if port == 0 {
 		return nil, fmt.Errorf("deployment port must be specified for MCPServer %s", server.Name)
 	}
+
+	appProtocol := makePtr(kgatewayMcpAppProtocol)
+	if disableKgatewayMcpAppProtocol == "true" {
+		appProtocol = nil
+	}
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.Name,
@@ -499,7 +505,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(
 				TargetPort: intstr.IntOrString{
 					IntVal: int32(port),
 				},
-				AppProtocol: makePtr(kgatewayMcpAppProtocol),
+				AppProtocol: appProtocol,
 			}},
 			Selector: map[string]string{
 				"app.kubernetes.io/name":     server.Name,
