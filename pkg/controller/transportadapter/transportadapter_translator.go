@@ -116,14 +116,28 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 	transportAdapterContainerImage := getTransportAdapterImage()
 
 	initContainerPullPolicy := corev1.PullIfNotPresent
+	var initContainerResources corev1.ResourceRequirements
+	var initContainerSecurityContext *corev1.SecurityContext
 
 	// Override with custom image if specified in the MCPServer spec
-	if server.Spec.Deployment.InitContainer != nil && server.Spec.Deployment.InitContainer.Image != "" {
-		transportAdapterContainerImage = server.Spec.Deployment.InitContainer.Image
-		initContainerPullPolicy = server.Spec.Deployment.InitContainer.ImagePullPolicy
-		if initContainerPullPolicy == "" {
-			initContainerPullPolicy = corev1.PullIfNotPresent
+	if server.Spec.Deployment.InitContainer != nil {
+		if server.Spec.Deployment.InitContainer.Image != "" {
+			transportAdapterContainerImage = server.Spec.Deployment.InitContainer.Image
 		}
+		if server.Spec.Deployment.InitContainer.ImagePullPolicy != "" {
+			initContainerPullPolicy = server.Spec.Deployment.InitContainer.ImagePullPolicy
+		}
+		if server.Spec.Deployment.InitContainer.Resources != nil {
+			initContainerResources = *server.Spec.Deployment.InitContainer.Resources
+		}
+		if server.Spec.Deployment.InitContainer.SecurityContext != nil {
+			initContainerSecurityContext = server.Spec.Deployment.InitContainer.SecurityContext.DeepCopy()
+		}
+	}
+
+	// If init container security context is not set, fall back to main container security context
+	if initContainerSecurityContext == nil && server.Spec.Deployment.SecurityContext != nil {
+		initContainerSecurityContext = server.Spec.Deployment.SecurityContext.DeepCopy()
 	}
 
 	// Determine the main container pull policy to use
@@ -132,12 +146,23 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		mainContainerPullPolicy = corev1.PullIfNotPresent
 	}
 
+	// Get main container resources
+	var mainContainerResources corev1.ResourceRequirements
+	if server.Spec.Deployment.Resources != nil {
+		mainContainerResources = *server.Spec.Deployment.Resources
+	}
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
 			ServiceAccountName: server.Name,
+			SecurityContext:    server.Spec.Deployment.PodSecurityContext,
+			ImagePullSecrets:   server.Spec.Deployment.ImagePullSecrets,
+			Tolerations:        server.Spec.Deployment.Tolerations,
+			Affinity:           server.Spec.Deployment.Affinity,
+			NodeSelector:       server.Spec.Deployment.NodeSelector,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           transportAdapterContainerImage,
@@ -151,6 +176,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Name:      "binary",
 					MountPath: "/adapterbin",
 				}},
+				Resources:       initContainerResources,
+				SecurityContext: initContainerSecurityContext,
 			}},
 			Containers: append([]corev1.Container{{
 				Name:            "mcp-server",
@@ -163,8 +190,9 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					"-f",
 					"/config/local.yaml",
 				},
-				Env:     convertEnvVars(server.Spec.Deployment.Env),
-				EnvFrom: secretEnvFrom,
+				Env:       convertEnvVars(server.Spec.Deployment.Env),
+				EnvFrom:   secretEnvFrom,
+				Resources: mainContainerResources,
 				VolumeMounts: append([]corev1.VolumeMount{
 					{
 						Name:      "config",
@@ -175,6 +203,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 						MountPath: "/adapterbin",
 					},
 				}, volumeMounts...),
+				SecurityContext: server.Spec.Deployment.SecurityContext,
 			}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
@@ -202,6 +231,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		}
 		template = corev1.PodSpec{
 			ServiceAccountName: server.Name,
+			SecurityContext:    server.Spec.Deployment.PodSecurityContext,
+			ImagePullSecrets:   server.Spec.Deployment.ImagePullSecrets,
+			Tolerations:        server.Spec.Deployment.Tolerations,
+			Affinity:           server.Spec.Deployment.Affinity,
+			NodeSelector:       server.Spec.Deployment.NodeSelector,
 			Containers: append([]corev1.Container{
 				{
 					Name:            "mcp-server",
@@ -211,12 +245,14 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Args:            server.Spec.Deployment.Args,
 					Env:             convertEnvVars(server.Spec.Deployment.Env),
 					EnvFrom:         secretEnvFrom,
+					Resources:       mainContainerResources,
 					VolumeMounts: append([]corev1.VolumeMount{
 						{
 							Name:      "config",
 							MountPath: "/config",
 						},
 					}, volumeMounts...),
+					SecurityContext: server.Spec.Deployment.SecurityContext,
 				}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
@@ -233,6 +269,31 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		}
 	}
 
+	// Prepare pod template labels (merge defaults with custom labels)
+	podLabels := map[string]string{
+		"app.kubernetes.io/name":       server.Name,
+		"app.kubernetes.io/instance":   server.Name,
+		"app.kubernetes.io/managed-by": "kmcp",
+	}
+	for k, v := range server.Spec.Deployment.Labels {
+		podLabels[k] = v
+	}
+
+	// Prepare pod template annotations (merge defaults with custom annotations)
+	var podAnnotations map[string]string
+	if len(server.Spec.Deployment.Annotations) > 0 {
+		podAnnotations = make(map[string]string)
+		for k, v := range server.Spec.Deployment.Annotations {
+			podAnnotations[k] = v
+		}
+	}
+
+	// Determine replicas (default to 1)
+	var replicas *int32
+	if server.Spec.Deployment.Replicas != nil {
+		replicas = server.Spec.Deployment.Replicas
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.Name,
@@ -243,6 +304,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app.kubernetes.io/name":     server.Name,
@@ -251,11 +313,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/name":       server.Name,
-						"app.kubernetes.io/instance":   server.Name,
-						"app.kubernetes.io/managed-by": "kmcp",
-					},
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: template,
 			},

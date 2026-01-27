@@ -1,0 +1,137 @@
+# Example MCPServer with production security best practices
+# This demonstrates all available security and resource configuration options
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcp-server-secure
+  namespace: mcp-servers
+  labels:
+    environment: production
+    team: platform
+spec:
+  # Transport type: stdio (uses init container) or http
+  transportType: stdio
+  
+  deployment:
+    # Container image for the MCP server
+    image: "ghcr.io/example/mcp-server:v1.0.0"
+    imagePullPolicy: IfNotPresent
+    
+    # Number of replicas (optional, defaults to 1)
+    replicas: 2
+    
+    # Custom labels applied to pods
+    labels:
+      app.kubernetes.io/component: mcp-server
+      app.kubernetes.io/part-of: ai-platform
+      team: platform
+    
+    # Custom annotations applied to pods
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "8080"
+    
+    # Image pull secrets for private registries
+    imagePullSecrets:
+      - name: registry-credentials
+    
+    # Resource requests and limits for the main container
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    
+    # Container-level security context (applies to main container)
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Pod-level security context
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Init container configuration (for stdio transport)
+    initContainer:
+      # Custom image for init container (optional)
+      # image: "ghcr.io/kagent-dev/agentgateway:latest"
+      imagePullPolicy: IfNotPresent
+      
+      # Resources for init container
+      resources:
+        requests:
+          memory: "32Mi"
+          cpu: "10m"
+        limits:
+          memory: "64Mi"
+          cpu: "50m"
+      
+      # Security context for init container
+      # If not specified, inherits from main container's securityContext
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        readOnlyRootFilesystem: false  # Needs write access to copy binary
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+    
+    # Node scheduling constraints
+    nodeSelector:
+      kubernetes.io/os: linux
+      # node-type: compute
+    
+    # Pod affinity/anti-affinity rules
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: mcp-server-secure
+              topologyKey: kubernetes.io/hostname
+    
+    # Tolerations for tainted nodes
+    tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "ai-workloads"
+        effect: "NoSchedule"
+    
+    # Environment variables
+    env:
+      - name: LOG_LEVEL
+        value: "info"
+      - name: MCP_SERVER_PORT
+        value: "8080"
+    
+    # Reference to secrets for environment variables
+    secretRefs:
+      - name: mcp-server-secrets
+        key: API_KEY
+        envName: MCP_API_KEY
+
+  # MCP server configuration
+  mcpServer:
+    name: "secure-mcp-server"
+    args:
+      - "--port"
+      - "8080"
