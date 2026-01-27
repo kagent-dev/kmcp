@@ -268,6 +268,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				g.Expect(service).NotTo(gomega.BeNil())
 				g.Expect(service.Spec.Ports).To(gomega.HaveLen(1))
 				g.Expect(service.Spec.Ports[0].Port).To(gomega.Equal(int32(3000)))
+				g.Expect(service.Spec.Ports[0].AppProtocol).To(gomega.HaveValue(gomega.Equal("kgateway.dev/mcp")))
 			}).Should(gomega.Succeed())
 
 			ginkgo.By("verifying that environment variables are loaded via envFrom")
