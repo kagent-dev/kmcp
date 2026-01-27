@@ -26,6 +26,7 @@ import (
 const (
 	transportAdapterRepository     = "ghcr.io/agentgateway/agentgateway"
 	defaultTransportAdapterVersion = "0.9.0"
+	kgatewayMcpAppProtocol         = "kgateway.dev/mcp"
 )
 
 // versionRegex validates that version strings contain only allowed characters
@@ -498,6 +499,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(
 				TargetPort: intstr.IntOrString{
 					IntVal: int32(port),
 				},
+				AppProtocol: makePtr(kgatewayMcpAppProtocol),
 			}},
 			Selector: map[string]string{
 				"app.kubernetes.io/name":     server.Name,
@@ -662,4 +664,8 @@ func getTransportAdapterImage() string {
 	}
 
 	return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, transportAdapterVersion)
+}
+
+func makePtr[T any](v T) *T {
+	return &v
 }
