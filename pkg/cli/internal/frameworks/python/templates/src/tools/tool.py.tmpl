@@ -3,11 +3,18 @@
 {{.description}}{{end}}
 """
 
+from mcp.types import ToolAnnotations
+
 from core.server import mcp
 from core.utils import get_tool_config
 
 
-@mcp.tool()
+@mcp.tool(
+    annotations=ToolAnnotations(
+        title="{{if .ToolNameTitle}}{{.ToolNameTitle}}{{else}}Tool{{end}}",
+        readOnlyHint=True,  # Set to False if tool modifies state
+    ),
+)
 def {{if .ToolName}}{{.ToolName}}{{else}}tool{{end}}(message: str) -> str:
     """{{if .ToolNameTitle}}{{.ToolNameTitle}}{{else}}Example{{end}} tool implementation.
 

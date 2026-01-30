@@ -10,6 +10,10 @@ const {{.ToolNameCamelCase}} = {
   name: '{{.ToolName}}',
   description: '{{.Description}}',
   inputSchema: {{.ToolNameCamelCase}}Schema,
+  annotations: {
+    title: '{{.ToolNameTitle}}',
+    readOnlyHint: true, // Set to false if tool modifies state
+  },
   handler: async (params: z.infer<typeof {{.ToolNameCamelCase}}Schema>) => {
     // Implement your tool logic here
     // Example:
