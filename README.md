@@ -54,10 +54,10 @@
 
 ## Why kMCP?
 
-Prototyping MCP services in isolation is quick and fun, but but production adoption introduces many challenges:
+Prototyping MCP services in isolation is quick and fun, but production adoption introduces many challenges:
 
-- **Ad-hoc scaffolding** - Configuring the MCP server, integrating it in Kubernetes, and operating it at Enterprise scale
-- **Transport fragmentation** – Supporting multiple protocols (HTTP, WebSocket, SSE, etc.) requires custom maintenance.
+- **Ad-hoc scaffolding** - Configuring the MCP server, integrating it in Kubernetes, and operating it at enterprise scale
+- **Transport fragmentation** – Supporting multiple protocols (HTTP, WebSocket, SSE, etc.) requires custom maintenance
 - **Disconnected context** - Enforcing consistent security, observability, and governance for agent-to-tool communication
 
 **_We believe teams who have build MCP services should not experience friction when bringing those services to production. kMCP is designed to make MCP connectivity simple._**
