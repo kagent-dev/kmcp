@@ -675,6 +675,120 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 	})
+
+	ginkgo.Context("Service Account Configuration", func() {
+		ctx := context.Background()
+
+		ginkgo.It("should use existing service account name when provided", func() {
+			ginkgo.By("Creating MCPServer with serviceAccountName")
+			serverName := "test-existing-sa"
+			existingSAName := "my-existing-sa"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image:              "test-image:latest",
+						Port:               3000,
+						ServiceAccountName: existingSAName,
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has the correct serviceAccountName")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(deployment.Spec.Template.Spec.ServiceAccountName).To(gomega.Equal(existingSAName))
+
+			ginkgo.By("Verifying no ServiceAccount was created for the MCPServer")
+			sa := &corev1.ServiceAccount{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, sa)
+			gomega.Expect(errors.IsNotFound(err)).To(gomega.BeTrue(), "ServiceAccount should not have been created")
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		ginkgo.It("should create a new service account when serviceAccountName is not provided", func() {
+			ginkgo.By("Creating MCPServer with serviceAccountConfig")
+			serverName := "test-create-sa"
+			server := &kagentdevv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serverName,
+					Namespace: "default",
+				},
+				Spec: kagentdevv1alpha1.MCPServerSpec{
+					TransportType: kagentdevv1alpha1.TransportTypeStdio,
+					Deployment: kagentdevv1alpha1.MCPServerDeployment{
+						Image: "test-image:latest",
+						Port:  3000,
+						ServiceAccountConfig: &kagentdevv1alpha1.ServiceAccountConfig{
+							Annotations: map[string]string{"foo": "bar"},
+						},
+					},
+				},
+			}
+
+			err := k8sClient.Create(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Reconciling the MCPServer")
+			controllerReconciler := setupController()
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      serverName,
+					Namespace: "default",
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			ginkgo.By("Verifying deployment has the correct serviceAccountName (defaulting to MCPServer name)")
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, deployment)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(deployment.Spec.Template.Spec.ServiceAccountName).To(gomega.Equal(serverName))
+
+			ginkgo.By("Verifying the ServiceAccount was created")
+			sa := &corev1.ServiceAccount{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      serverName,
+				Namespace: "default",
+			}, sa)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(sa.Annotations).To(gomega.HaveKeyWithValue("foo", "bar"))
+
+			// Cleanup
+			err = k8sClient.Delete(ctx, server)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+	})
 })
 
 // Helper functions to reduce code duplication

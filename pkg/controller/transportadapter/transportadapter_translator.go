@@ -64,10 +64,6 @@ func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	ctx context.Context,
 	server *v1alpha1.MCPServer,
 ) ([]client.Object, error) {
-	serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
-	if err != nil {
-		return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
-	}
 	deployment, err := t.translateTransportAdapterDeployment(server)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate TransportAdapter deployment: %w", err)
@@ -78,14 +74,25 @@ func (t *transportAdapterTranslator) TranslateTransportAdapterOutputs(
 	}
 	configMap, err := t.translateTransportAdapterConfigMap(server)
 	if err != nil {
-		return nil, fmt.Errorf("failed to translate TransportAdapter config map: %w", err)
+		return nil, fmt.Errorf("failed to marshal MCP server config to YAML: %w", err)
 	}
-	return t.runPlugins(ctx, server, []client.Object{
-		serviceAccount,
+
+	objects := []client.Object{
 		deployment,
 		service,
 		configMap,
-	})
+	}
+
+	// Create new service account only when service account name is not specified
+	if server.Spec.Deployment.ServiceAccountName == "" {
+		serviceAccount, err := t.translateTransportAdapterServiceAccount(server)
+		if err != nil {
+			return nil, fmt.Errorf("failed to translate TransportAdapter service account: %w", err)
+		}
+		objects = append(objects, serviceAccount)
+	}
+
+	return t.runPlugins(ctx, server, objects)
 }
 
 func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
@@ -154,12 +161,18 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		mainContainerResources = *server.Spec.Deployment.Resources
 	}
 
+	// Determine ServiceAccountName to use
+	serviceAccountName := server.Name
+	if server.Spec.Deployment.ServiceAccountName != "" {
+		serviceAccountName = server.Spec.Deployment.ServiceAccountName
+	}
+
 	var template corev1.PodSpec
 	switch server.Spec.TransportType {
 	case v1alpha1.TransportTypeStdio:
 		// copy the binary into the container when running with stdio
 		template = corev1.PodSpec{
-			ServiceAccountName: server.Name,
+			ServiceAccountName: serviceAccountName,
 			SecurityContext:    server.Spec.Deployment.PodSecurityContext,
 			ImagePullSecrets:   server.Spec.Deployment.ImagePullSecrets,
 			Tolerations:        server.Spec.Deployment.Tolerations,
@@ -232,7 +245,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			cmd = []string{server.Spec.Deployment.Cmd}
 		}
 		template = corev1.PodSpec{
-			ServiceAccountName: server.Name,
+			ServiceAccountName: serviceAccountName,
 			SecurityContext:    server.Spec.Deployment.PodSecurityContext,
 			ImagePullSecrets:   server.Spec.Deployment.ImagePullSecrets,
 			Tolerations:        server.Spec.Deployment.Tolerations,
@@ -361,12 +374,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
 	}
 
 	// Apply custom annotations and labels if provided
-	if server.Spec.Deployment.ServiceAccount != nil {
-		if server.Spec.Deployment.ServiceAccount.Annotations != nil {
-			objectMeta.Annotations = server.Spec.Deployment.ServiceAccount.Annotations
+	if server.Spec.Deployment.ServiceAccountConfig != nil {
+		if server.Spec.Deployment.ServiceAccountConfig.Annotations != nil {
+			objectMeta.Annotations = server.Spec.Deployment.ServiceAccountConfig.Annotations
 		}
-		if server.Spec.Deployment.ServiceAccount.Labels != nil {
-			objectMeta.Labels = server.Spec.Deployment.ServiceAccount.Labels
+		if server.Spec.Deployment.ServiceAccountConfig.Labels != nil {
+			objectMeta.Labels = server.Spec.Deployment.ServiceAccountConfig.Labels
 		}
 	}
 

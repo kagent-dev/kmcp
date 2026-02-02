@@ -1885,9 +1885,9 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serviceAccount:
-                    description: ServiceAccount defines the configuration for the
-                      ServiceAccount.
+                  serviceAccountConfig:
+                    description: ServiceAccountConfig defines the configuration for
+                      the ServiceAccount to be created.
                     properties:
                       annotations:
                         additionalProperties:
@@ -1904,6 +1904,10 @@ spec:
                         description: Labels to add to the ServiceAccount.
                         type: object
                     type: object
+                  serviceAccountName:
+                    description: ServiceAccountName is the name of an existing ServiceAccount
+                      to use.
+                    type: string
                   sidecars:
                     description: |-
                       Sidecars defines additional containers to run alongside the MCP server container.
@@ -5239,6 +5243,11 @@ spec:
                       type: object
                     type: array
                 type: object
+                x-kubernetes-validations:
+                - message: serviceAccountConfig and serviceAccountName are mutually
+                    exclusive
+                  rule: '!(has(self.serviceAccountConfig) && self.serviceAccountName
+                    != '''')'
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
                   HTTP transport.
