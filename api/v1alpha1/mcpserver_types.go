@@ -211,7 +211,7 @@ type MCPServerStatus struct {
 }
 
 // MCPServerDeployment
-// +kubebuilder:validation:XValidation:rule="!(has(self.serviceAccountConfig) && self.serviceAccountName != '')",message="serviceAccountConfig and serviceAccountName are mutually exclusive"
+// +kubebuilder:validation:XValidation:rule="!(has(self.serviceAccountConfig) && has(self.serviceAccountName))",message="serviceAccountConfig and serviceAccountName are mutually exclusive"
 type MCPServerDeployment struct {
 	// Image defines the container image to to deploy the MCP server.
 	// +optional

@@ -5246,8 +5246,7 @@ spec:
                 x-kubernetes-validations:
                 - message: serviceAccountConfig and serviceAccountName are mutually
                     exclusive
-                  rule: '!(has(self.serviceAccountConfig) && self.serviceAccountName
-                    != '''')'
+                  rule: '!(has(self.serviceAccountConfig) && has(self.serviceAccountName))'
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
                   HTTP transport.
