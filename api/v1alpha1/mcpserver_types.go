@@ -211,6 +211,7 @@ type MCPServerStatus struct {
 }
 
 // MCPServerDeployment
+// +kubebuilder:validation:XValidation:rule="!(has(self.serviceAccount) && has(self.serviceAccountName))",message="serviceAccount and serviceAccountName are mutually exclusive"
 type MCPServerDeployment struct {
 	// Image defines the container image to to deploy the MCP server.
 	// +optional
@@ -263,9 +264,13 @@ type MCPServerDeployment struct {
 	// +optional
 	InitContainer *InitContainerConfig `json:"initContainer,omitempty"`
 
-	// ServiceAccount defines the configuration for the ServiceAccount.
+	// ServiceAccount defines the configuration for the ServiceAccount to be created.
 	// +optional
 	ServiceAccount *ServiceAccountConfig `json:"serviceAccount,omitempty"`
+
+	// ServiceAccountName is the name of an existing ServiceAccount to use.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// Sidecars defines additional containers to run alongside the MCP server container.
 	// These containers will share the same pod and can share volumes with the main container.
