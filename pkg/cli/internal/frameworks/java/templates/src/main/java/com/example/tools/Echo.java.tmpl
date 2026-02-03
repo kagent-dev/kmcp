@@ -1,29 +1,35 @@
 package com.example.tools;
 
+import io.modelcontextprotocol.spec.McpSchema;
 import java.util.Map;
 import java.util.List;
 import com.example.tools.ToolConfig;
 
 /**
  * Echo tool for {{.ProjectName}} MCP server.
- * 
+ *
  * This is an example tool showing the basic structure for MCP tools.
  * Each tool should implement the Tool interface and be registered in Tools.java.
  */
 public class Echo implements Tool {
-    
+
     @Override
     public String getName() {
         return "echo";
     }
-    
+
     @Override
     public String getDescription() {
         return "Echo a message back to the client";
     }
-    
+
     @Override
-    public io.modelcontextprotocol.spec.McpSchema.JsonSchema getInputSchema() {
+    public McpSchema.ToolAnnotations getAnnotations() {
+        return new McpSchema.ToolAnnotations("Echo Message", true, null, null, null);
+    }
+
+    @Override
+    public McpSchema.JsonSchema getInputSchema() {
         return new io.modelcontextprotocol.spec.McpSchema.JsonSchema(
             "object",
             java.util.Map.of(

@@ -24,6 +24,7 @@ export async function createServer(): Promise<Server> {
         name: tool.name,
         description: tool.description,
         inputSchema: zodToJsonSchema(tool.inputSchema, { strictUnions: true }) as any,
+        annotations: tool.annotations,
       })),
     };
   });
@@ -77,11 +78,16 @@ export async function createHttpServer(): Promise<Server> {
           name: 'health',
           description: 'Health check',
           inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+          annotations: {
+            title: 'Health Check',
+            readOnlyHint: true,
+          },
         },
         ...allTools.map(tool => ({
           name: tool.name,
           description: tool.description,
           inputSchema: zodToJsonSchema(tool.inputSchema, { strictUnions: true }) as any,
+          annotations: tool.annotations,
         })),
       ],
     };
