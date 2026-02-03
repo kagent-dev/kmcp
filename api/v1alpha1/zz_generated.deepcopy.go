@@ -157,8 +157,8 @@ func (in *MCPServerDeployment) DeepCopyInto(out *MCPServerDeployment) {
 		*out = new(InitContainerConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ServiceAccountConfig != nil {
-		in, out := &in.ServiceAccountConfig, &out.ServiceAccountConfig
+	if in.ServiceAccount != nil {
+		in, out := &in.ServiceAccount, &out.ServiceAccount
 		*out = new(ServiceAccountConfig)
 		(*in).DeepCopyInto(*out)
 	}

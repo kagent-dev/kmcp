@@ -374,12 +374,12 @@ func (t *transportAdapterTranslator) translateTransportAdapterServiceAccount(
 	}
 
 	// Apply custom annotations and labels if provided
-	if server.Spec.Deployment.ServiceAccountConfig != nil {
-		if server.Spec.Deployment.ServiceAccountConfig.Annotations != nil {
-			objectMeta.Annotations = server.Spec.Deployment.ServiceAccountConfig.Annotations
+	if server.Spec.Deployment.ServiceAccount != nil {
+		if server.Spec.Deployment.ServiceAccount.Annotations != nil {
+			objectMeta.Annotations = server.Spec.Deployment.ServiceAccount.Annotations
 		}
-		if server.Spec.Deployment.ServiceAccountConfig.Labels != nil {
-			objectMeta.Labels = server.Spec.Deployment.ServiceAccountConfig.Labels
+		if server.Spec.Deployment.ServiceAccount.Labels != nil {
+			objectMeta.Labels = server.Spec.Deployment.ServiceAccount.Labels
 		}
 	}
 

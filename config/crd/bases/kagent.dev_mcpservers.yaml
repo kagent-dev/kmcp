@@ -1885,9 +1885,9 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serviceAccountConfig:
-                    description: ServiceAccountConfig defines the configuration for
-                      the ServiceAccount to be created.
+                  serviceAccount:
+                    description: ServiceAccount defines the configuration for the
+                      ServiceAccount to be created.
                     properties:
                       annotations:
                         additionalProperties:
@@ -5244,9 +5244,8 @@ spec:
                     type: array
                 type: object
                 x-kubernetes-validations:
-                - message: serviceAccountConfig and serviceAccountName are mutually
-                    exclusive
-                  rule: '!(has(self.serviceAccountConfig) && has(self.serviceAccountName))'
+                - message: serviceAccount and serviceAccountName are mutually exclusive
+                  rule: '!(has(self.serviceAccount) && has(self.serviceAccountName))'
               httpTransport:
                 description: HTTPTransport defines the configuration for a Streamable
                   HTTP transport.

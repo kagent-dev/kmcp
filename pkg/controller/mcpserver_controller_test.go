@@ -746,7 +746,7 @@ var _ = ginkgo.Describe("MCPServer Controller", func() {
 					Deployment: kagentdevv1alpha1.MCPServerDeployment{
 						Image: "test-image:latest",
 						Port:  3000,
-						ServiceAccountConfig: &kagentdevv1alpha1.ServiceAccountConfig{
+						ServiceAccount: &kagentdevv1alpha1.ServiceAccountConfig{
 							Annotations: map[string]string{"foo": "bar"},
 						},
 					},
