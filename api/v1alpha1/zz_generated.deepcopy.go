@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -284,6 +284,11 @@ func (in *MCPServerSpec) DeepCopyInto(out *MCPServerSpec) {
 		in, out := &in.HTTPTransport, &out.HTTPTransport
 		*out = new(HTTPTransport)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Timeout != nil {
+		in, out := &in.Timeout, &out.Timeout
+		*out = new(v1.Duration)
+		**out = **in
 	}
 }
 

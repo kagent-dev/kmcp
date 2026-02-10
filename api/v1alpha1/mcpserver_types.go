@@ -148,6 +148,17 @@ type MCPServerSpec struct {
 
 	// HTTPTransport defines the configuration for a Streamable HTTP transport.
 	HTTPTransport *HTTPTransport `json:"httpTransport,omitempty"`
+
+	// Timeout defines the default connection timeout for clients connecting
+	// to this MCP server. MCP servers deployed via the MCPServer CRD use a
+	// sidecar gateway that spawns a new stdio process (e.g. via uvx/npx)
+	// for each session. Process startup can take 2-8 seconds depending on
+	// package cache state, which may exceed the default timeout used by some
+	// clients. This value is propagated to the generated RemoteMCPServer
+	// resources when they do not specify an explicit timeout.
+	// +optional
+	// +kubebuilder:default="30s"
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.

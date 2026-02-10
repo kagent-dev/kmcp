@@ -5282,6 +5282,17 @@ spec:
                 description: StdioTransport defines the configuration for a standard
                   input/output transport.
                 type: object
+              timeout:
+                default: 30s
+                description: |-
+                  Timeout defines the default connection timeout for clients connecting
+                  to this MCP server. MCP servers deployed via the MCPServer CRD use a
+                  sidecar gateway that spawns a new stdio process (e.g. via uvx/npx)
+                  for each session. Process startup can take 2-8 seconds depending on
+                  package cache state, which may exceed the default timeout used by some
+                  clients. This value is propagated to the generated RemoteMCPServer
+                  resources when they do not specify an explicit timeout.
+                type: string
               transportType:
                 description: TransportType defines the type of mcp server being run
                 enum:
