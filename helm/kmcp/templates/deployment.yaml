@@ -46,6 +46,11 @@ spec:
           name: health
           protocol: TCP
         {{- end }}
+        {{- if .Values.controller.mcpServer.enabled }}
+        - containerPort: {{ .Values.controller.mcpServer.bindAddress | regexFind "[0-9]+" }}
+          name: mcp
+          protocol: TCP
+        {{- end }}
         {{- if .Values.controller.env }}
         env:
         {{- toYaml .Values.controller.env | nindent 8 }}

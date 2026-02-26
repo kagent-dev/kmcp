@@ -45,6 +45,11 @@ controller:
     bindAddress: ":8443"
     secureServing: true
   
+  # MCP server endpoint configuration
+  mcpServer:
+    enabled: true
+    bindAddress: ":8083"
+
   env: []
 
 # Pod annotations

@@ -83,5 +83,10 @@ Create controller manager container args
 {{- if .Values.controller.metrics.enabled }}
 {{- $args = append $args (printf "--metrics-bind-address=%s" .Values.controller.metrics.bindAddress) }}
 {{- end }}
+{{- if .Values.controller.mcpServer.enabled }}
+{{- $args = append $args (printf "--mcp-bind-address=%s" .Values.controller.mcpServer.bindAddress) }}
+{{- else }}
+{{- $args = append $args "--mcp-bind-address=0" }}
+{{- end }}
 {{- toYaml $args }}
 {{- end }} 

@@ -41,6 +41,7 @@ import (
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 	"github.com/kagent-dev/kmcp/pkg/controller"
 	"github.com/kagent-dev/kmcp/pkg/controller/transportadapter"
+	mcppkg "github.com/kagent-dev/kmcp/pkg/mcp"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -74,6 +75,7 @@ type Config struct {
 	ProbeAddr      string
 	SecureMetrics  bool
 	EnableHTTP2    bool
+	MCPAddr        string
 }
 
 func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
@@ -109,6 +111,8 @@ func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
 	commandLine.StringVar(&cfg.Webhook.CertKey, "webhook-cert-key", "tls.key", "The name of the webhook key file.")
 	commandLine.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	commandLine.StringVar(&cfg.MCPAddr, "mcp-bind-address", ":8083",
+		"The address the MCP server endpoint binds to. Set to 0 to disable.")
 }
 
 // PluginFactory creates a TranslatorPlugin when provided with the client and scheme.
@@ -287,6 +291,20 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	// Start MCP server if enabled
+	if cfg.MCPAddr != "0" {
+		mcpHandler, err := mcppkg.NewMCPHandler(mgr.GetClient())
+		if err != nil {
+			setupLog.Error(err, "unable to create MCP handler")
+			os.Exit(1)
+		}
+		mcpServer := mcppkg.NewServer(mcpHandler, cfg.MCPAddr)
+		if err := mgr.Add(mcpServer); err != nil {
+			setupLog.Error(err, "unable to add MCP server to manager")
+			os.Exit(1)
+		}
+	}
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")

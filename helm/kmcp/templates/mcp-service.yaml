@@ -1,0 +1,18 @@
+{{- if .Values.controller.mcpServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kmcp.fullname" . }}-mcp
+  namespace: {{ include "kmcp.namespace" . }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: mcp
+    port: {{ .Values.controller.mcpServer.bindAddress | regexFind "[0-9]+" }}
+    targetPort: {{ .Values.controller.mcpServer.bindAddress | regexFind "[0-9]+" }}
+    protocol: TCP
+  selector:
+    {{- include "kmcp.selectorLabels" . | nindent 4 }}
+{{- end }}

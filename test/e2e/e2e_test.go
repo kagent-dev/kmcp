@@ -167,6 +167,147 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		})
 	})
 
+	ginkgo.Context("MCP endpoint", func() {
+		ginkgo.It("should expose list_mcp_servers, list_tools, and call_tool via MCP protocol", func() {
+			var mcpPortForwardCmd *exec.Cmd
+			mcpLocalPort := 18083
+
+			ginkgo.By("verifying the MCP service exists")
+			gomega.Eventually(func(g gomega.Gomega) {
+				service := getService("kmcp-mcp", namespace)
+				g.Expect(service).NotTo(gomega.BeNil(), "MCP service should exist")
+				g.Expect(service.Spec.Ports).To(gomega.HaveLen(1))
+				g.Expect(service.Spec.Ports[0].Port).To(gomega.Equal(int32(8083)))
+			}).Should(gomega.Succeed())
+
+			ginkgo.By("setting up port-forward to the MCP endpoint")
+			mcpPortForwardCmd = exec.Command("kubectl", "port-forward",
+				"service/kmcp-mcp",
+				fmt.Sprintf("%d:8083", mcpLocalPort),
+				"-n", namespace)
+			err := mcpPortForwardCmd.Start()
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to start port-forward to MCP endpoint")
+
+			// Wait for port-forward to be ready
+			gomega.Eventually(func() error {
+				resp, err := http.Get(fmt.Sprintf("http://localhost:%d/mcp", mcpLocalPort))
+				if err != nil {
+					return err
+				}
+				_ = resp.Body.Close()
+				return nil
+			}, 30*time.Second, 1*time.Second).Should(gomega.Succeed())
+
+			ginkgo.By("connecting MCP client to the controller's MCP endpoint")
+			mcpClient, err := client.NewStreamableHttpClient(
+				fmt.Sprintf("http://localhost:%d/mcp", mcpLocalPort))
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create MCP client")
+
+			ctx := context.Background()
+
+			initResponse, err := mcpClient.Initialize(ctx, mcp.InitializeRequest{
+				Params: mcp.InitializeParams{
+					ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+					ClientInfo: mcp.Implementation{
+						Name:    "kmcp-e2e-test-mcp-endpoint",
+						Version: "1.0.0",
+					},
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to initialize MCP client")
+			gomega.Expect(initResponse).NotTo(gomega.BeNil())
+			gomega.Expect(initResponse.ServerInfo.Name).To(gomega.Equal("kmcp-mcp-servers"))
+
+			ginkgo.By("listing available tools and verifying all three exist")
+			toolsResponse, err := mcpClient.ListTools(ctx, mcp.ListToolsRequest{})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to list tools")
+			gomega.Expect(toolsResponse).NotTo(gomega.BeNil())
+
+			toolNames := make([]string, 0, len(toolsResponse.Tools))
+			for _, tool := range toolsResponse.Tools {
+				toolNames = append(toolNames, tool.Name)
+				_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "MCP endpoint tool: %s - %s\n", tool.Name, tool.Description)
+			}
+			gomega.Expect(toolNames).To(gomega.ContainElements(
+				"list_mcp_servers", "list_tools", "call_tool"))
+
+			ginkgo.By("creating a minimal MCPServer CR for testing")
+			cmd := exec.Command("kubectl", "apply", "-f", "-")
+			cmd.Stdin = strings.NewReader(fmt.Sprintf(`apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: e2e-test-mcp
+  namespace: %s
+spec:
+  deployment:
+    image: alpine:latest
+    port: 3000
+    cmd: "sleep"
+    args: ["infinity"]
+  transportType: stdio
+`, namespace))
+			_, err = utils.Run(cmd)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create test MCPServer")
+
+			ginkgo.By("calling list_mcp_servers and verifying the test server appears")
+			gomega.Eventually(func(g gomega.Gomega) {
+				listResult, err := mcpClient.CallTool(ctx, mcp.CallToolRequest{
+					Params: mcp.CallToolParams{
+						Name: "list_mcp_servers",
+					},
+				})
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to call list_mcp_servers")
+				g.Expect(listResult.IsError).To(gomega.BeFalse(), "list_mcp_servers should not return error")
+				g.Expect(listResult.Content).NotTo(gomega.BeEmpty())
+
+				// Check that the text content contains our test server
+				foundServer := false
+				for _, content := range listResult.Content {
+					if textContent, ok := content.(mcp.TextContent); ok {
+						if strings.Contains(textContent.Text, fmt.Sprintf("%s/e2e-test-mcp", namespace)) {
+							foundServer = true
+							break
+						}
+					}
+				}
+				g.Expect(foundServer).To(gomega.BeTrue(),
+					"list_mcp_servers should include e2e-test-mcp")
+			}, 30*time.Second, 2*time.Second).Should(gomega.Succeed())
+
+			ginkgo.By("calling list_tools with invalid ref and verifying error handling")
+			invalidResult, err := mcpClient.CallTool(ctx, mcp.CallToolRequest{
+				Params: mcp.CallToolParams{
+					Name:      "list_tools",
+					Arguments: map[string]any{"server": "nonexistent/server"},
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "list_tools should not return protocol error")
+			gomega.Expect(invalidResult.IsError).To(gomega.BeTrue(), "list_tools with bad ref should return tool error")
+
+			ginkgo.By("calling call_tool with missing tool name and verifying error handling")
+			missingToolResult, err := mcpClient.CallTool(ctx, mcp.CallToolRequest{
+				Params: mcp.CallToolParams{
+					Name: "call_tool",
+					Arguments: map[string]any{
+						"server": fmt.Sprintf("%s/e2e-test-mcp", namespace),
+						"tool":   "",
+					},
+				},
+			})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "call_tool should not return protocol error")
+			gomega.Expect(missingToolResult.IsError).To(gomega.BeTrue(), "call_tool with empty tool should return error")
+
+			ginkgo.By("cleaning up port-forward")
+			if mcpPortForwardCmd != nil && mcpPortForwardCmd.Process != nil {
+				_ = mcpPortForwardCmd.Process.Kill()
+			}
+
+			ginkgo.By("cleaning up the test MCPServer")
+			cmd = exec.Command("kubectl", "delete", "mcpserver", "e2e-test-mcp", "-n", namespace)
+			_, _ = utils.Run(cmd)
+		})
+	})
+
 	ginkgo.Context("MCPServer CRD", func() {
 		ginkgo.It("deploy a working MCP server with mounted secrets", func() {
 			mcpServerName := "knowledge-assistant"
