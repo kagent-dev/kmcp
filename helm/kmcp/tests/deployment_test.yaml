@@ -153,4 +153,46 @@ tests:
     asserts:
       - hasDocuments:
           count: 1
-      - matchSnapshot: {} 
+      - matchSnapshot: {}
+
+  - it: should not include watch-namespaces arg when clusterScoped is true
+    template: deployment.yaml
+    set:
+      rbac.clusterScoped: true
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --watch-namespaces=NAMESPACE
+
+  - it: should include watch-namespaces arg when clusterScoped is false with default namespace
+    template: deployment.yaml
+    set:
+      rbac.clusterScoped: false
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --watch-namespaces=NAMESPACE
+
+  - it: should include watch-namespaces arg with explicit namespaces when clusterScoped is false
+    template: deployment.yaml
+    set:
+      rbac.clusterScoped: false
+      rbac.namespaces:
+        - ns1
+        - ns2
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --watch-namespaces=ns1,ns2 

@@ -83,5 +83,9 @@ Create controller manager container args
 {{- if .Values.controller.metrics.enabled }}
 {{- $args = append $args (printf "--metrics-bind-address=%s" .Values.controller.metrics.bindAddress) }}
 {{- end }}
+{{- if not .Values.rbac.clusterScoped }}
+{{- $namespaces := .Values.rbac.namespaces | default (list (include "kmcp.namespace" .)) }}
+{{- $args = append $args (printf "--watch-namespaces=%s" (join "," $namespaces)) }}
+{{- end }}
 {{- toYaml $args }}
 {{- end }} 

@@ -142,4 +142,57 @@ tests:
     asserts:
       - hasDocuments:
           count: 1
-      - matchSnapshot: {} 
+      - matchSnapshot: {}
+
+  - it: should create Role when clusterScoped is false
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+      rbac.clusterScoped: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - containsDocument:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+      - matchSnapshot: {}
+
+  - it: should create RoleBinding when clusterScoped is false
+    template: rbac/clusterrolebinding.yaml
+    set:
+      rbac.create: true
+      rbac.clusterScoped: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - containsDocument:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+      - matchSnapshot: {}
+
+  - it: should create multiple Roles when multiple namespaces are provided
+    template: rbac/clusterrole.yaml
+    set:
+      rbac.create: true
+      rbac.clusterScoped: false
+      rbac.namespaces:
+        - ns1
+        - ns2
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.namespace
+          value: ns1
+        documentIndex: 0
+      - equal:
+          path: metadata.namespace
+          value: ns2
+        documentIndex: 1
+      - isKind:
+          of: Role
+        documentIndex: 0
+      - isKind:
+          of: Role
+        documentIndex: 1
+      - matchSnapshot: {}

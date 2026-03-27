@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -30,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -70,10 +72,11 @@ type Config struct {
 		CertName string
 		CertKey  string
 	}
-	LeaderElection bool
-	ProbeAddr      string
-	SecureMetrics  bool
-	EnableHTTP2    bool
+	LeaderElection  bool
+	ProbeAddr       string
+	SecureMetrics   bool
+	EnableHTTP2     bool
+	WatchNamespaces string
 }
 
 func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
@@ -109,6 +112,8 @@ func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
 	commandLine.StringVar(&cfg.Webhook.CertKey, "webhook-cert-key", "tls.key", "The name of the webhook key file.")
 	commandLine.BoolVar(&cfg.EnableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	commandLine.StringVar(&cfg.WatchNamespaces, "watch-namespaces", "",
+		"Comma-separated list of namespaces the controller watches. If empty, watches all namespaces.")
 }
 
 // PluginFactory creates a TranslatorPlugin when provided with the client and scheme.
@@ -126,6 +131,31 @@ type ExtensionConfig struct {
 }
 
 type GetExtensionConfig func() (*ExtensionConfig, error)
+
+// filterValidNamespaces removes empty strings from a list of namespace names.
+func filterValidNamespaces(namespaces []string) []string {
+	var result []string
+	for _, ns := range namespaces {
+		if ns = strings.TrimSpace(ns); ns != "" {
+			result = append(result, ns)
+		}
+	}
+	return result
+}
+
+// configureNamespaceWatching returns a DefaultNamespaces map for cache.Options
+// when a non-empty namespace list is provided, restricting the controller's
+// watches to those namespaces. Returns nil (cluster-wide) when the list is empty.
+func configureNamespaceWatching(namespaces []string) map[string]cache.Config {
+	if len(namespaces) == 0 {
+		return nil
+	}
+	nsMap := make(map[string]cache.Config, len(namespaces))
+	for _, ns := range namespaces {
+		nsMap[ns] = cache.Config{}
+	}
+	return nsMap
+}
 
 // nolint:gocyclo
 func Start(getExtensionConfig GetExtensionConfig) {
@@ -248,6 +278,13 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		}
 	}
 
+	watchNamespacesList := filterValidNamespaces(strings.Split(cfg.WatchNamespaces, ","))
+	if len(watchNamespacesList) > 0 {
+		setupLog.Info("watching specific namespaces", "namespaces", watchNamespacesList)
+	} else {
+		setupLog.Info("watching all namespaces")
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -255,6 +292,9 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		HealthProbeBindAddress: cfg.ProbeAddr,
 		LeaderElection:         cfg.LeaderElection,
 		LeaderElectionID:       "90217b08.kagent.dev",
+		Cache: cache.Options{
+			DefaultNamespaces: configureNamespaceWatching(watchNamespacesList),
+		},
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
