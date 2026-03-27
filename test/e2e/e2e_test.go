@@ -317,7 +317,8 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			mcpClient, err := client.NewStreamableHttpClient(fmt.Sprintf("http://localhost:%d/mcp", localPort))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create MCP client")
 
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
 			ginkgo.By("initializing the MCP client")
 			initResponse, err := mcpClient.Initialize(ctx, mcp.InitializeRequest{
