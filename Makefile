@@ -245,7 +245,7 @@ docker-build: ## Build docker image with the manager.
 
 .PHONY: kind-load
 kind-load: ## Load the controller image into the Kind cluster.
-	kind load docker-image ${CONTROLLER_IMG}
+	kind load docker-image ${CONTROLLER_IMG} --name kind-kmcp-test
 
 .PHONY: docker-tag-latest
 docker-tag-latest: ## Tag the built image as 'latest' and push it
