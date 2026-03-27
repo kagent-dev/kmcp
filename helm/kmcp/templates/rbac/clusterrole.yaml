@@ -1,11 +1,4 @@
-{{- if .Values.rbac.create }}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: {{ include "kmcp.fullname" . }}-manager-role
-  labels:
-    {{- include "kmcp.labels" . | nindent 4 }}
-rules:
+{{- define "kmcp.manager.rules" -}}
 - apiGroups:
   - ""
   resources:
@@ -58,4 +51,32 @@ rules:
   - get
   - patch
   - update
+{{- end -}}
+
+{{- if .Values.rbac.create }}
+
+{{- if .Values.rbac.clusterScoped }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kmcp.fullname" . }}-manager-role
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+rules:
+  {{- include "kmcp.manager.rules" . | nindent 2 }}
+{{- else }}
+{{- $namespaces := .Values.rbac.namespaces | default (list (include "kmcp.namespace" .)) }}
+{{- range $namespace := $namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kmcp.fullname" $ }}-manager-role
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "kmcp.labels" $ | nindent 4 }}
+rules:
+  {{- include "kmcp.manager.rules" $ | nindent 2 }}
+{{- end }}
+{{- end }}
 {{- end }} 
