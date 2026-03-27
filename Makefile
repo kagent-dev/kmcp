@@ -243,10 +243,6 @@ docker-build: ## Build docker image with the manager.
 	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t ${CONTROLLER_IMG} .
 	- $(DOCKER_BUILDER) rm $(BUILDX_BUILDER_NAME)
 
-.PHONY: kind-load
-kind-load: ## Load the controller image into the Kind cluster.
-	kind load docker-image ${CONTROLLER_IMG} --name kind-kmcp-test
-
 .PHONY: docker-tag-latest
 docker-tag-latest: ## Tag the built image as 'latest' and push it
 	@echo "Tagging image as 'latest'..."

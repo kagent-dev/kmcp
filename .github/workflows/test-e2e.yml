@@ -22,15 +22,11 @@ jobs:
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1
         with:
-          cluster_name: kind-kmcp-test
+          cluster_name: kind
 
       - name: Build controller image
         run: make docker-build CONTROLLER_IMG=ghcr.io/kagent-dev/kmcp/controller:e2e-test
         timeout-minutes: 15
-
-      - name: Load image into Kind
-        run: make kind-load CONTROLLER_IMG=ghcr.io/kagent-dev/kmcp/controller:e2e-test
-        timeout-minutes: 5
 
       - name: Run e2e tests
         run: |

@@ -22,6 +22,8 @@ import (
 
 	ginkgo "github.com/onsi/ginkgo/v2"
 	gomega "github.com/onsi/gomega"
+
+	"github.com/kagent-dev/kmcp/test/utils"
 )
 
 var (
@@ -39,3 +41,9 @@ func TestE2E(t *testing.T) {
 	_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "Starting kmcp integration test suite\n")
 	ginkgo.RunSpecs(t, "e2e suite")
 }
+
+var _ = ginkgo.BeforeSuite(func() {
+	ginkgo.By("loading the manager(Operator) image on Kind")
+	err := utils.LoadImageToKindClusterWithName(projectImage)
+	gomega.ExpectWithOffset(1, err).NotTo(gomega.HaveOccurred(), "Failed to load the manager(Operator) image into Kind")
+})
