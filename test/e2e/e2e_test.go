@@ -303,17 +303,9 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			err = portForwardCmd.Start()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to start port-forward")
 
-			ginkgo.DeferCleanup(func() {
-				if portForwardCmd != nil && portForwardCmd.Process != nil {
-					_ = portForwardCmd.Process.Kill()
-					_, _ = portForwardCmd.Process.Wait()
-				}
-			})
-
 			// Wait for port-forward to be ready
-			httpClient := &http.Client{Timeout: 2 * time.Second}
 			gomega.Eventually(func() error {
-				resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/mcp", localPort))
+				resp, err := http.Get(fmt.Sprintf("http://localhost:%d", localPort))
 				if err != nil {
 					return err
 				}
@@ -325,8 +317,7 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			mcpClient, err := client.NewStreamableHttpClient(fmt.Sprintf("http://localhost:%d/mcp", localPort))
 			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to create MCP client")
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			ginkgo.DeferCleanup(cancel)
+			ctx := context.Background()
 
 			ginkgo.By("initializing the MCP client")
 			initResponse, err := mcpClient.Initialize(ctx, mcp.InitializeRequest{
@@ -382,6 +373,12 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 				// Pod should have restarted (different name)
 				g.Expect(currentPodName).NotTo(gomega.Equal(originalPodName), "Pod should have been restarted")
 			}, 1*time.Minute, 5*time.Second).Should(gomega.Succeed())
+
+			ginkgo.By("cleaning up port-forward")
+			if portForwardCmd != nil && portForwardCmd.Process != nil {
+				err = portForwardCmd.Process.Kill()
+				gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to kill port-forward process")
+			}
 
 			ginkgo.By("cleaning up the MCPServer")
 			cmd = exec.Command("kubectl", "delete", "mcpserver", mcpServerName, "-n", namespace)
