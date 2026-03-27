@@ -62,7 +62,8 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 			"--namespace", namespace,
 			"--wait", "--timeout=5m",
 			"--set", fmt.Sprintf("image.repository=%s", getImageRepository(projectImage)),
-			"--set", fmt.Sprintf("image.tag=%s", getImageTag(projectImage)))
+			"--set", fmt.Sprintf("image.tag=%s", getImageTag(projectImage)),
+			"--set", "image.pullPolicy=Never")
 		_, err = utils.Run(cmd)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to deploy the controller-manager using Helm")
 	})

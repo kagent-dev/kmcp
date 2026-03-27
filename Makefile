@@ -7,7 +7,7 @@ HELM_REPO ?= oci://ghcr.io/kagent-dev
 
 BUILD_DATE := $(shell date -u '+%Y-%m-%d')
 GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/-dirty//' | grep v || echo "v0.0.1+$(GIT_COMMIT)")
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/-dirty//' | grep v || echo "v0.0.1-$(GIT_COMMIT)")
 
 
 # Version information for the build
@@ -242,6 +242,10 @@ docker-build: ## Build docker image with the manager.
 	$(DOCKER_BUILDER) use $(BUILDX_BUILDER_NAME)
 	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t ${CONTROLLER_IMG} .
 	- $(DOCKER_BUILDER) rm $(BUILDX_BUILDER_NAME)
+
+.PHONY: kind-load
+kind-load: ## Load the controller image into the Kind cluster.
+	kind load docker-image ${CONTROLLER_IMG}
 
 .PHONY: docker-tag-latest
 docker-tag-latest: ## Tag the built image as 'latest' and push it
