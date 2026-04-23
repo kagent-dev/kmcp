@@ -196,9 +196,14 @@ type HTTPTransportTLS struct {
 
 // MCPServerStatus defines the observed state of MCPServer.
 type MCPServerStatus struct {
+	// DisplayStatus shows a human-readable status of the MCPServer.
+	// Possible values: "Not Ready", "Ready", "Deleting"
+	// +optional
+	DisplayStatus string `json:"displayStatus,omitempty"`
+
 	// Conditions describe the current conditions of the MCPServer.
 	// Implementations should prefer to express MCPServer conditions
-	// using the `MCPServerConditionType` and `MCPServerConditionReason`
+	// using the MCPServerConditionType and MCPServerConditionReason
 	// constants so that operators and tools can converge on a common
 	// vocabulary to describe MCPServer state.
 	//
@@ -398,6 +403,7 @@ type ServiceAccountConfig struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=mcps;mcp
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.displayStatus"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:categories=kagent
