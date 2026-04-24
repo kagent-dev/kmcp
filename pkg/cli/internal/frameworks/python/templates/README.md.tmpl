@@ -82,7 +82,7 @@ tests/                  # Generated tests
 
 3. **Deploy to Kubernetes**:
    ```bash
-   kmcp deploy mcp --apply
+   kmcp deploy
    ```
 
 4. **Add New Tools**:
@@ -214,7 +214,7 @@ docker run -i {{.ProjectName}}:latest
 
 ```bash
 # Deploy to Kubernetes
-kmcp deploy mcp --apply
+kmcp deploy
 
 # Check deployment status
 kubectl get mcpserver {{.ProjectName}}
