@@ -1,22 +1,7 @@
 {{- if .Values.rbac.create }}
-{{- if .Values.rbac.clusterScoped }}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ include "kmcp.fullname" . }}-manager-rolebinding
-  labels:
-    {{- include "kmcp.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ include "kmcp.fullname" . }}-manager-role
-subjects:
-- kind: ServiceAccount
-  name: {{ include "kmcp.serviceAccountName" . }}
-  namespace: {{ include "kmcp.namespace" . }}
-{{- else }}
-{{- $namespaces := .Values.rbac.namespaces | default (list (include "kmcp.namespace" .)) }}
-{{- range $namespace := $namespaces }}
+{{- include "kmcp.rbac.validate" . -}}
+{{- if .Values.rbac.namespaces }}
+{{- range $namespace := (.Values.rbac.namespaces | uniq | sortAlpha) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -34,5 +19,20 @@ subjects:
   name: {{ include "kmcp.serviceAccountName" $ }}
   namespace: {{ include "kmcp.namespace" $ }}
 {{- end }}
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kmcp.fullname" . }}-manager-rolebinding
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "kmcp.fullname" . }}-manager-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kmcp.serviceAccountName" . }}
+  namespace: {{ include "kmcp.namespace" . }}
 {{- end }}
 {{- end }} 

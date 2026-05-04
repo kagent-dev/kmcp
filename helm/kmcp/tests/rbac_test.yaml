@@ -144,11 +144,12 @@ tests:
           count: 1
       - matchSnapshot: {}
 
-  - it: should create Role when clusterScoped is false
+  - it: should create Role when rbac.namespaces is set
     template: rbac/clusterrole.yaml
     set:
       rbac.create: true
-      rbac.clusterScoped: false
+      rbac.namespaces:
+        - NAMESPACE
     asserts:
       - hasDocuments:
           count: 1
@@ -157,11 +158,12 @@ tests:
           apiVersion: rbac.authorization.k8s.io/v1
       - matchSnapshot: {}
 
-  - it: should create RoleBinding when clusterScoped is false
+  - it: should create RoleBinding when rbac.namespaces is set
     template: rbac/clusterrolebinding.yaml
     set:
       rbac.create: true
-      rbac.clusterScoped: false
+      rbac.namespaces:
+        - NAMESPACE
     asserts:
       - hasDocuments:
           count: 1
@@ -170,20 +172,40 @@ tests:
           apiVersion: rbac.authorization.k8s.io/v1
       - matchSnapshot: {}
 
+  - it: should render a single role/binding in the listed namespace only (no release-ns fallback)
+    set:
+      rbac.create: true
+      rbac.namespaces:
+        - NAMESPACE
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: rbac/clusterrole.yaml
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+        template: rbac/clusterrole.yaml
+      - hasDocuments:
+          count: 1
+        template: rbac/clusterrolebinding.yaml
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+        template: rbac/clusterrolebinding.yaml
+
   - it: should create multiple Roles when multiple namespaces are provided
     template: rbac/clusterrole.yaml
     set:
       rbac.create: true
-      rbac.clusterScoped: false
       rbac.namespaces:
-        - ns1
+        - NAMESPACE
         - ns2
     asserts:
       - hasDocuments:
           count: 2
       - equal:
           path: metadata.namespace
-          value: ns1
+          value: NAMESPACE
         documentIndex: 0
       - equal:
           path: metadata.namespace
@@ -196,3 +218,42 @@ tests:
           of: Role
         documentIndex: 1
       - matchSnapshot: {}
+
+  - it: should fail rendering if the removed rbac.clusterScoped field is set
+    set:
+      rbac.create: true
+      rbac.clusterScoped: false
+    template: rbac/clusterrolebinding.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: "rbac.clusterScoped has been removed. Leave rbac.namespaces empty for cluster-scoped RBAC, or set rbac.namespaces=[<ns>, ...] for namespaced RBAC."
+
+  - it: should fail rendering if rbac.namespaces is set but does not include the install namespace
+    set:
+      rbac.create: true
+      rbac.namespaces:
+        - some-other-ns
+    template: rbac/clusterrolebinding.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: "rbac.namespaces is set but does not include the install namespace \"NAMESPACE\""
+
+  - it: should accept a custom install namespace when listed in rbac.namespaces
+    set:
+      namespaceOverride: my-ns
+      rbac.create: true
+      rbac.namespaces:
+        - my-ns
+        - other-ns
+    template: rbac/clusterrole.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.namespace
+          value: my-ns
+        documentIndex: 0
+      - equal:
+          path: metadata.namespace
+          value: other-ns
+        documentIndex: 1
