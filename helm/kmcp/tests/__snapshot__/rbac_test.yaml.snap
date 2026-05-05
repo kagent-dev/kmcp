@@ -1,4 +1,4 @@
-should create Role when clusterScoped is false:
+should create Role when rbac.namespaces is set:
   1: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
@@ -64,7 +64,7 @@ should create Role when clusterScoped is false:
           - get
           - patch
           - update
-should create RoleBinding when clusterScoped is false:
+should create RoleBinding when rbac.namespaces is set:
   1: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
@@ -310,7 +310,7 @@ should create multiple Roles when multiple namespaces are provided:
         control-plane: controller-manager
         helm.sh/chart: kmcp-1.0.0
       name: RELEASE-NAME-manager-role
-      namespace: ns1
+      namespace: NAMESPACE
     rules:
       - apiGroups:
           - ""

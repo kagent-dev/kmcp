@@ -70,6 +70,21 @@ Create the image reference
 {{- end }}
 
 {{/*
+Guards on the rbac block
+*/}}
+{{- define "kmcp.rbac.validate" -}}
+{{- if and .Values.rbac (hasKey .Values.rbac "clusterScoped") -}}
+{{- fail "rbac.clusterScoped has been removed. Leave rbac.namespaces empty for cluster-scoped RBAC, or set rbac.namespaces=[<ns>, ...] for namespaced RBAC." -}}
+{{- end -}}
+{{- if and .Values.rbac .Values.rbac.namespaces -}}
+{{- $installNs := include "kmcp.namespace" . -}}
+{{- if not (has $installNs .Values.rbac.namespaces) -}}
+{{- fail (printf "rbac.namespaces is set but does not include the install namespace %q" $installNs) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create controller manager container args
 */}}
 {{- define "kmcp.controllerArgs" -}}
@@ -83,8 +98,8 @@ Create controller manager container args
 {{- if .Values.controller.metrics.enabled }}
 {{- $args = append $args (printf "--metrics-bind-address=%s" .Values.controller.metrics.bindAddress) }}
 {{- end }}
-{{- if not .Values.rbac.clusterScoped }}
-{{- $namespaces := .Values.rbac.namespaces | default (list (include "kmcp.namespace" .)) }}
+{{- if and .Values.rbac .Values.rbac.namespaces }}
+{{- $namespaces := .Values.rbac.namespaces | uniq }}
 {{- $args = append $args (printf "--watch-namespaces=%s" (join "," $namespaces)) }}
 {{- end }}
 {{- toYaml $args }}
