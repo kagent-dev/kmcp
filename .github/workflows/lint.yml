@@ -22,4 +22,5 @@ jobs:
       - name: Run linter
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          # Must be built with a Go version >= the go directive in go.mod.
+          version: v2.12

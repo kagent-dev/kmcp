@@ -88,7 +88,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	// Install controller using Helm
 	controllerHelmArgs := []string{
 		"upgrade",
-		"--install", "kmcp", "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
+		"--install", kmcpName, "oci://ghcr.io/kagent-dev/kmcp/helm/kmcp",
 		"--version", version,
 		"--namespace", controllerNamespace,
 		"--create-namespace",

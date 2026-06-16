@@ -1,0 +1,236 @@
+suite: Test substrate runtime support
+templates:
+  - deployment.yaml
+  - rbac/clusterrole.yaml
+  - rbac/substrate-rbac.yaml
+  - substrate-ingress-proxy.yaml
+
+tests:
+  - it: should not render substrate args or RBAC by default
+    asserts:
+      - template: rbac/substrate-rbac.yaml
+        hasDocuments:
+          count: 0
+      - template: substrate-ingress-proxy.yaml
+        hasDocuments:
+          count: 0
+      - template: deployment.yaml
+        notContains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ate-api-endpoint=dns:///api.ate-system.svc:443
+      - template: rbac/clusterrole.yaml
+        notContains:
+          path: rules
+          content:
+            apiGroups:
+              - ate.dev
+            resources:
+              - workerpools
+            verbs:
+              - get
+              - list
+              - watch
+
+  - it: should fail when enabled without an ate-api endpoint
+    template: deployment.yaml
+    set:
+      substrate.enabled: true
+      substrate.ateApiEndpoint: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: substrate.ateApiEndpoint is required when substrate.enabled is true
+
+  - it: should render substrate controller args when enabled
+    template: deployment.yaml
+    set:
+      substrate.enabled: true
+      substrate.ateApiInsecure: true
+      substrate.defaultWorkerPool.namespace: ate-pools
+      substrate.defaultWorkerPool.name: mcp-pool
+      substrate.snapshots.locationPrefix: s3://ate-snapshots
+      substrate.runsc.amd64.url: gs://gvisor/releases/nightly/2026-05-19/x86_64/runsc
+      substrate.runsc.amd64.sha256: abc123
+      substrate.ingress.mode: none
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ate-api-endpoint=dns:///api.ate-system.svc:443
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ate-api-insecure
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-default-workerpool-namespace=ate-pools
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-default-workerpool-name=mcp-pool
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-snapshots-location-prefix=s3://ate-snapshots
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-runsc-amd64-url=gs://gvisor/releases/nightly/2026-05-19/x86_64/runsc
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-runsc-amd64-sha256=abc123
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-mode=none
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-proxy-namespace=NAMESPACE
+
+  - it: should render the shared ingress proxy in managed-proxy mode
+    release:
+      namespace: kmcp-system
+    set:
+      substrate.enabled: true
+    asserts:
+      - template: substrate-ingress-proxy.yaml
+        hasDocuments:
+          count: 1
+      - template: substrate-ingress-proxy.yaml
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-substrate-ingress-proxy
+      - template: substrate-ingress-proxy.yaml
+        equal:
+          path: spec.template.metadata.labels["kmcp.kagent.dev/role"]
+          value: substrate-ingress-proxy
+      - template: substrate-ingress-proxy.yaml
+        equal:
+          path: spec.template.spec.volumes[0].configMap.name
+          value: RELEASE-NAME-substrate-ingress-proxy
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-mode=managed-proxy
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-proxy-namespace=kmcp-system
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-proxy-configmap=RELEASE-NAME-substrate-ingress-proxy
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].args
+          content: --substrate-ingress-proxy-port=8080
+
+  - it: should skip the proxy in none mode
+    set:
+      substrate.enabled: true
+      substrate.ingress.mode: none
+    asserts:
+      - template: substrate-ingress-proxy.yaml
+        hasDocuments:
+          count: 0
+
+  - it: should fail on gateway-api mode until it is implemented
+    template: deployment.yaml
+    set:
+      substrate.enabled: true
+      substrate.ingress.mode: gateway-api
+    asserts:
+      - failedTemplate:
+          errorMessage: substrate.ingress.mode=gateway-api is not implemented yet; use managed-proxy or none
+
+  - it: should add pod and endpointslice rules to the cluster role when enabled
+    template: rbac/clusterrole.yaml
+    set:
+      substrate.enabled: true
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - discovery.k8s.io
+            resources:
+              - endpointslices
+            verbs:
+              - create
+              - delete
+              - get
+              - list
+              - patch
+              - update
+              - watch
+
+  - it: should add ate.dev rules to the cluster role when enabled
+    template: rbac/clusterrole.yaml
+    set:
+      substrate.enabled: true
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - ate.dev
+            resources:
+              - workerpools
+            verbs:
+              - get
+              - list
+              - watch
+
+  - it: should grant ate-api access to env source namespaces
+    template: rbac/substrate-rbac.yaml
+    release:
+      namespace: kmcp-system
+    set:
+      substrate.enabled: true
+      substrate.envSourceNamespaces:
+        - team-a
+        - team-b
+    asserts:
+      - hasDocuments:
+          count: 4
+      - documentIndex: 0
+        equal:
+          path: metadata.namespace
+          value: team-a
+      - documentIndex: 1
+        equal:
+          path: subjects[0].name
+          value: ate-api-server
+      - documentIndex: 1
+        equal:
+          path: subjects[0].namespace
+          value: ate-system
+
+  - it: should default env source namespaces to the release namespace
+    template: rbac/substrate-rbac.yaml
+    release:
+      namespace: kmcp-system
+    set:
+      substrate.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentIndex: 0
+        equal:
+          path: metadata.namespace
+          value: kmcp-system
+
+  - it: should grant workerpool access outside watched namespaces in namespaced mode
+    template: rbac/substrate-rbac.yaml
+    release:
+      namespace: kmcp-system
+    set:
+      rbac.namespaces:
+        - kmcp-system
+      substrate.enabled: true
+      substrate.defaultWorkerPool.namespace: ate-pools
+      substrate.defaultWorkerPool.name: mcp-pool
+    asserts:
+      - hasDocuments:
+          count: 4
+      - documentIndex: 2
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-workerpool-reader
+      - documentIndex: 2
+        equal:
+          path: metadata.namespace
+          value: ate-pools

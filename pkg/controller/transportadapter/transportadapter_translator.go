@@ -27,6 +27,10 @@ const (
 	transportAdapterRepository     = "ghcr.io/agentgateway/agentgateway"
 	defaultTransportAdapterVersion = "0.9.0"
 	kgatewayMcpAppProtocol         = "kgateway.dev/mcp"
+	binaryVolumeName               = "binary"
+	configVolumeName               = "config"
+	appNameLabel                   = "app.kubernetes.io/name"
+	appInstanceLabel               = "app.kubernetes.io/instance"
 )
 
 // versionRegex validates that version strings contain only allowed characters
@@ -188,7 +192,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					"/adapterbin/agentgateway",
 				},
 				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "binary",
+					Name:      binaryVolumeName,
 					MountPath: "/adapterbin",
 				}},
 				Resources:       initContainerResources,
@@ -210,11 +214,11 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				Resources: mainContainerResources,
 				VolumeMounts: append([]corev1.VolumeMount{
 					{
-						Name:      "config",
+						Name:      configVolumeName,
 						MountPath: "/config",
 					},
 					{
-						Name:      "binary",
+						Name:      binaryVolumeName,
 						MountPath: "/adapterbin",
 					},
 				}, volumeMounts...),
@@ -222,7 +226,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
-					Name: "config",
+					Name: configVolumeName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
 							LocalObjectReference: corev1.LocalObjectReference{
@@ -232,7 +236,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					},
 				},
 				{
-					Name: "binary",
+					Name: binaryVolumeName,
 					VolumeSource: corev1.VolumeSource{
 						EmptyDir: &corev1.EmptyDirVolumeSource{}, // EmptyDir for the binary
 					},
@@ -263,7 +267,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 					Resources:       mainContainerResources,
 					VolumeMounts: append([]corev1.VolumeMount{
 						{
-							Name:      "config",
+							Name:      configVolumeName,
 							MountPath: "/config",
 						},
 					}, volumeMounts...),
@@ -271,7 +275,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 				}}, server.Spec.Deployment.Sidecars...),
 			Volumes: append([]corev1.Volume{
 				{
-					Name: "config",
+					Name: configVolumeName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
 							LocalObjectReference: corev1.LocalObjectReference{
@@ -286,8 +290,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 
 	// Prepare pod template labels (merge defaults with custom labels)
 	podLabels := map[string]string{
-		"app.kubernetes.io/name":       server.Name,
-		"app.kubernetes.io/instance":   server.Name,
+		appNameLabel:                   server.Name,
+		appInstanceLabel:               server.Name,
 		"app.kubernetes.io/managed-by": "kmcp",
 	}
 	for k, v := range server.Spec.Deployment.Labels {
@@ -322,8 +326,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/name":     server.Name,
-					"app.kubernetes.io/instance": server.Name,
+					appNameLabel:     server.Name,
+					appInstanceLabel: server.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -521,8 +525,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterService(
 				AppProtocol: appProtocol,
 			}},
 			Selector: map[string]string{
-				"app.kubernetes.io/name":     server.Name,
-				"app.kubernetes.io/instance": server.Name,
+				appNameLabel:     server.Name,
+				appInstanceLabel: server.Name,
 			},
 		},
 	}

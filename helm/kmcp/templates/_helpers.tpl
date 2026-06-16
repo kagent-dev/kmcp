@@ -102,5 +102,101 @@ Create controller manager container args
 {{- $namespaces := .Values.rbac.namespaces | uniq }}
 {{- $args = append $args (printf "--watch-namespaces=%s" (join "," $namespaces)) }}
 {{- end }}
+{{- if .Values.substrate.enabled }}
+{{- $s := .Values.substrate }}
+{{- if not $s.ateApiEndpoint }}
+{{- fail "substrate.ateApiEndpoint is required when substrate.enabled is true" }}
+{{- end }}
+{{- $args = append $args (printf "--substrate-ate-api-endpoint=%s" $s.ateApiEndpoint) }}
+{{- if $s.ateApiInsecure }}
+{{- $args = append $args "--substrate-ate-api-insecure" }}
+{{- end }}
+{{- with $s.atenetRouterURL }}
+{{- $args = append $args (printf "--substrate-atenet-router-url=%s" .) }}
+{{- end }}
+{{- with $s.actorHostSuffix }}
+{{- $args = append $args (printf "--substrate-actor-host-suffix=%s" .) }}
+{{- end }}
+{{- with $s.defaultWorkerPool.namespace }}
+{{- $args = append $args (printf "--substrate-default-workerpool-namespace=%s" .) }}
+{{- end }}
+{{- with $s.defaultWorkerPool.name }}
+{{- $args = append $args (printf "--substrate-default-workerpool-name=%s" .) }}
+{{- end }}
+{{- with $s.snapshots.locationPrefix }}
+{{- $args = append $args (printf "--substrate-snapshots-location-prefix=%s" .) }}
+{{- end }}
+{{- with $s.pauseImage }}
+{{- $args = append $args (printf "--substrate-pause-image=%s" .) }}
+{{- end }}
+{{- with $s.runsc.amd64.url }}
+{{- $args = append $args (printf "--substrate-runsc-amd64-url=%s" .) }}
+{{- end }}
+{{- with $s.runsc.amd64.sha256 }}
+{{- $args = append $args (printf "--substrate-runsc-amd64-sha256=%s" .) }}
+{{- end }}
+{{- with $s.runsc.arm64.url }}
+{{- $args = append $args (printf "--substrate-runsc-arm64-url=%s" .) }}
+{{- end }}
+{{- with $s.runsc.arm64.sha256 }}
+{{- $args = append $args (printf "--substrate-runsc-arm64-sha256=%s" .) }}
+{{- end }}
+{{- with $s.adapterBinary.amd64.url }}
+{{- $args = append $args (printf "--substrate-adapter-amd64-url=%s" .) }}
+{{- end }}
+{{- with $s.adapterBinary.amd64.sha256 }}
+{{- $args = append $args (printf "--substrate-adapter-amd64-sha256=%s" .) }}
+{{- end }}
+{{- with $s.adapterBinary.arm64.url }}
+{{- $args = append $args (printf "--substrate-adapter-arm64-url=%s" .) }}
+{{- end }}
+{{- with $s.adapterBinary.arm64.sha256 }}
+{{- $args = append $args (printf "--substrate-adapter-arm64-sha256=%s" .) }}
+{{- end }}
+{{- include "kmcp.substrate.ingress.validate" . }}
+{{- $args = append $args (printf "--substrate-ingress-mode=%s" $s.ingress.mode) }}
+{{- if eq $s.ingress.mode "managed-proxy" }}
+{{- $args = append $args (printf "--substrate-ingress-proxy-namespace=%s" (include "kmcp.namespace" .)) }}
+{{- $args = append $args (printf "--substrate-ingress-proxy-configmap=%s" (include "kmcp.substrate.proxyConfigMapName" .)) }}
+{{- $args = append $args (printf "--substrate-ingress-proxy-port=%d" (int $s.ingress.proxy.port)) }}
+{{- end }}
+{{- end }}
 {{- toYaml $args }}
-{{- end }} 
+{{- end }}
+
+{{/*
+Guards on the substrate.ingress block
+*/}}
+{{- define "kmcp.substrate.ingress.validate" -}}
+{{- $mode := .Values.substrate.ingress.mode -}}
+{{- if eq $mode "gateway-api" -}}
+{{- fail "substrate.ingress.mode=gateway-api is not implemented yet; use managed-proxy or none" -}}
+{{- else if not (has $mode (list "managed-proxy" "none")) -}}
+{{- fail (printf "invalid substrate.ingress.mode %q (supported: managed-proxy, none)" $mode) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Names of the shared substrate ingress proxy objects
+*/}}
+{{- define "kmcp.substrate.proxyName" -}}
+{{- printf "%s-substrate-ingress-proxy" (include "kmcp.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "kmcp.substrate.proxyConfigMapName" -}}
+{{- include "kmcp.substrate.proxyName" . -}}
+{{- end -}}
+
+{{/*
+Namespaces in which the substrate ate-api server may read Secrets/ConfigMaps
+referenced by generated ActorTemplates. Comma-separated.
+*/}}
+{{- define "kmcp.substrate.envSourceNamespaces" -}}
+{{- if .Values.substrate.envSourceNamespaces -}}
+{{- join "," (.Values.substrate.envSourceNamespaces | uniq | sortAlpha) -}}
+{{- else if and .Values.rbac .Values.rbac.namespaces -}}
+{{- join "," (.Values.rbac.namespaces | uniq | sortAlpha) -}}
+{{- else -}}
+{{- include "kmcp.namespace" . -}}
+{{- end -}}
+{{- end }}

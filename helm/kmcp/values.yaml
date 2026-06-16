@@ -108,3 +108,112 @@ service:
   type: ClusterIP
   port: 8443
   targetPort: 8443
+
+# Agent Substrate runtime support (serverless MCPServers).
+# Disabled by default; requires substrate (https://github.com/agent-substrate/substrate)
+# to be installed in the cluster.
+substrate:
+  # Enable substrate runtime support. When enabled, MCPServers with
+  # spec.runtime=substrate are provisioned as scale-to-zero substrate actors.
+  enabled: false
+
+  # gRPC endpoint of the substrate ate-api server. Required when enabled.
+  ateApiEndpoint: "dns:///api.ate-system.svc:443"
+
+  # Skip TLS verification for ate-api (kind/local installs use pod-issued certs).
+  ateApiInsecure: false
+
+  # URL of the atenet router that fronts actors (published in MCPServer status
+  # and targeted by the ingress proxy). Defaults to the controller's built-in
+  # (http://atenet-router.ate-system.svc:80).
+  atenetRouterURL: ""
+
+  # DNS suffix the atenet router matches actor Host headers against.
+  # Defaults to the controller's built-in (actors.resources.substrate.ate.dev).
+  actorHostSuffix: ""
+
+  # Identity of the ate-api server, used to grant it read access to Secrets
+  # referenced by generated ActorTemplates (env secretKeyRef resolution).
+  ateApiServer:
+    namespace: ate-system
+    serviceAccount: ate-api-server
+
+  # WorkerPool used when an MCPServer does not reference one explicitly.
+  defaultWorkerPool:
+    namespace: ""
+    name: ""
+
+  # Object-storage prefix for actor snapshots; the per-server default is
+  # <locationPrefix>/<namespace>/<name>. Use s3://... for kind/rustfs installs.
+  snapshots:
+    locationPrefix: ""
+
+  # Digest-pinned pause image for the actor's root sandbox container.
+  # Defaults to the controller's built-in (registry.k8s.io pause image).
+  pauseImage: ""
+
+  # gVisor runsc binaries fetched by substrate's atelet.
+  runsc:
+    amd64:
+      url: ""
+      sha256: ""
+    arm64:
+      url: ""
+      sha256: ""
+
+  # agentgateway binary downloaded by the actor bootstrap script when the
+  # workload image does not bundle it at /usr/local/bin/agentgateway.
+  adapterBinary:
+    amd64:
+      url: ""
+      sha256: ""
+    arm64:
+      url: ""
+      sha256: ""
+
+  # How substrate MCPServers are exposed to in-cluster clients. Every mode
+  # preserves the MCPServer status.substrate routing coordinates.
+  ingress:
+    # managed-proxy: the chart ships one shared agentgateway Deployment; the
+    #   controller routes every substrate MCPServer's Service through it, so
+    #   clients keep the normal http://<name>.<namespace>.svc:<port>/mcp URL.
+    # gateway-api: reserved — the controller will create HTTPRoutes attached
+    #   to gatewayRef instead of shipping a proxy (not implemented yet).
+    # none: no ingress objects; an embedding platform reaches actors directly
+    #   using the MCPServer status.substrate fields.
+    mode: managed-proxy
+
+    # Gateway the per-MCPServer HTTPRoutes attach to in gateway-api mode.
+    gatewayRef:
+      name: ""
+      namespace: ""
+
+    # The shared ingress proxy Deployment (managed-proxy mode only).
+    proxy:
+      # agentgateway image for the proxy.
+      image: ghcr.io/agentgateway/agentgateway:0.9.0-musl
+      # The proxy is stateless; run at least 2 replicas for availability.
+      replicas: 2
+      # Single listen port; MCPServers are told apart by Host header, and each
+      # server's Service remaps its own port onto this one.
+      port: 8080
+      resources:
+        limits:
+          cpu: 500m
+          memory: 256Mi
+        requests:
+          cpu: 10m
+          memory: 64Mi
+      # The agentgateway image declares no USER, so run it as an explicit
+      # non-root UID.
+      podSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+
+  # Namespaces in which the ate-api server is granted read access to Secrets
+  # and ConfigMaps (for resolving ActorTemplate env secretKeyRefs).
+  # Defaults to rbac.namespaces when set, otherwise the release namespace.
+  envSourceNamespaces: []

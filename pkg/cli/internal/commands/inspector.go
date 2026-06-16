@@ -38,7 +38,7 @@ func createMCPInspectorConfig(serverName string, serverConfig map[string]interfa
 	}
 
 	// Check if this is a streamable-http configuration and notify user
-	if serverConfig["type"] == "streamable-http" {
+	if serverConfig["type"] == transportStreamableHTTP {
 		fmt.Println("\nNOTE: Due to a known issue with the MCP Inspector, you will need to")
 		fmt.Println("manually configure the connection in the UI:")
 		fmt.Println("1. Set Transport Type to 'Streamable HTTP'")

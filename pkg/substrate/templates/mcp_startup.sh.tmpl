@@ -1,0 +1,36 @@
+set -e
+
+AGW=/usr/local/bin/agentgateway
+if [ ! -x "$AGW" ]; then
+  case "$(uname -m)" in
+    x86_64)  AGW_URL='{{.AMD64URL}}'; AGW_SHA='{{.AMD64SHA256}}' ;;
+    aarch64) AGW_URL='{{.ARM64URL}}'; AGW_SHA='{{.ARM64SHA256}}' ;;
+    *) echo "kmcp bootstrap: unsupported architecture $(uname -m)" >&2; exit 1 ;;
+  esac
+  if [ -z "$AGW_URL" ]; then
+    echo "kmcp bootstrap: no agentgateway binary at $AGW and no download URL configured" >&2
+    exit 1
+  fi
+  mkdir -p /usr/local/bin
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$AGW_URL" -o "$AGW"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "$AGW" "$AGW_URL"
+  else
+    echo "kmcp bootstrap: neither curl nor wget available to download agentgateway" >&2
+    exit 1
+  fi
+  if [ -n "$AGW_SHA" ]; then
+    echo "$AGW_SHA  $AGW" | sha256sum -c - >/dev/null
+  fi
+  chmod +x "$AGW"
+fi
+
+mkdir -p /etc/kmcp
+echo '{{.LocalConfigBase64}}' | base64 -d > /etc/kmcp/local.yaml
+{{- if .BackgroundCmd}}
+
+{{.BackgroundCmd}} &
+{{- end}}
+
+exec "$AGW" -f /etc/kmcp/local.yaml

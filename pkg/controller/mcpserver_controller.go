@@ -37,6 +37,11 @@ import (
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 )
 
+const (
+	cmdNPX = "npx"
+	cmdUVX = "uvx"
+)
+
 // MCPServerReconciler reconciles a MCPServer object
 type MCPServerReconciler struct {
 	client.Client
@@ -69,6 +74,11 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err := r.Get(ctx, req.NamespacedName, mcpServer); err != nil {
 		// If the resource is not found, we can ignore the error since it will be requeued later
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Substrate-runtime MCPServers are reconciled by the substrate controller.
+	if effectiveRuntime(mcpServer) != kagentdevv1alpha1.MCPServerRuntimeKubernetes {
+		return ctrl.Result{}, nil
 	}
 
 	t := transportadapter.NewTransportAdapterTranslator(r.Scheme, r.Plugins)
@@ -104,6 +114,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *MCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kagentdevv1alpha1.MCPServer{}, builder.WithPredicates(
+			mcpServerRuntimePredicate(kagentdevv1alpha1.MCPServerRuntimeKubernetes),
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
 				predicate.LabelChangedPredicate{},
@@ -215,7 +226,7 @@ func (r *MCPServerReconciler) validateMCPServer(server *kagentdevv1alpha1.MCPSer
 	// Check if required fields are present
 	// Allow empty image if command is npx or uvx (default images will be injected)
 	if server.Spec.Deployment.Image == "" {
-		if server.Spec.Deployment.Cmd != "npx" && server.Spec.Deployment.Cmd != "uvx" {
+		if server.Spec.Deployment.Cmd != cmdNPX && server.Spec.Deployment.Cmd != cmdUVX {
 			return fmt.Errorf("deployment.image is required when command is not 'npx' or 'uvx'")
 		}
 	}

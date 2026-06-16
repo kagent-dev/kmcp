@@ -168,12 +168,14 @@ type QueryValueMatch struct {
 type RouteBackend struct {
 	Weight  int             `json:"weight" yaml:"weight"`
 	Service *ServiceBackend `json:"service,omitempty" yaml:"service,omitempty"`
-	Opaque  *Target         `json:"opaque,omitempty" yaml:"opaque,omitempty"`
-	Dynamic *struct{}       `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
-	MCP     *MCPBackend     `json:"mcp,omitempty" yaml:"mcp,omitempty"`
-	AI      *AIBackend      `json:"ai,omitempty" yaml:"ai,omitempty"`
-	Invalid bool            `json:"invalid,omitempty" yaml:"invalid,omitempty"`
-	Filters []RouteFilter   `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// Host is an opaque backend target serialized as "host:port"
+	// (LocalBackend::Opaque(Target) in the Rust types).
+	Host    string        `json:"host,omitempty" yaml:"host,omitempty"`
+	Dynamic *struct{}     `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
+	MCP     *MCPBackend   `json:"mcp,omitempty" yaml:"mcp,omitempty"`
+	AI      *AIBackend    `json:"ai,omitempty" yaml:"ai,omitempty"`
+	Invalid bool          `json:"invalid,omitempty" yaml:"invalid,omitempty"`
+	Filters []RouteFilter `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // TCPRouteBackend represents a TCP route backend
@@ -211,8 +213,10 @@ type MCPBackend struct {
 
 // MCPTarget represents an MCP target
 type MCPTarget struct {
-	Name    string             `json:"name" yaml:"name"`
-	SSE     *SSETargetSpec     `json:"sse,omitempty" yaml:"sse,omitempty"`
+	Name string         `json:"name" yaml:"name"`
+	SSE  *SSETargetSpec `json:"sse,omitempty" yaml:"sse,omitempty"`
+	// MCP is a streamable HTTP target (same backend shape as SSE).
+	MCP     *SSETargetSpec     `json:"mcp,omitempty" yaml:"mcp,omitempty"`
 	Stdio   *StdioTargetSpec   `json:"stdio,omitempty" yaml:"stdio,omitempty"`
 	OpenAPI *OpenAPITargetSpec `json:"openapi,omitempty" yaml:"openapi,omitempty"`
 	Filters []interface{}      `json:"filters,omitempty" yaml:"filters,omitempty"` // Skipped complex type

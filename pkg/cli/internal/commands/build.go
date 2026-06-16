@@ -102,7 +102,8 @@ func runBuild(_ *cobra.Command, _ []string) error {
 	}
 	if buildKindLoad || buildKindLoadCluster != "" {
 		fmt.Printf("Loading Docker image %s into kind cluster...\n", imageName)
-		kindArgs := []string{"load", "docker-image", imageName}
+		kindArgs := make([]string, 0, 5)
+		kindArgs = append(kindArgs, "load", "docker-image", imageName)
 		clusterName := buildKindLoadCluster
 		if clusterName == "" {
 			var err error

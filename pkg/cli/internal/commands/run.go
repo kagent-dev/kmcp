@@ -11,8 +11,14 @@ import (
 	"github.com/kagent-dev/kmcp/pkg/cli/internal/manifest"
 )
 
+const (
+	runCmdName       = "run"
+	configKeyCommand = "command"
+	configKeyArgs    = "args"
+)
+
 var runCmd = &cobra.Command{
-	Use:   "run",
+	Use:   runCmdName,
 	Short: "Run MCP server locally",
 	Long: `Run an MCP server locally using the Model Context Protocol inspector.
 
@@ -123,7 +129,7 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
 		fmt.Printf("Press Ctrl+C to stop the server\n")
 
-		serverCmd := exec.Command("uv", "run", "python", "src/main.py")
+		serverCmd := exec.Command("uv", runCmdName, pythonCommand, pythonEntrypoint)
 		serverCmd.Dir = projectDir
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -133,8 +139,8 @@ func runFastMCPPython(projectDir string, manifest *manifest.ProjectManifest) err
 
 	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
-		"command": "uv",
-		"args":    []string{"run", "python", "src/main.py"},
+		configKeyCommand: "uv",
+		configKeyArgs:    []string{runCmdName, pythonCommand, pythonEntrypoint},
 	}
 
 	// Create MCP inspector config
@@ -172,7 +178,7 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 		fmt.Printf("Server is running and waiting for MCP protocol input on stdin...\n")
 		fmt.Printf("Press Ctrl+C to stop the server\n")
 
-		serverCmd := exec.Command("go", "run", "cmd/server/main.go")
+		serverCmd := exec.Command("go", runCmdName, "cmd/server/main.go")
 		serverCmd.Dir = projectDir
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -182,8 +188,8 @@ func runMCPGo(projectDir string, manifest *manifest.ProjectManifest) error {
 
 	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
-		"command": "go",
-		"args":    []string{"run", "cmd/server/main.go"},
+		configKeyCommand: "go",
+		configKeyArgs:    []string{runCmdName, "cmd/server/main.go"},
 	}
 
 	// Create MCP inspector config
@@ -278,8 +284,8 @@ func runTypeScript(projectDir string, manifest *manifest.ProjectManifest) error 
 
 	// Create server configuration for inspector
 	serverConfig := map[string]interface{}{
-		"command": "npx",
-		"args":    []string{"tsx", "src/index.ts"},
+		configKeyCommand: "npx",
+		configKeyArgs:    []string{"tsx", "src/index.ts"},
 	}
 
 	// Create MCP inspector config
@@ -345,13 +351,13 @@ func runJava(projectDir string, manifest *manifest.ProjectManifest) error {
 	var serverConfig map[string]interface{}
 	if runTransport == transportHTTP {
 		serverConfig = map[string]interface{}{
-			"type": "streamable-http",
+			"type": transportStreamableHTTP,
 			"url":  "http://localhost:3000/mcp",
 		}
 	} else {
 		serverConfig = map[string]interface{}{
-			"command": "mvn",
-			"args":    mavenArgs,
+			configKeyCommand: "mvn",
+			configKeyArgs:    mavenArgs,
 		}
 	}
 

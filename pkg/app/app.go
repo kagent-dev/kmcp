@@ -17,16 +17,21 @@ limitations under the License.
 package app
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
 	"path/filepath"
 	"strings"
 
+	atev1alpha1 "github.com/agent-substrate/substrate/api/v1alpha1"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -43,6 +48,7 @@ import (
 	kagentdevv1alpha1 "github.com/kagent-dev/kmcp/api/v1alpha1"
 	"github.com/kagent-dev/kmcp/pkg/controller"
 	"github.com/kagent-dev/kmcp/pkg/controller/transportadapter"
+	"github.com/kagent-dev/kmcp/pkg/substrate"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -77,6 +83,7 @@ type Config struct {
 	SecureMetrics   bool
 	EnableHTTP2     bool
 	WatchNamespaces string
+	Substrate       SubstrateConfig
 }
 
 func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
@@ -114,6 +121,7 @@ func (cfg *Config) SetFlags(commandLine *flag.FlagSet) {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	commandLine.StringVar(&cfg.WatchNamespaces, "watch-namespaces", "",
 		"Comma-separated list of namespaces the controller watches. If empty, watches all namespaces.")
+	cfg.Substrate.SetFlags(commandLine)
 }
 
 // PluginFactory creates a TranslatorPlugin when provided with the client and scheme.
@@ -278,11 +286,34 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		}
 	}
 
+	// Substrate types are only registered (and the substrate controller only
+	// runs) when an ate-api endpoint is configured, so default installs do
+	// not require the ate.dev CRDs.
+	if cfg.Substrate.Enabled() {
+		utilruntime.Must(atev1alpha1.AddToScheme(scheme))
+	}
+
 	watchNamespacesList := filterValidNamespaces(strings.Split(cfg.WatchNamespaces, ","))
 	if len(watchNamespacesList) > 0 {
 		setupLog.Info("watching specific namespaces", "namespaces", watchNamespacesList)
 	} else {
 		setupLog.Info("watching all namespaces")
+	}
+
+	cacheOptions := cache.Options{
+		DefaultNamespaces: configureNamespaceWatching(watchNamespacesList),
+	}
+	if cfg.Substrate.Enabled() {
+		// The substrate controller only reads the shared ingress proxy pods
+		// (to publish their IPs in per-server EndpointSlices); scope the pod
+		// cache to that label so it does not hold every pod in the cluster.
+		cacheOptions.ByObject = map[client.Object]cache.ByObject{
+			&corev1.Pod{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					substrate.RoleLabelKey: substrate.RoleIngressProxy,
+				}),
+			},
+		}
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -292,9 +323,7 @@ func Start(getExtensionConfig GetExtensionConfig) {
 		HealthProbeBindAddress: cfg.ProbeAddr,
 		LeaderElection:         cfg.LeaderElection,
 		LeaderElectionID:       "90217b08.kagent.dev",
-		Cache: cache.Options{
-			DefaultNamespaces: configureNamespaceWatching(watchNamespacesList),
-		},
+		Cache:                  cacheOptions,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -325,6 +354,16 @@ func Start(getExtensionConfig GetExtensionConfig) {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MCPServer")
 		os.Exit(1)
+	}
+
+	if cfg.Substrate.Enabled() {
+		setupLog.Info("substrate runtime support enabled",
+			"ateApiEndpoint", cfg.Substrate.AteAPIEndpoint,
+			"ingressMode", cfg.Substrate.IngressMode)
+		if err := setupSubstrateController(context.Background(), mgr, &cfg.Substrate); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "MCPServerSubstrate")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 

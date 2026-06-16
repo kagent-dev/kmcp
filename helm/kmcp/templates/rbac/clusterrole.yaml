@@ -51,6 +51,62 @@
   - get
   - patch
   - update
+{{- if .Values.substrate.enabled }}
+- apiGroups:
+  - ate.dev
+  resources:
+  - actortemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ate.dev
+  resources:
+  - actortemplates/status
+  verbs:
+  - get
+- apiGroups:
+  - ate.dev
+  resources:
+  - workerpools
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- end }}
 {{- end -}}
 
 {{- if .Values.rbac.create }}

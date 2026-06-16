@@ -51,7 +51,7 @@ func (r *DefaultRegistry) ListTools() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	tools := make([]string, len(r.toolFactories))
+	tools := make([]string, 0, len(r.toolFactories))
 	for toolType := range r.toolFactories {
 		tools = append(tools, toolType)
 	}

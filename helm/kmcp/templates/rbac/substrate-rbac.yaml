@@ -1,0 +1,87 @@
+{{- if .Values.substrate.enabled }}
+{{/*
+Grant the substrate ate-api server read access to Secrets and ConfigMaps in
+the namespaces where MCPServers live: generated ActorTemplates reference
+Secrets via env secretKeyRef, which ate-api resolves at actor-create time.
+*/}}
+{{- $namespaces := splitList "," (include "kmcp.substrate.envSourceNamespaces" .) }}
+{{- $ateNs := .Values.substrate.ateApiServer.namespace | default "ate-system" }}
+{{- $ateSA := .Values.substrate.ateApiServer.serviceAccount | default "ate-api-server" }}
+{{- range $namespace := $namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kmcp.fullname" $ }}-ate-api-env-sources
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "kmcp.labels" $ | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kmcp.fullname" $ }}-ate-api-env-sources
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "kmcp.labels" $ | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $ateSA | quote }}
+  namespace: {{ $ateNs | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kmcp.fullname" $ }}-ate-api-env-sources
+{{- end }}
+{{/*
+In namespaced-RBAC mode the controller has no cluster-wide read access, so if
+the default WorkerPool lives outside rbac.namespaces, grant the controller
+read access to WorkerPools in that namespace.
+*/}}
+{{- if and .Values.rbac .Values.rbac.namespaces .Values.substrate.defaultWorkerPool.name }}
+{{- $wpNs := .Values.substrate.defaultWorkerPool.namespace | default (include "kmcp.namespace" .) }}
+{{- if not (has $wpNs .Values.rbac.namespaces) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kmcp.fullname" . }}-workerpool-reader
+  namespace: {{ $wpNs }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ate.dev
+  resources:
+  - workerpools
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kmcp.fullname" . }}-workerpool-reader
+  namespace: {{ $wpNs }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kmcp.serviceAccountName" . }}
+  namespace: {{ include "kmcp.namespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kmcp.fullname" . }}-workerpool-reader
+{{- end }}
+{{- end }}
+{{- end }}

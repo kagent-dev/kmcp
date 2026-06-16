@@ -46,7 +46,7 @@ func (s *Sanitizer) sanitizeValue(v reflect.Value) reflect.Value {
 		return s.sanitizeSlice(v)
 	case reflect.Struct:
 		return s.sanitizeStruct(v)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return v
 		}

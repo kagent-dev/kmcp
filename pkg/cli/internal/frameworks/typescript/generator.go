@@ -137,7 +137,7 @@ func (g *Generator) generateToolsContent(tools []string) string {
 
 	// Add import statements (named exports)
 	for _, tool := range tools {
-		content.WriteString(fmt.Sprintf("import { %s } from './tools/%s.js';\n", tool, tool))
+		fmt.Fprintf(&content, "import { %s } from './tools/%s.js';\n", tool, tool)
 	}
 
 	// Add empty line
@@ -149,7 +149,7 @@ func (g *Generator) generateToolsContent(tools []string) string {
 		if i > 0 {
 			content.WriteString(",\n")
 		}
-		content.WriteString(fmt.Sprintf("  %s", tool))
+		fmt.Fprintf(&content, "  %s", tool)
 	}
 	content.WriteString("\n];\n\n")
 

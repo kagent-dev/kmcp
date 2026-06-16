@@ -18,8 +18,12 @@ import (
 )
 
 const (
-	transportHTTP  = "http"
-	transportStdio = "stdio"
+	transportHTTP           = "http"
+	transportStdio          = "stdio"
+	transportStreamableHTTP = "streamable-http"
+	kmcpName                = "kmcp"
+	pythonCommand           = "python"
+	pythonEntrypoint        = "src/main.py"
 )
 
 var deployCmd = &cobra.Command{
@@ -452,8 +456,8 @@ func generateMCPServer(
 				"app.kubernetes.io/name":       deploymentName,
 				"app.kubernetes.io/instance":   deploymentName,
 				"app.kubernetes.io/component":  "mcp-server",
-				"app.kubernetes.io/part-of":    "kmcp",
-				"app.kubernetes.io/managed-by": "kmcp",
+				"app.kubernetes.io/part-of":    kmcpName,
+				"app.kubernetes.io/managed-by": kmcpName,
 				"kmcp.dev/framework":           projectManifest.Framework,
 				"kmcp.dev/version":             sanitizeLabelValue(projectManifest.Version),
 			},
@@ -522,7 +526,7 @@ func sanitizeLabelValue(value string) string {
 func getDefaultCommand(framework string) string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
-		return "python"
+		return pythonCommand
 	case manifest.FrameworkMCPGo:
 		return "./server"
 	case manifest.FrameworkTypeScript:
@@ -530,7 +534,7 @@ func getDefaultCommand(framework string) string {
 	case manifest.FrameworkJava:
 		return "java"
 	default:
-		return "python"
+		return pythonCommand
 	}
 }
 
@@ -538,9 +542,9 @@ func getDefaultArgs(framework string, targetPort int) []string {
 	switch framework {
 	case manifest.FrameworkFastMCPPython:
 		if deployTransport == transportHTTP {
-			return []string{"src/main.py", "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
+			return []string{pythonEntrypoint, "--transport", "http", "--host", "0.0.0.0", "--port", fmt.Sprintf("%d", targetPort)}
 		}
-		return []string{"src/main.py"}
+		return []string{pythonEntrypoint}
 	case manifest.FrameworkMCPGo:
 		return []string{}
 	case manifest.FrameworkTypeScript:
@@ -556,7 +560,7 @@ func getDefaultArgs(framework string, targetPort int) []string {
 		}
 		return []string{"-jar", "app.jar"}
 	default:
-		return []string{"src/main.py"}
+		return []string{pythonEntrypoint}
 	}
 }
 
@@ -604,7 +608,7 @@ func applyToCluster(projectDir, yamlContent string, mcpServer *v1alpha1.MCPServe
 			port = mcpServer.Spec.Deployment.Port
 		}
 		serverConfig := map[string]interface{}{
-			"type": "streamable-http",
+			"type": transportStreamableHTTP,
 			"url":  fmt.Sprintf("http://localhost:%d/mcp", port),
 		}
 		configPath = filepath.Join(projectDir, "mcp-server-config.json")

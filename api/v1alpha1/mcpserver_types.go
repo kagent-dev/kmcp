@@ -106,6 +106,38 @@ const (
 	// but should prefer to use the reasons listed above to improve
 	// interoperability.
 	MCPServerConditionReady MCPServerConditionType = "Ready"
+
+	// MCPServerConditionActorTemplateReady indicates that the generated
+	// ate.dev ActorTemplate has baked its golden snapshot and is ready to
+	// instantiate actors. Only set when runtime is substrate.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Ready"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "ActorTemplatePending"
+	// * "ActorTemplateFailed"
+	MCPServerConditionActorTemplateReady MCPServerConditionType = "ActorTemplateReady"
+
+	// MCPServerConditionActorReady indicates that the substrate actor backing
+	// this MCPServer exists and is routable through the atenet router. A
+	// suspended actor is considered ready: the router resumes it on demand
+	// when a request arrives. Only set when runtime is substrate.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "ActorRunning"
+	// * "ActorResuming"
+	// * "ActorSuspended"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "ActorNotCreated"
+	// * "ActorSuspending"
+	// * "ActorCreateFailed"
+	MCPServerConditionActorReady MCPServerConditionType = "ActorReady"
 )
 
 // MCPServerConditionReason represents the reasons for MCPServer conditions.
@@ -132,12 +164,56 @@ const (
 	MCPServerReasonPodsNotReady MCPServerConditionReason = "PodsNotReady"
 	MCPServerReasonAvailable    MCPServerConditionReason = "Available"
 	MCPServerReasonNotAvailable MCPServerConditionReason = "NotAvailable"
+
+	// Substrate runtime condition reasons
+	MCPServerReasonUnsupportedField     MCPServerConditionReason = "UnsupportedField"
+	MCPServerReasonImageNotPinned       MCPServerConditionReason = "ImageNotPinned"
+	MCPServerReasonWorkerPoolNotFound   MCPServerConditionReason = "WorkerPoolNotFound"
+	MCPServerReasonSecretNotFound       MCPServerConditionReason = "SecretNotFound"
+	MCPServerReasonActorTemplatePending MCPServerConditionReason = "ActorTemplatePending"
+	MCPServerReasonActorTemplateFailed  MCPServerConditionReason = "ActorTemplateFailed"
+	MCPServerReasonActorNotCreated      MCPServerConditionReason = "ActorNotCreated"
+	MCPServerReasonActorCreateFailed    MCPServerConditionReason = "ActorCreateFailed"
+	MCPServerReasonActorRunning         MCPServerConditionReason = "ActorRunning"
+	MCPServerReasonActorResuming        MCPServerConditionReason = "ActorResuming"
+	MCPServerReasonActorSuspended       MCPServerConditionReason = "ActorSuspended"
+	MCPServerReasonActorSuspending      MCPServerConditionReason = "ActorSuspending"
+	MCPServerReasonActorDeleting        MCPServerConditionReason = "ActorDeleting"
+	MCPServerReasonDeleteTimeout        MCPServerConditionReason = "DeleteTimeout"
+)
+
+// MCPServerRuntime selects the provisioning stack for the MCP server workload.
+// +kubebuilder:validation:Enum=kubernetes;substrate
+type MCPServerRuntime string
+
+const (
+	// MCPServerRuntimeKubernetes provisions the MCP server as a standard
+	// Kubernetes Deployment + Service. This is the default.
+	MCPServerRuntimeKubernetes MCPServerRuntime = "kubernetes"
+
+	// MCPServerRuntimeSubstrate provisions the MCP server as a serverless
+	// Agent Substrate actor (scale-to-zero with resume-on-request).
+	MCPServerRuntimeSubstrate MCPServerRuntime = "substrate"
 )
 
 // MCPServerSpec defines the desired state of MCPServer.
+// +kubebuilder:validation:XValidation:rule="!has(self.substrate) || (has(self.runtime) && self.runtime == 'substrate')",message="spec.substrate may only be set when runtime is substrate"
+// +kubebuilder:validation:XValidation:rule="!has(self.runtime) || self.runtime != 'substrate' || has(self.substrate)",message="spec.substrate is required when runtime is substrate"
+// +kubebuilder:validation:XValidation:rule="!has(self.runtime) || self.runtime != 'substrate' || (has(self.deployment.image) && self.deployment.image.contains('@'))",message="spec.deployment.image must be set and digest-pinned (e.g. @sha256:...) when runtime is substrate"
 type MCPServerSpec struct {
 	// Configuration to Deploy the MCP Server using a docker container
 	Deployment MCPServerDeployment `json:"deployment"`
+
+	// Runtime selects the provisioning stack for the MCP server workload.
+	// Defaults to kubernetes when unset.
+	// +optional
+	// +kubebuilder:default=kubernetes
+	Runtime MCPServerRuntime `json:"runtime,omitempty"`
+
+	// Substrate configures the Agent Substrate runtime.
+	// Required when runtime is substrate, and forbidden otherwise.
+	// +optional
+	Substrate *SubstrateSpec `json:"substrate,omitempty"`
 
 	// TransportType defines the type of mcp server being run
 	// +kubebuilder:validation:Enum=stdio;http
@@ -159,6 +235,31 @@ type MCPServerSpec struct {
 	// +optional
 	// +kubebuilder:default="30s"
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+}
+
+// SubstrateSnapshotsConfig points at an object-storage prefix for actor
+// memory snapshots.
+type SubstrateSnapshotsConfig struct {
+	// Location is the object-storage prefix to store actor snapshots in,
+	// e.g. gs://my-bucket/path or s3://my-bucket/path.
+	// +required
+	// +kubebuilder:validation:Pattern=`^(gs|s3)://`
+	Location string `json:"location"`
+}
+
+// SubstrateSpec configures the Agent Substrate runtime
+// (generated ate.dev ActorTemplate + actor).
+type SubstrateSpec struct {
+	// WorkerPoolRef references an existing ate.dev WorkerPool in the
+	// MCPServer's namespace that provides compute capacity for the actor.
+	// When unset, the controller uses its configured default WorkerPool.
+	// +optional
+	WorkerPoolRef *corev1.LocalObjectReference `json:"workerPoolRef,omitempty"`
+
+	// SnapshotsConfig configures where actor memory snapshots are stored.
+	// Defaults to <controller default prefix>/<namespace>/<name> when unset.
+	// +optional
+	SnapshotsConfig *SubstrateSnapshotsConfig `json:"snapshotsConfig,omitempty"`
 }
 
 // StdioTransport defines the configuration for a standard input/output transport.
@@ -219,6 +320,48 @@ type MCPServerStatus struct {
 	// It corresponds to the MCPServer's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Substrate publishes routing coordinates for the substrate actor backing
+	// this MCPServer. Only set when runtime is substrate. This is the contract
+	// consumed by any ingress in front of substrate (kmcp's optional ingress
+	// proxy, or an external proxy such as kagent's API server).
+	// +optional
+	Substrate *MCPServerSubstrateStatus `json:"substrate,omitempty"`
+}
+
+// MCPServerSubstrateStatus publishes routing coordinates for the substrate
+// actor backing an MCPServer.
+type MCPServerSubstrateStatus struct {
+	// ActorID is the substrate actor id (a DNS-1123 label),
+	// e.g. mcp-<namespace>-<name>.
+	// +optional
+	ActorID string `json:"actorID,omitempty"`
+
+	// ActorHost is the Host/:authority header value the atenet router uses to
+	// resume-then-route requests to the actor,
+	// e.g. <actorID>.actors.resources.substrate.ate.dev.
+	// +optional
+	ActorHost string `json:"actorHost,omitempty"`
+
+	// RouterURL is the atenet router base URL requests must be sent to with
+	// Host set to ActorHost, e.g. http://atenet-router.ate-system.svc:80.
+	// +optional
+	RouterURL string `json:"routerURL,omitempty"`
+
+	// MCPPath is the HTTP path MCP is served on through the router.
+	// +optional
+	MCPPath string `json:"mcpPath,omitempty"`
+
+	// ActorTemplateRef is the name of the generated ate.dev ActorTemplate in
+	// the MCPServer's namespace.
+	// +optional
+	ActorTemplateRef string `json:"actorTemplateRef,omitempty"`
+
+	// ProxyEndpoint is the in-cluster URL of the optional ingress proxy
+	// Service, e.g. http://<name>.<namespace>.svc:<port>/mcp.
+	// Empty when the ingress proxy is disabled.
+	// +optional
+	ProxyEndpoint string `json:"proxyEndpoint,omitempty"`
 }
 
 // MCPServerDeployment
@@ -399,6 +542,7 @@ type ServiceAccountConfig struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=mcps;mcp
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+// +kubebuilder:printcolumn:name="Runtime",type="string",JSONPath=".spec.runtime"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:categories=kagent
 

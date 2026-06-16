@@ -1,0 +1,89 @@
+{{- if and .Values.substrate.enabled (eq .Values.substrate.ingress.mode "managed-proxy") }}
+{{/*
+The shared substrate ingress proxy: one stateless agentgateway Deployment per
+installation that fronts every substrate MCPServer. The controller writes its
+routes into the mounted ConfigMap (one route block per MCPServer, rewriting
+the Host header to the actor hostname); agentgateway hot-reloads the file, so
+the proxy is never restarted for route changes. Each MCPServer's selector-less
+Service points at these pods through a controller-managed EndpointSlice — the
+controller finds the pods by the kmcp.kagent.dev/role label.
+
+The ConfigMap is created and owned by the controller, not the chart: chart
+upgrades must not reset the routes. Proxy pods stay pending until the
+controller has created it.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kmcp.substrate.proxyName" . }}
+  namespace: {{ include "kmcp.namespace" . }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: substrate-ingress-proxy
+spec:
+  replicas: {{ .Values.substrate.ingress.proxy.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "kmcp.substrate.proxyName" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kmcp.substrate.proxyName" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: substrate-ingress-proxy
+        kmcp.kagent.dev/role: substrate-ingress-proxy
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The agentgateway image has no USER directive, so an explicit non-root
+      # UID is required (the binary needs no root: it binds a high port and
+      # writes nothing).
+      securityContext:
+        {{- toYaml .Values.substrate.ingress.proxy.podSecurityContext | nindent 8 }}
+      containers:
+      - name: proxy
+        image: {{ .Values.substrate.ingress.proxy.image }}
+        args:
+        - -f
+        - /config/local.yaml
+        ports:
+        - containerPort: {{ .Values.substrate.ingress.proxy.port }}
+          name: http
+          protocol: TCP
+        # agentgateway's built-in readiness endpoint; readiness gates the pod
+        # IPs the controller publishes in the per-MCPServer EndpointSlices.
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+          initialDelaySeconds: 2
+          periodSeconds: 5
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        resources:
+          {{- toYaml .Values.substrate.ingress.proxy.resources | nindent 10 }}
+        volumeMounts:
+        # Mounted as a whole-ConfigMap volume on purpose: subPath mounts never
+        # receive ConfigMap updates, which would break route hot-reload.
+        - name: config
+          mountPath: /config
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "kmcp.substrate.proxyConfigMapName" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
