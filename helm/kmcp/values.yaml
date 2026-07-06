@@ -47,6 +47,12 @@ controller:
   
   env: []
 
+  # -- Additional annotations to add to the controller Deployment metadata
+  annotations: {}
+
+# -- Additional annotations to add to all Kubernetes deployment resources
+annotations: {}
+
 # Pod annotations
 podAnnotations: {}
 

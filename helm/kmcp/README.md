@@ -84,6 +84,15 @@ The following table lists the configurable parameters of the KMCP chart and thei
 | `securityContext.allowPrivilegeEscalation` | Allow privilege escalation | `false` |
 | `securityContext.capabilities.drop` | Capabilities to drop | `["ALL"]` |
 
+### Annotations Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `annotations` | Additional annotations applied to the Deployment `metadata.annotations` | `{}` |
+| `controller.annotations` | Controller-specific annotations that override `annotations` on key collision | `{}` |
+| `podAnnotations` | Annotations applied to the controller Pod template (`spec.template.metadata.annotations`) | `{}` |
+| `serviceAccount.annotations` | Annotations applied to the ServiceAccount resource | `{}` |
+
 ### Service Configuration
 
 | Parameter | Description | Default |
