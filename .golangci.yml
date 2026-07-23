@@ -25,16 +25,21 @@ linters:
     revive:
       rules:
         - name: comment-spacings
+issues:
+  exclude-rules:
+    - path: 'api/.*'
+      linters:
+        - lll
   exclusions:
     generated: lax
     rules:
       - linters:
           - lll
-        path: api/*
+        path: api/.*
       - linters:
           - dupl
           - lll
-        path: internal/*
+        path: internal/.*
     paths:
       - third_party$
       - builtin$
