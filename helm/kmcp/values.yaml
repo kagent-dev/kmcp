@@ -108,3 +108,8 @@ service:
   type: ClusterIP
   port: 8443
   targetPort: 8443
+
+# Transport adapter configuration
+transportAdapter:
+  # Override the default registry for the transport adapter image
+  registry: "ghcr.io/agentgateway"
