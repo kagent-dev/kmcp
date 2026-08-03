@@ -81,6 +81,9 @@ tolerations: []
 # Affinity
 affinity: {}
 
+# Topology Spread Constraints
+topologySpreadConstraints: []
+
 # Service account configuration
 serviceAccount:
   # Specifies whether a service account should be created
