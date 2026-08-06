@@ -84,6 +84,33 @@ The following table lists the configurable parameters of the KMCP chart and thei
 | `securityContext.allowPrivilegeEscalation` | Allow privilege escalation | `false` |
 | `securityContext.capabilities.drop` | Capabilities to drop | `["ALL"]` |
 
+### Pod Disruption Budget
+
+Creates a `PodDisruptionBudget` for the controller pods so that voluntary disruptions (node drains, cluster upgrades) keep a minimum number of replicas running. Disabled by default.
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `podDisruptionBudget.enabled` | Create a PodDisruptionBudget | `false` |
+| `podDisruptionBudget.minAvailable` | Minimum available pods, as an integer or percentage string | `1` |
+| `podDisruptionBudget.maxUnavailable` | Maximum unavailable pods, as an integer or percentage string | `""` |
+| `podDisruptionBudget.unhealthyPodEvictionPolicy` | `IfHealthyBudget` or `AlwaysAllow` | `""` (omitted) |
+| `podDisruptionBudget.annotations` | Extra annotations for the PodDisruptionBudget | `{}` |
+| `podDisruptionBudget.labels` | Extra labels for the PodDisruptionBudget | `{}` |
+
+Set exactly one of `minAvailable` and `maxUnavailable`; the chart rejects a configuration that sets both or neither.
+
+```bash
+helm install kmcp kmcp/kmcp \
+  --set controller.replicaCount=2 \
+  --set podDisruptionBudget.enabled=true \
+  --set podDisruptionBudget.minAvailable=1 \
+  --set podDisruptionBudget.maxUnavailable=""
+```
+
+**Note**: `minAvailable: 1` together with the default `controller.replicaCount: 1` blocks node drains, because evicting the only replica would breach the budget. Raise `controller.replicaCount` to at least 2 before enabling the budget. Leader election keeps a single controller active across the replicas.
+
+**Note**: The `policy/v1` API requires Kubernetes 1.21+, and `unhealthyPodEvictionPolicy` requires 1.27+ (beta) or 1.31+ (stable).
+
 ### Service Configuration
 
 | Parameter | Description | Default |
