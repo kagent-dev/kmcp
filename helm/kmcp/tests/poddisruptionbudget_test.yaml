@@ -1,0 +1,167 @@
+suite: Test poddisruptionbudget template
+templates:
+  - poddisruptionbudget.yaml
+
+tests:
+  - it: should not create a pdb by default
+    template: poddisruptionbudget.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create a pdb when disabled
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a pdb with minAvailable when enabled
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodDisruptionBudget
+      - isAPIVersion:
+          of: policy/v1
+      - equal:
+          path: spec.minAvailable
+          value: 1
+      - notExists:
+          path: spec.maxUnavailable
+      - matchSnapshot: {}
+
+  - it: should accept a percentage for minAvailable
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 50%
+      podDisruptionBudget.maxUnavailable: ""
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.minAvailable
+          value: 50%
+      - matchSnapshot: {}
+
+  - it: should create a pdb with maxUnavailable when enabled
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: ""
+      podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+      - notExists:
+          path: spec.minAvailable
+      - matchSnapshot: {}
+
+  - it: should select the controller manager pods
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["control-plane"]
+          value: controller-manager
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: kmcp
+
+  - it: should not render unhealthyPodEvictionPolicy by default
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+    asserts:
+      - notExists:
+          path: spec.unhealthyPodEvictionPolicy
+
+  - it: should render unhealthyPodEvictionPolicy when set
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+      podDisruptionBudget.unhealthyPodEvictionPolicy: AlwaysAllow
+    asserts:
+      - equal:
+          path: spec.unhealthyPodEvictionPolicy
+          value: AlwaysAllow
+      - matchSnapshot: {}
+
+  - it: should render custom labels and annotations
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+      podDisruptionBudget.labels:
+        custom-label: custom-value
+      podDisruptionBudget.annotations:
+        custom-annotation: annotation-value
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: custom-value
+      - equal:
+          path: metadata.annotations["custom-annotation"]
+          value: annotation-value
+      - matchSnapshot: {}
+
+  - it: should use the release namespace override
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+      namespaceOverride: custom-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-namespace
+
+  - it: should fail when both minAvailable and maxUnavailable are set
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: podDisruptionBudget.minAvailable and podDisruptionBudget.maxUnavailable are mutually exclusive. Set exactly one of them.
+
+  - it: should fail when neither minAvailable nor maxUnavailable is set
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: ""
+      podDisruptionBudget.maxUnavailable: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: podDisruptionBudget.enabled is true but neither podDisruptionBudget.minAvailable nor podDisruptionBudget.maxUnavailable is set. Set exactly one of them.
+
+  - it: should fail on an invalid unhealthyPodEvictionPolicy
+    template: poddisruptionbudget.yaml
+    set:
+      podDisruptionBudget.enabled: true
+      podDisruptionBudget.minAvailable: 1
+      podDisruptionBudget.maxUnavailable: ""
+      podDisruptionBudget.unhealthyPodEvictionPolicy: Whenever
+    asserts:
+      - failedTemplate:
+          errorMessage: podDisruptionBudget.unhealthyPodEvictionPolicy must be either "AlwaysAllow" or "IfHealthyBudget", got "Whenever"

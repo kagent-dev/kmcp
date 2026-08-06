@@ -47,6 +47,29 @@ controller:
   
   env: []
 
+# PodDisruptionBudget for the controller pods
+podDisruptionBudget:
+  # Specifies whether a PodDisruptionBudget should be created
+  enabled: false
+
+  # Exactly one of minAvailable / maxUnavailable must be set.
+  # Both accept an integer or a percentage string (e.g. 1 or "50%").
+  # Note: minAvailable: 1 combined with controller.replicaCount: 1 blocks
+  # voluntary node drains, so increase the replica count when enabling this.
+  minAvailable: 1
+  maxUnavailable: ""
+
+  # Eviction policy for unhealthy pods: "IfHealthyBudget" or "AlwaysAllow".
+  # Requires Kubernetes 1.27+ (beta) or 1.31+ (stable).
+  # Left out of the manifest when empty.
+  unhealthyPodEvictionPolicy: ""
+
+  # Extra annotations for the PodDisruptionBudget
+  annotations: {}
+
+  # Extra labels for the PodDisruptionBudget
+  labels: {}
+
 # Pod annotations
 podAnnotations: {}
 

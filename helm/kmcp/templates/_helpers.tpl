@@ -85,6 +85,38 @@ Guards on the rbac block
 {{- end -}}
 
 {{/*
+Report whether a PodDisruptionBudget field is set.
+Outputs "true" when the value is neither nil nor an empty string, otherwise the
+empty string. The integer 0 counts as set, so it is not silently dropped.
+Usage: {{ eq (include "kmcp.pdb.isSet" .Values.podDisruptionBudget.minAvailable) "true" }}
+*/}}
+{{- define "kmcp.pdb.isSet" -}}
+{{- if and (not (kindIs "invalid" .)) (ne (toString .) "") -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Guards on the podDisruptionBudget block
+*/}}
+{{- define "kmcp.pdb.validate" -}}
+{{- $pdb := .Values.podDisruptionBudget -}}
+{{- $hasMin := eq (include "kmcp.pdb.isSet" $pdb.minAvailable) "true" -}}
+{{- $hasMax := eq (include "kmcp.pdb.isSet" $pdb.maxUnavailable) "true" -}}
+{{- if and $hasMin $hasMax -}}
+{{- fail "podDisruptionBudget.minAvailable and podDisruptionBudget.maxUnavailable are mutually exclusive. Set exactly one of them." -}}
+{{- end -}}
+{{- if and (not $hasMin) (not $hasMax) -}}
+{{- fail "podDisruptionBudget.enabled is true but neither podDisruptionBudget.minAvailable nor podDisruptionBudget.maxUnavailable is set. Set exactly one of them." -}}
+{{- end -}}
+{{- if eq (include "kmcp.pdb.isSet" $pdb.unhealthyPodEvictionPolicy) "true" -}}
+{{- if not (has $pdb.unhealthyPodEvictionPolicy (list "AlwaysAllow" "IfHealthyBudget")) -}}
+{{- fail (printf "podDisruptionBudget.unhealthyPodEvictionPolicy must be either \"AlwaysAllow\" or \"IfHealthyBudget\", got %q" (toString $pdb.unhealthyPodEvictionPolicy)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create controller manager container args
 */}}
 {{- define "kmcp.controllerArgs" -}}
