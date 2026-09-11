@@ -1,0 +1,98 @@
+suite: Test global values
+templates:
+  - deployment.yaml
+  - rbac/clusterrole.yaml
+tests:
+  - it: should override the registry from global.imageRegistry
+    set:
+      global.imageRegistry: mirror.example
+    template: deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "^mirror\\.example/kagent-dev/kmcp/controller:"
+
+  - it: should let a local image.registry override the default
+    set:
+      image.registry: my.registry.example
+    template: deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "^my\\.registry\\.example/kagent-dev/kmcp/controller:"
+
+  - it: should render an unqualified image when registry is explicitly empty
+    set:
+      image.registry: ""
+      image.repository: test-repo
+      image.tag: v1.0.0
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: test-repo:v1.0.0
+
+  - it: should fail when repository carries a registry host (the old shape)
+    set:
+      image.repository: my.registry.example/platform/kmcp-controller
+    template: deployment.yaml
+    asserts:
+      - failedTemplate:
+          errorPattern: "carries a registry host"
+
+  - it: should merge global.imagePullSecrets with the local list
+    set:
+      imagePullSecrets:
+        - name: local
+      global.imagePullSecrets:
+        - name: shared
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: local
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: shared
+
+  - it: should fall back to global.imagePullPolicy when image.pullPolicy is unset
+    set:
+      global.imagePullPolicy: Always
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  - it: should render namespaced RBAC from global.watchNamespaces, install namespace appended
+    release:
+      namespace: kmcp-system
+    set:
+      global.watchNamespaces:
+        - team-a
+    template: rbac/clusterrole.yaml
+    asserts:
+      - containsDocument:
+          any: true
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          namespace: team-a
+      - containsDocument:
+          any: true
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          namespace: kmcp-system
+
+  - it: should keep ClusterRoles when rbac.namespaces is an explicit empty list
+    set:
+      rbac.namespaces: []
+      global.watchNamespaces:
+        - team-a
+    template: rbac/clusterrole.yaml
+    asserts:
+      - containsDocument:
+          any: true
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRole

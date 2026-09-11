@@ -34,7 +34,7 @@ should create deployment when metrics enabled:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -112,7 +112,7 @@ should create deployment with default values:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -189,7 +189,7 @@ should create deployment with minimal configuration:
                 - --health-probe-bind-address=:8081
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -264,7 +264,7 @@ should include metrics port in deployment when metrics enabled:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -342,7 +342,7 @@ should use custom namespace:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -420,7 +420,7 @@ should use custom release name:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
