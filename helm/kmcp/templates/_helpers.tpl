@@ -65,9 +65,40 @@ Allows overriding it for multi-namespace deployments in combined charts.
 Create the image reference
 */}}
 {{- define "kmcp.image" -}}
-{{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" }}
-{{- printf "%s:%s" .Values.image.repository $tag }}
+{{- $tag := .Values.image.tag | default .Chart.AppVersion | default "latest" -}}
+{{/* image.repository used to be one string carrying its registry
+     (ghcr.io/kagent-dev/kmcp/controller). It is now the environment-invariant
+     path only, joined onto image.registry -- the same registry/repository split
+     every kagent-family chart uses, so one global.imageRegistry value redirects
+     them all. A values file still carrying a host in repository would render a
+     doubled path that fails only at pod start, as ImagePullBackOff, so it fails
+     the render here instead and names the split. */}}
+{{- $first := first (splitList "/" .Values.image.repository) -}}
+{{- if or (contains "." $first) (contains ":" $first) -}}
+{{- fail (printf "image.repository (%q) carries a registry host. It is now the image path only: move the host into image.registry (or global.imageRegistry) and keep repository as the path, e.g. registry: ghcr.io, repository: kagent-dev/kmcp/controller." .Values.image.repository) -}}
+{{- end -}}
+{{- include "kmcp.images.image" (dict "imageRoot" (dict "registry" .Values.image.registry "repository" .Values.image.repository "tag" $tag) "global" .Values.global) -}}
 {{- end }}
+
+{{/*
+The resolved RBAC scope, as a JSON list so callers can range over it.
+Precedence: rbac.namespaces > global.watchNamespaces > empty (cluster-scoped).
+The global is a fallback, not an override: a values file that sets rbac.namespaces
+renders exactly what it rendered before the global existed, and an explicit empty
+list forces cluster-scoped RBAC (hasKey, not coalesce, so a present-but-empty key
+wins). On the global path the install namespace is auto-appended: the global is a
+shared signal a parent may aim at other charts, and failing this chart's render
+over it would brick an install the value was never about.
+*/}}
+{{- define "kmcp.rbacNamespaces" -}}
+{{- $scope := list -}}
+{{- if and .Values.rbac (hasKey .Values.rbac "namespaces") -}}
+{{- $scope = .Values.rbac.namespaces | default list -}}
+{{- else if ((.Values.global).watchNamespaces) -}}
+{{- $scope = concat (.Values.global).watchNamespaces (list (include "kmcp.namespace" .)) -}}
+{{- end -}}
+{{- $scope | uniq | sortAlpha | toJson -}}
+{{- end -}}
 
 {{/*
 Guards on the rbac block
@@ -98,9 +129,29 @@ Create controller manager container args
 {{- if .Values.controller.metrics.enabled }}
 {{- $args = append $args (printf "--metrics-bind-address=%s" .Values.controller.metrics.bindAddress) }}
 {{- end }}
-{{- if and .Values.rbac .Values.rbac.namespaces }}
-{{- $namespaces := .Values.rbac.namespaces | uniq }}
-{{- $args = append $args (printf "--watch-namespaces=%s" (join "," $namespaces)) }}
+{{- $watchNs := include "kmcp.rbacNamespaces" . | fromJsonArray }}
+{{- if $watchNs }}
+{{- $args = append $args (printf "--watch-namespaces=%s" (join "," $watchNs)) }}
 {{- end }}
 {{- toYaml $args }}
 {{- end }} 
+{{/*
+Pull secrets for the pod: the chart's own list merged (union) with
+global.imagePullSecrets. Renders nothing when both are empty.
+*/}}
+{{- define "kmcp.imagePullSecrets" -}}
+{{- $merged := concat (.Values.imagePullSecrets | default list) (((.Values.global).imagePullSecrets) | default list) | uniq -}}
+{{- if $merged -}}
+imagePullSecrets:
+{{- toYaml $merged | nindent 2 }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+imagePullPolicy for a container: the component's own value, then
+global.imagePullPolicy, then IfNotPresent. One definition so the fallback chain
+cannot drift between pods.
+*/}}
+{{- define "kmcp.imagePullPolicy" -}}
+{{- .local | default (((.root.Values.global)).imagePullPolicy) | default "IfNotPresent" -}}
+{{- end -}}

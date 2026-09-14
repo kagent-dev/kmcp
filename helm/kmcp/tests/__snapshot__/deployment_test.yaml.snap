@@ -34,7 +34,7 @@ should create deployment with default values:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -112,7 +112,7 @@ should include health probe ports when health probe enabled:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -190,7 +190,7 @@ should include image pull secrets when specified:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -270,7 +270,7 @@ should include metrics port when metrics enabled:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -348,7 +348,7 @@ should include node selector when specified:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -430,7 +430,7 @@ should include pod annotations when specified:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -508,7 +508,7 @@ should include tolerations when specified:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -591,7 +591,7 @@ should set custom replica count:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -669,7 +669,7 @@ should set custom resources:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -747,7 +747,7 @@ should set pod security context:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -825,7 +825,7 @@ should set security context:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
@@ -903,7 +903,7 @@ should set termination grace period:
                 - --metrics-bind-address=:8443
               command:
                 - /manager
-              image: test-repo:v1.0.0
+              image: ghcr.io/test-repo:v1.0.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
