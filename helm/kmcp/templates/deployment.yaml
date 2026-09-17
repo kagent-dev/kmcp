@@ -20,17 +20,14 @@ spec:
       labels:
         {{- include "kmcp.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- with include "kmcp.imagePullSecrets" . }}{{- . | nindent 6 }}{{- end }}
       serviceAccountName: {{ include "kmcp.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
       - name: manager
         image: {{ include "kmcp.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        imagePullPolicy: {{ include "kmcp.imagePullPolicy" (dict "root" . "local" .Values.image.pullPolicy) }}
         command:
         - /manager
         args:

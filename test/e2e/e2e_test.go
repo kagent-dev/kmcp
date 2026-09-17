@@ -61,7 +61,8 @@ var _ = ginkgo.Describe("Manager", ginkgo.Ordered, func() {
 		cmd = exec.Command("helm", "install", "kmcp", "helm/kmcp",
 			"--namespace", namespace,
 			"--wait", "--timeout=5m",
-			"--set", fmt.Sprintf("image.repository=%s", getImageRepository(projectImage)),
+			"--set", fmt.Sprintf("image.registry=%s", getImageRegistry(projectImage)),
+			"--set", fmt.Sprintf("image.repository=%s", getImagePath(projectImage)),
 			"--set", fmt.Sprintf("image.tag=%s", getImageTag(projectImage)),
 			"--set", "image.pullPolicy=Never")
 		_, err = utils.Run(cmd)
@@ -418,13 +419,38 @@ func getService(name, namespace string) *corev1.Service {
 	return &service
 }
 
-// getImageRepository extracts the repository part from a full image name
-// e.g., "example.com/kmcp:v0.0.1" -> "example.com/kmcp"
+// getImageRepository extracts everything before the tag from a full image name
+// e.g., "example.com/org/kmcp:v0.0.1" -> "example.com/org/kmcp"
 func getImageRepository(image string) string {
 	if idx := strings.LastIndex(image, ":"); idx != -1 {
 		return image[:idx]
 	}
 	return image
+}
+
+// getImageRegistry extracts the registry host from a full image name, matching
+// the chart's registry/repository split. The first path segment is a registry
+// when it contains "." or ":" (the containerd rule).
+// e.g., "example.com/org/kmcp:v0.0.1" -> "example.com"
+func getImageRegistry(image string) string {
+	repo := getImageRepository(image)
+	if idx := strings.Index(repo, "/"); idx != -1 {
+		if first := repo[:idx]; strings.ContainsAny(first, ".:") {
+			return first
+		}
+	}
+	return ""
+}
+
+// getImagePath extracts the image path without registry host or tag, matching
+// the chart's image.repository value.
+// e.g., "example.com/org/kmcp:v0.0.1" -> "org/kmcp"
+func getImagePath(image string) string {
+	repo := getImageRepository(image)
+	if registry := getImageRegistry(image); registry != "" {
+		return strings.TrimPrefix(repo, registry+"/")
+	}
+	return repo
 }
 
 // getImageTag extracts the tag part from a full image name

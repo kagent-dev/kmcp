@@ -1,0 +1,34 @@
+name: Helm Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  helm-test:
+    name: Run on Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint the chart
+        run: make helm-lint
+
+      # Pre-installed because modern helm verifies plugin provenance by
+      # default and the unittest plugin publishes none; the Makefile's own
+      # bootstrap (helm plugin install without --verify=false) predates that
+      # and fails on a fresh runner. With the plugin present, make helm-test
+      # skips its bootstrap.
+      - name: Install helm-unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+
+      # Enforced here rather than developer-run only -- a green PR previously
+      # said nothing about the chart tests.
+      - name: Run chart unit tests
+        run: make helm-test

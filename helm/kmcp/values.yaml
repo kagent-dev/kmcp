@@ -10,9 +10,35 @@ fullnameOverride: ""
 namespaceOverride: ""
 
 # Image configuration
+# Values under `global` are visible to this chart and every subchart. A parent chart
+# (or an operator) sets one value here instead of one per chart.
+global:
+  # -- Registry that overrides image.registry when set. This is the air-gap
+  # mirror knob: one value redirects the image. image.repository stays untouched,
+  # so a mirror serves the image under its existing kagent-dev/kmcp/controller
+  # path. For control without the override, leave this unset and set
+  # image.registry.
+  imageRegistry: ""
+  # -- Pull secrets merged (union) into the pod's own imagePullSecrets list.
+  imagePullSecrets: []
+  # -- Fallback imagePullPolicy when image.pullPolicy is unset.
+  imagePullPolicy: ""
+  # -- Namespace scope fallback. rbac.namespaces overrides it when the key is
+  # present. A non-empty resolved list replaces ClusterRoles with Roles and
+  # scopes the controller's watch.
+  watchNamespaces: []
+
 image:
-  repository: ghcr.io/kagent-dev/kmcp/controller
-  pullPolicy: IfNotPresent
+  # -- Registry host for the image, and nothing else. To change environments (a
+  # private mirror, an air-gapped registry), change only this value or
+  # global.imageRegistry, which overrides it. A host inside `repository` fails
+  # the render, and the error names this split.
+  registry: ghcr.io
+  # -- Image path under the registry. The path is identical on every registry
+  # that serves the image. A mirror copies the image under this same path.
+  repository: kagent-dev/kmcp/controller
+  # -- Pull policy. Empty falls back to global.imagePullPolicy, then IfNotPresent.
+  pullPolicy: ""
   # Overrides the image tag whose default is the chart's appVersion.
   # Set to a specific version (e.g., "v0.1.7") to pin to that version.
   # tag: ""
@@ -99,9 +125,14 @@ rbac:
   # -- Namespaces in which to create Role and RoleBinding resources.
   # If empty (default), the chart creates cluster-scoped ClusterRole and ClusterRoleBinding
   # resources and the controller watches all namespaces.
-  # If set, the chart creates a Role + RoleBinding per listed namespace and the controller's
-  # WATCH_NAMESPACES is derived from this list.
-  namespaces: []
+  # If set, the chart creates a Role + RoleBinding per listed namespace and the controller
+  # receives the same list as its --watch-namespaces flag, so RBAC scope and watch scope
+  # cannot disagree. Left unset, the scope falls back to global.watchNamespaces.
+  # An explicit empty list forces cluster-scoped RBAC, even under a parent that
+  # sets the global. This is why the key ships commented out: a declared default
+  # [] would make every install look explicitly cluster-scoped, and the fallback
+  # would be unreachable.
+  # namespaces: []
 
 # Service configuration for metrics
 service:
