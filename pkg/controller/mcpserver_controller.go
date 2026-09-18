@@ -198,6 +198,25 @@ func (r *MCPServerReconciler) reconcileStatus(
 		}
 	}
 
+	// Set human-readable DisplayStatus based on deletion timestamp and Ready condition
+	if !server.DeletionTimestamp.IsZero() {
+		server.Status.DisplayStatus = "Deleting"
+	} else {
+		readyCondition := false
+		for _, condition := range server.Status.Conditions {
+			if condition.Type == string(kagentdevv1alpha1.MCPServerConditionReady) &&
+				condition.Status == metav1.ConditionTrue {
+				readyCondition = true
+				break
+			}
+		}
+		if readyCondition {
+			server.Status.DisplayStatus = "Ready"
+		} else {
+			server.Status.DisplayStatus = "Not Ready"
+		}
+	}
+
 	// Update the status
 	if err := r.Status().Update(ctx, server); err != nil {
 		log.FromContext(ctx).Error(err, "Failed to update MCPServer status")
