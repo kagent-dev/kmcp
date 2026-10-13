@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	transportAdapterRepository     = "ghcr.io/agentgateway/agentgateway"
-	defaultTransportAdapterVersion = "0.9.0"
-	kgatewayMcpAppProtocol         = "kgateway.dev/mcp"
+	defaultTransportAdapterRegistry = "ghcr.io/agentgateway"
+	transportAdapterImageName       = "agentgateway"
+	defaultTransportAdapterVersion  = "0.9.0"
+	kgatewayMcpAppProtocol          = "kgateway.dev/mcp"
 )
 
 // versionRegex validates that version strings contain only allowed characters
@@ -672,17 +673,25 @@ func validateVersion(version string) error {
 // getTransportAdapterImage returns the transport adapter container image,
 // using the environment variable if provided and valid, otherwise using the default
 func getTransportAdapterImage() string {
+	transportAdapterRegistry := os.Getenv("TRANSPORT_ADAPTER_REGISTRY")
+	if transportAdapterRegistry == "" {
+		transportAdapterRegistry = defaultTransportAdapterRegistry
+	}
+
 	transportAdapterVersion := os.Getenv("TRANSPORT_ADAPTER_VERSION")
 	if transportAdapterVersion == "" {
-		return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, defaultTransportAdapterVersion)
+		return fmt.Sprintf("%s/%s:%s-musl",
+			transportAdapterRegistry, transportAdapterImageName, defaultTransportAdapterVersion)
 	}
 
 	if err := validateVersion(transportAdapterVersion); err != nil {
 		klog.Warningf("Invalid TRANSPORT_ADAPTER_VERSION: %v, fallback to %s", err, defaultTransportAdapterVersion)
-		return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, defaultTransportAdapterVersion)
+		return fmt.Sprintf("%s/%s:%s-musl",
+			transportAdapterRegistry, transportAdapterImageName, defaultTransportAdapterVersion)
 	}
 
-	return fmt.Sprintf("%s:%s-musl", transportAdapterRepository, transportAdapterVersion)
+	return fmt.Sprintf("%s/%s:%s-musl",
+		transportAdapterRegistry, transportAdapterImageName, transportAdapterVersion)
 }
 
 func makePtr[T any](v T) *T {
