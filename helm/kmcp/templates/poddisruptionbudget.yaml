@@ -1,0 +1,30 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- include "kmcp.pdb.validate" . }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "kmcp.fullname" . }}-controller-manager
+  namespace: {{ include "kmcp.namespace" . }}
+  labels:
+    {{- include "kmcp.labels" . | nindent 4 }}
+    {{- with .Values.podDisruptionBudget.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.podDisruptionBudget.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if eq (include "kmcp.pdb.isSet" .Values.podDisruptionBudget.minAvailable) "true" }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if eq (include "kmcp.pdb.isSet" .Values.podDisruptionBudget.maxUnavailable) "true" }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  {{- if eq (include "kmcp.pdb.isSet" .Values.podDisruptionBudget.unhealthyPodEvictionPolicy) "true" }}
+  unhealthyPodEvictionPolicy: {{ .Values.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "kmcp.selectorLabels" . | nindent 6 }}
+{{- end }}

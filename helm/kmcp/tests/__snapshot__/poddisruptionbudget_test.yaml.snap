@@ -1,0 +1,104 @@
+should accept a percentage for minAvailable:
+  1: |
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-1.0.0
+      name: RELEASE-NAME-controller-manager
+      namespace: NAMESPACE
+    spec:
+      minAvailable: 50%
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: kmcp
+          control-plane: controller-manager
+should create a pdb with maxUnavailable when enabled:
+  1: |
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-1.0.0
+      name: RELEASE-NAME-controller-manager
+      namespace: NAMESPACE
+    spec:
+      maxUnavailable: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: kmcp
+          control-plane: controller-manager
+should create a pdb with minAvailable when enabled:
+  1: |
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-1.0.0
+      name: RELEASE-NAME-controller-manager
+      namespace: NAMESPACE
+    spec:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: kmcp
+          control-plane: controller-manager
+should render custom labels and annotations:
+  1: |
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      annotations:
+        custom-annotation: annotation-value
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        custom-label: custom-value
+        helm.sh/chart: kmcp-1.0.0
+      name: RELEASE-NAME-controller-manager
+      namespace: NAMESPACE
+    spec:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: kmcp
+          control-plane: controller-manager
+should render unhealthyPodEvictionPolicy when set:
+  1: |
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: kmcp
+        control-plane: controller-manager
+        helm.sh/chart: kmcp-1.0.0
+      name: RELEASE-NAME-controller-manager
+      namespace: NAMESPACE
+    spec:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: kmcp
+          control-plane: controller-manager
+      unhealthyPodEvictionPolicy: AlwaysAllow
