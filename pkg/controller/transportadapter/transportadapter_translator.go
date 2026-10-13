@@ -178,6 +178,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			Tolerations:        server.Spec.Deployment.Tolerations,
 			Affinity:           server.Spec.Deployment.Affinity,
 			NodeSelector:       server.Spec.Deployment.NodeSelector,
+			TopologySpreadConstraints: server.Spec.Deployment.TopologySpreadConstraints,
 			InitContainers: []corev1.Container{{
 				Name:            "copy-binary",
 				Image:           transportAdapterContainerImage,
@@ -251,6 +252,7 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 			Tolerations:        server.Spec.Deployment.Tolerations,
 			Affinity:           server.Spec.Deployment.Affinity,
 			NodeSelector:       server.Spec.Deployment.NodeSelector,
+			TopologySpreadConstraints: server.Spec.Deployment.TopologySpreadConstraints,
 			Containers: append([]corev1.Container{
 				{
 					Name:            "mcp-server",

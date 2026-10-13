@@ -341,6 +341,15 @@ type MCPServerDeployment struct {
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
+	// TopologySpreadConstraints defines the topology spread constraints for the pod.
+	// Use this to control how pods are spread across topology domains
+	// such as zones, regions, or nodes for high availability.
+	// +optional
+	// +patchStrategy=replace
+	// +listType=map
+	// +listMapKey=name
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
 	// NodeSelector defines the node selector for the pod.
 	// Use this to constrain pods to nodes with specific labels.
 	// +optional
