@@ -77,6 +77,43 @@ tests:
           count: 1
       - matchSnapshot: {}
 
+  - it: should set global annotations on deployment
+    template: deployment.yaml
+    set:
+      annotations:
+        app.kubernetes.io/managed-by: "custom"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isSubset:
+          path: metadata.annotations
+          content:
+            app.kubernetes.io/managed-by: "custom"
+
+  - it: should set controller annotations on deployment and override global ones
+    template: deployment.yaml
+    set:
+      annotations:
+        global-key: "global-value"
+        shared-key: "global-wins"
+      controller:
+        annotations:
+          controller-key: "controller-value"
+          shared-key: "controller-wins"
+      image.repository: test-repo
+      image.tag: v1.0.0
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isSubset:
+          path: metadata.annotations
+          content:
+            global-key: "global-value"
+            controller-key: "controller-value"
+            shared-key: "controller-wins"
+
   - it: should include image pull secrets when specified
     template: deployment.yaml
     set:
