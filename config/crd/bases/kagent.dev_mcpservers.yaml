@@ -1590,10 +1590,11 @@ spec:
                       listen.
                     type: integer
                   replicas:
-                    default: 1
                     description: |-
                       Replicas defines the number of desired pod replicas.
-                      Defaults to 1 if not specified.
+                      If not specified, the Deployment is created with 1 replica and its
+                      replica count is left untouched afterwards, so that it can be managed
+                      by a HorizontalPodAutoscaler.
                     format: int32
                     type: integer
                   resources:

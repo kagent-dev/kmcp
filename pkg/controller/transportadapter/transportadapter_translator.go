@@ -303,7 +303,8 @@ func (t *transportAdapterTranslator) translateTransportAdapterDeployment(
 		}
 	}
 
-	// Determine replicas (default to 1)
+	// Leave replicas unset when not specified: a new Deployment defaults to 1,
+	// and upsertOutput keeps the live count on updates.
 	var replicas *int32
 	if server.Spec.Deployment.Replicas != nil {
 		replicas = server.Spec.Deployment.Replicas
