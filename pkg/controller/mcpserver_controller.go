@@ -365,9 +365,25 @@ func upsertOutput(ctx context.Context, kube client.Client, output client.Object)
 	} else {
 		// If found, update it
 		output.SetResourceVersion(existing.GetResourceVersion())
+		preserveReplicas(existing, output)
 		if err := kube.Update(ctx, output); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// preserveReplicas keeps the live replica count of a Deployment whose desired
+// spec leaves replicas unset, so that a HorizontalPodAutoscaler scaling it is
+// not reverted on every reconcile.
+func preserveReplicas(existing, desired client.Object) {
+	existingDeployment, ok := existing.(*appsv1.Deployment)
+	if !ok {
+		return
+	}
+	desiredDeployment, ok := desired.(*appsv1.Deployment)
+	if !ok || desiredDeployment.Spec.Replicas != nil {
+		return
+	}
+	desiredDeployment.Spec.Replicas = existingDeployment.Spec.Replicas
 }

@@ -347,9 +347,10 @@ type MCPServerDeployment struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Replicas defines the number of desired pod replicas.
-	// Defaults to 1 if not specified.
+	// If not specified, the Deployment is created with 1 replica and its
+	// replica count is left untouched afterwards, so that it can be managed
+	// by a HorizontalPodAutoscaler.
 	// +optional
-	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// ImagePullSecrets defines the list of secrets to use for pulling container images.
